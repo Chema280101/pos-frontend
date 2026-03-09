@@ -15,6 +15,7 @@ import { es } from 'date-fns/locale';
 import { downloadExcelReport } from '@/lib/excelReport';
 import { downloadPdfReport } from '@/lib/pdfReport';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
+import { useAuthStore } from '@/store/authStore';
 
 interface ListResponse {
   data: Client[];
@@ -39,6 +40,8 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
 
   // ✅ NUEVO: Reset page when filters change
   useEffect(() => {
@@ -206,6 +209,19 @@ export default function ClientsPage() {
           ) : (
             <ClientsMetrics clients={data?.data || []} />
           )}
+
+          {/* Enhanced Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+            {canEdit && (
+              <Link
+                href="/clients/new"
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus className="h-5 w-5" />
+                Nuevo Cliente
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Enhanced Clients Filters */}
