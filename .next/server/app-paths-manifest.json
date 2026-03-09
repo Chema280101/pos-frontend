@@ -1,12 +1,1 @@
-{
-  "/error/403/page": "app/error/403/page.js",
-  "/page": "app/page.js",
-  "/(app)/reports/sales/page": "app/(app)/reports/sales/page.js",
-  "/(app)/reports/detailed/page": "app/(app)/reports/detailed/page.js",
-  "/(app)/admin/audit/page": "app/(app)/admin/audit/page.js",
-  "/(app)/admin/users/page": "app/(app)/admin/users/page.js",
-  "/(app)/admin/backups/page": "app/(app)/admin/backups/page.js",
-  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(app)/clients/page": "app/(app)/clients/page.js"
-}
+{}
