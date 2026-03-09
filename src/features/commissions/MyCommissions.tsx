@@ -15,6 +15,7 @@ import type { Commission, CommissionsResponse } from '@/types/commission';
 export function MyCommissions(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'ADMIN';
+  const canViewAllCommissions = user?.role === 'ADMIN'; // Only ADMIN can view all commissions
   
   // Filter states
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 30)));
@@ -194,7 +195,7 @@ export function MyCommissions(): JSX.Element {
 
           {/* Enhanced Action Buttons - Exacto estilo ServicesPage */}
           <div className="flex flex-wrap items-center justify-center gap-4">
-            {isAdmin && (
+            {canViewAllCommissions && (
               <Link href="/commissions/admin" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                 <Eye className="h-5 w-5" />
                 Todas las Comisiones (Admin)

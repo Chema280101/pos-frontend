@@ -64,6 +64,12 @@ function StatusBadge({ status }: { status: string }): JSX.Element {
       text: 'text-gray-800', 
       border: 'border-gray-200',
       label: 'Programada' 
+    },
+    RESCHEDULED: { 
+      bg: 'bg-amber-100', 
+      text: 'text-amber-800', 
+      border: 'border-amber-200',
+      label: 'Reprogramada' 
     }
   };
 
@@ -160,7 +166,7 @@ export function AppointmentDetailDrawer({
     },
   });
 
-  const canChangeStatus = apt?.status === 'SCHEDULED' || apt?.status === 'IN_PROGRESS';
+  const canChangeStatus = apt?.status === 'SCHEDULED' || apt?.status === 'IN_PROGRESS' || apt?.status === 'RESCHEDULED';
 
   return (
     <Drawer open={open} onClose={onClose} title={apt ? apt.customer.name : 'Cita'} width="md">
@@ -245,7 +251,7 @@ export function AppointmentDetailDrawer({
               <div className="relative">
                 <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider mb-3">Acciones</h4>
                 <div className="flex flex-wrap gap-3">
-                  {apt.status === 'SCHEDULED' && (
+                  {(apt.status === 'SCHEDULED' || apt.status === 'RESCHEDULED') && (
                     <button
                       type="button"
                       onClick={() => statusMutation.mutate({ status: 'IN_PROGRESS' })}
@@ -256,7 +262,7 @@ export function AppointmentDetailDrawer({
                       Cliente llegó (check-in)
                     </button>
                   )}
-                  {(apt.status === 'SCHEDULED' || apt.status === 'IN_PROGRESS') && (
+                  {(apt.status === 'SCHEDULED' || apt.status === 'IN_PROGRESS' || apt.status === 'RESCHEDULED') && (
                     <>
                       <button
                         type="button"

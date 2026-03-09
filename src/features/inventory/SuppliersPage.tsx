@@ -32,6 +32,8 @@ export function SuppliersPage(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<NewSupplierData>({
     name: '',
     contactName: '',
@@ -72,6 +74,8 @@ export function SuppliersPage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      setShowDeleteDialog(false);
+      setSelectedSupplier(null);
     },
   });
 
@@ -90,10 +94,9 @@ export function SuppliersPage(): JSX.Element {
     createMutation.mutate(formData);
   };
 
-  const handleDeleteSupplier = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este proveedor?')) {
-      deleteMutation.mutate(id);
-    }
+  const handleDeleteSupplier = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setShowDeleteDialog(true);
   };
 
   // Filter suppliers based on search
@@ -341,7 +344,7 @@ export function SuppliersPage(): JSX.Element {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteSupplier(supplier.id)}
+                            onClick={() => handleDeleteSupplier(supplier)}
                             className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
                             title="Eliminar proveedor"
                           >
@@ -501,6 +504,124 @@ export function SuppliersPage(): JSX.Element {
           </div>
         </div>
       )}
+
+        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {showDeleteDialog && selectedSupplier && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteDialog(false);
+              setSelectedSupplier(null);
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
+                <div className="h-full w-full bg-repeat" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }}></div>
+              </div>
+
+              {/* Header */}
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                  <Trash2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Eliminar Proveedor</h3>
+                  <p className="text-sm text-red-700">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-red-900">
+                        ¿Estás seguro de que deseas eliminar el proveedor "{selectedSupplier.name}"?
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Esta acción eliminará permanentemente el proveedor y toda su información asociada. No se podrá recuperar.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supplier Info */}
+                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Proveedor</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {selectedSupplier.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Contacto</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedSupplier.contactName || '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Teléfono</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedSupplier.phone || '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Email</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedSupplier.email || '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Entradas</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedSupplier._count.stockEntries} {selectedSupplier._count.stockEntries === 1 ? 'entrada' : 'entradas'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    deleteMutation.mutate(selectedSupplier.id);
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                  {deleteMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                      Eliminando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Proveedor
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedSupplier(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

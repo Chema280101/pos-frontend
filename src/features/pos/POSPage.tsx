@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ShoppingBag, Trash2, UserCircle, Search, Printer, X, Package, Scissors, Box, TrendingUp, Clock, Star, Zap, CreditCard, Smartphone, DollarSign, ChevronRight, Plus, Minus, ChevronLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
+import { useAuthStore } from '@/store/authStore';
 import { printReceipt, type ReceiptSaleData } from '@/lib/receipt';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { PaymentModal } from './PaymentModal';
 import { PendingSales } from './PendingSales';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { 
   type CartItem, 
   type PendingSale, 
@@ -35,7 +37,12 @@ export function POSPage(): JSX.Element {
   const appointmentIdFromUrl = searchParams.get('appointmentId');
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const setUnit = useUnitStore((s) => s.setUnit);
-  const unit = (activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA') as BusinessUnit;
+  const user = useAuthStore((s) => s.user);
+  
+  // For RECEPTIONIST, use their assigned unit instead of the active unit
+  const unit = user?.role === 'RECEPTIONIST' 
+    ? (user.unit === 'BARBERIA' ? 'BARBERIA' : 'SPA') as BusinessUnit
+    : (activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA') as BusinessUnit;
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null);
@@ -76,6 +83,7 @@ export function POSPage(): JSX.Element {
   const [discountReason, setDiscountReason] = useState('');
   const [closingSaleId, setClosingSaleId] = useState<string | null>(null);
   const [closingSaleTotal, setClosingSaleTotal] = useState(0);
+  const [showSaleConfirmDialog, setShowSaleConfirmDialog] = useState(false);
   const [lastClosedSale, setLastClosedSale] = useState<ReceiptSaleData | null>(null);
   const [receiptHtmlToPrint, setReceiptHtmlToPrint] = useState<string | null>(null);
   const receiptIframeRef = useRef<HTMLIFrameElement>(null);
@@ -489,6 +497,7 @@ const popularServices = useMemo(() => {
       items: Array<{ name: string; unitPrice: number; quantity: number; subtotal: number }>;
     }) => {
       setClosingSaleId(null);
+      setShowSaleConfirmDialog(true);
       queryClient.invalidateQueries({ queryKey: ['pos-pending', unit] });
       setLastClosedSale({
         saleNumber: data.saleNumber,
@@ -724,7 +733,7 @@ const popularServices = useMemo(() => {
           {/* Item Selection */}
           <div className="lg:col-span-2 space-y-4">
             {/* Item Search */}
-            <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6">
+            <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-20">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
               
               <div className="relative">
@@ -751,7 +760,7 @@ const popularServices = useMemo(() => {
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] pl-12 pr-4 py-3 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                 />
                 {showItemSearch && debouncedItemSearch.length >= 2 && (
-                  <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-white shadow-xl" style={{ maxHeight: '400px' }}>
+                  <div className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-white shadow-xl" style={{ maxHeight: '400px' }}>
                     <div className="max-h-80 overflow-y-auto">
                       {/* Services */}
                       {searchServices.length > 0 && (
@@ -775,16 +784,18 @@ const popularServices = useMemo(() => {
                       {/* Products */}
                       {searchProducts.length > 0 && (
                         <div>
-                          <div className="px-3 py-2 text-xs font-semibold text-[var(--unit-text-muted)] uppercase tracking-wider">Productos</div>
+                          <div className="px-4 py-3 text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider border-b border-[var(--unit-border)]/30">Productos</div>
                           {searchProducts.filter((p: { salePrice: number | null }) => p.salePrice).map((p: { id: string; name: string; salePrice: number }) => (
                             <button
                               key={p.id}
                               type="button"
-                              className="group w-full px-3 py-2 text-left text-sm text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
+                              className="group w-full px-4 py-3 text-left text-[var(--unit-text)] transition-colors hover:bg-[var(--unit-accent)]/10"
                               onClick={() => addProductToCart(p)}
                             >
-                              <span className="font-medium">{p.name}</span>
-                              <span className="ml-2 text-[var(--unit-accent)] font-semibold group-hover:text-[var(--unit-text)]">S/ {p.salePrice}</span>
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{p.name}</span>
+                                <span className="text-[var(--unit-accent)] font-bold group-hover:text-[var(--unit-text)]">S/ {p.salePrice}</span>
+                              </div>
                             </button>
                           ))}
                         </div>
@@ -792,16 +803,18 @@ const popularServices = useMemo(() => {
                       {/* Packages */}
                       {searchPackages.length > 0 && (
                         <div>
-                          <div className="px-3 py-2 text-xs font-semibold text-[var(--unit-text-muted)] uppercase tracking-wider">Paquetes</div>
+                          <div className="px-4 py-3 text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider border-b border-[var(--unit-border)]/30">Paquetes</div>
                           {searchPackages.map((p: { id: string; name: string; fixedPrice: number }) => (
                             <button
                               key={p.id}
                               type="button"
-                              className="group w-full px-3 py-2 text-left text-sm text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
+                              className="group w-full px-4 py-3 text-left text-[var(--unit-text)] transition-colors hover:bg-[var(--unit-accent)]/10"
                               onClick={() => addPackageToCart(p)}
                             >
-                              <span className="font-medium">{p.name}</span>
-                              <span className="ml-2 text-[var(--unit-accent)] font-semibold group-hover:text-[var(--unit-text)]">S/ {p.fixedPrice}</span>
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{p.name}</span>
+                                <span className="text-[var(--unit-accent)] font-bold group-hover:text-[var(--unit-text)]">S/ {p.fixedPrice}</span>
+                              </div>
                             </button>
                           ))}
                         </div>
@@ -817,7 +830,7 @@ const popularServices = useMemo(() => {
             </section>
 
             {/* Services */}
-            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6">
+            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
               
               <div className="relative">
@@ -851,7 +864,7 @@ const popularServices = useMemo(() => {
             </section>
 
             {/* Products */}
-            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6">
+            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
               
               <div className="relative">
@@ -885,7 +898,7 @@ const popularServices = useMemo(() => {
             </section>
 
             {/* Packages */}
-            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6">
+            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
               
               <div className="relative">
@@ -1339,6 +1352,19 @@ const popularServices = useMemo(() => {
           }}
         />
       )}
+
+      {/* Sale Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showSaleConfirmDialog}
+        onClose={() => setShowSaleConfirmDialog(false)}
+        onConfirm={() => setShowSaleConfirmDialog(false)}
+        title="¡Venta Confirmada!"
+        message={`Venta ${lastClosedSale?.saleNumber} procesada exitosamente por S/ ${lastClosedSale?.total.toFixed(2)}. Método de pago: ${lastClosedSale?.paymentMethod || 'Efectivo'}.`}
+        type="success"
+        confirmText="Aceptar"
+        cancelText=""
+        isLoading={false}
+      />
       </div>
   );
 }

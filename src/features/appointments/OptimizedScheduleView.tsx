@@ -21,7 +21,7 @@ interface OptimizedScheduleViewProps {
   appointments: Appointment[];
   selectedUnit?: 'SPA' | 'BARBERIA' | null;
   onNewAppointment: (employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => void;
-  onEditAppointment: (appointmentId: string) => void;
+  onViewAppointment: (appointmentId: string) => void;
   onReschedule: (appointmentId: string, newEmployeeId: string, newTime: Date) => void;
 }
 
@@ -51,7 +51,7 @@ export function OptimizedScheduleView({
   appointments,
   selectedUnit,
   onNewAppointment,
-  onEditAppointment,
+  onViewAppointment,
   onReschedule,
 }: OptimizedScheduleViewProps) {
   const [selectedDate, setSelectedDate] = useState(date);
@@ -263,15 +263,15 @@ export function OptimizedScheduleView({
                             }}
                             draggable
                             onDragStart={() => handleDragStart(appointment.id)}
-                            onClick={() => onEditAppointment(appointment.id)}
+                            onClick={() => onViewAppointment(appointment.id)}
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-xl"></div>
                             <div className="relative">
                               <div className="text-sm font-bold text-white mb-1 truncate drop-shadow">
-                                {appointment.customer.name}
+                                {appointment.customer?.name || 'Cliente'}
                               </div>
                               <div className="text-xs text-white/95 truncate mb-1 drop-shadow">
-                                {appointment.service.name}
+                                {appointment.items?.[0]?.service?.name || 'Servicio'}
                               </div>
                               <div className="flex items-center gap-1 text-xs text-white/90 drop-shadow">
                                 <Clock className="h-3 w-3" />
@@ -371,15 +371,15 @@ export function OptimizedScheduleView({
                             }}
                             draggable
                             onDragStart={() => handleDragStart(appointment.id)}
-                            onClick={() => onEditAppointment(appointment.id)}
+                            onClick={() => onViewAppointment(appointment.id)}
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-xl"></div>
                             <div className="relative">
                               <div className="text-sm font-bold text-white mb-1 truncate drop-shadow">
-                                {appointment.customer.name}
+                                {appointment.customer?.name || 'Cliente'}
                               </div>
                               <div className="text-xs text-white/95 truncate mb-1 drop-shadow">
-                                {appointment.service.name}
+                                {appointment.items?.[0]?.service?.name || 'Servicio'}
                               </div>
                               <div className="flex items-center gap-1 text-xs text-white/90 drop-shadow">
                                 <Clock className="h-3 w-3" />

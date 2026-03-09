@@ -1,7 +1,7 @@
 'use client';
 
-import { StockMovementForm } from '@/features/inventory/StockMovementForm';
+import { StockMovementsPage } from '@/features/inventory/StockMovementsPage';
 
 export default function Page(): JSX.Element {
-  return <StockMovementForm />;
+  return <StockMovementsPage />;
 }

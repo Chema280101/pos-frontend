@@ -29,7 +29,7 @@ import {
 const schema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(200),
   email: z.string().email('Email inválido'),
-  role: z.enum(['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER', 'BEAUTICIAN', 'MANAGER']),
+  role: z.enum(['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER']),
   unit: z.enum(['SPA', 'BARBERIA']).nullable(),
   phone: z.string().optional(),
   commissionPct: z.string().optional(),
@@ -43,8 +43,6 @@ const roleOptions: { value: UserRole; label: string }[] = [
   { value: 'RECEPTIONIST', label: 'Recepcionista' },
   { value: 'SPA_SPECIALIST', label: 'Especialista SPA' },
   { value: 'BARBER', label: 'Barbero' },
-  { value: 'BEAUTICIAN', label: 'Esteticista' },
-  { value: 'MANAGER', label: 'Gerente' },
 ];
 
 const unitOptions: { value: BusinessUnit | ''; label: string }[] = [
@@ -102,7 +100,7 @@ export function UserForm(): JSX.Element {
       console.log('📝 Modo edición - seteando valores:', user);
       setValue('name', user.name || '');
       setValue('email', user.email || '');
-      setValue('role', user.role || 'RECEPTIONIST');
+      setValue('role', (user.role === 'BEAUTICIAN' || user.role === 'MANAGER') ? 'RECEPTIONIST' : (user.role || 'RECEPTIONIST') as any);
       setValue('unit', user.unit || null);
       setValue('phone', user.phone || '');
       setValue('commissionPct', user.commissionPct?.toString() || '');
@@ -158,13 +156,20 @@ export function UserForm(): JSX.Element {
   });
 
   const onSubmit = (data: FormData): void => {
-    console.log('Form submitted with data:', data);
-    console.log('Form errors:', errors);
+    // 💡 Convertimos commissionPct de string a número antes de enviarlo
+    const processedData = {
+      ...data,
+      commissionPct: data.commissionPct && data.commissionPct !== '' 
+        ? parseFloat(data.commissionPct) 
+        : undefined, // Si está vacío, enviamos undefined para que no falle
+    };
+
+    console.log('Enviando datos procesados:', processedData);
     
     if (isEdit) {
-      updateMutation.mutate(data);
+      updateMutation.mutate(processedData as any);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(processedData as any);
     }
   };
 

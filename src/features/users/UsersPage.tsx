@@ -22,6 +22,21 @@ export function UsersPage(): JSX.Element {
   const [isActiveFilter, setIsActiveFilter] = useState<string>('');
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [searchFilter, setSearchFilter] = useState('');
+
+// Debug: Override setSearchFilter to track calls
+const originalSetSearchFilter = setSearchFilter;
+const debugSetSearchFilter = (value: string) => {
+  console.log('🔍 setSearchFilter called with:', value);
+  console.trace('🔍 Stack trace for setSearchFilter call:');
+  
+  // 🔥 SOLUCIÓN: Ignorar valores sospechosos de fuentes externas
+  if (value === 'admin@barberiaspa.com') {
+    console.warn('🚫 IGNORANDO valor sospechoso "admin@barberiaspa.com" - Posible inyección externa');
+    return; // No ejecutar setSearchFilter
+  }
+  
+  return originalSetSearchFilter(value);
+};
   const [showFilters, setShowFilters] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -40,7 +55,18 @@ export function UsersPage(): JSX.Element {
     };
     
     if (roleFilter) params.role = roleFilter;
-    if (isActiveFilter) params.isActive = isActiveFilter;
+    if (isActiveFilter) {
+      if (isActiveFilter === 'ACTIVE') {
+        params.isActive = 'true';
+        params.isLocked = 'false';
+      } else if (isActiveFilter === 'INACTIVE') {
+        params.isActive = 'false';
+        params.isLocked = 'false';
+      } else if (isActiveFilter === 'LOCKED') {
+        params.isActive = 'true';
+        params.isLocked = 'true';
+      }
+    }
     if (unitFilter) params.unit = unitFilter;
     if (searchFilter) params.search = searchFilter;
     
@@ -63,10 +89,23 @@ export function UsersPage(): JSX.Element {
   const users = usersData?.data || [];
   const pagination = usersData?.pagination;
 
-  // ✅ MEJORADO: Reset page when filters change
+  // Reset page when filters change (except searchFilter to avoid unwanted behavior)
   useEffect(() => {
     setPage(1);
-  }, [roleFilter, isActiveFilter, unitFilter, searchFilter]);
+  }, [roleFilter, isActiveFilter, unitFilter]); // Removed searchFilter dependency
+
+  // Debug: Log searchFilter changes to identify unwanted modifications
+  useEffect(() => {
+    console.log('🔍 searchFilter changed:', searchFilter);
+    
+    // 🔥 Alerta si el valor sospechoso aparece
+    if (searchFilter === 'admin@barberiaspa.com') {
+      console.error('🚨 ¡ALERTA! searchFilter contiene "admin@barberiaspa.com" - Posible inyección externa');
+      console.trace('🔍 Stack trace para searchFilter sospechoso:');
+    } else {
+      console.trace('🔍 Stack trace for searchFilter change:');
+    }
+  }, [searchFilter]);
 
   const unlockMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -83,7 +122,12 @@ export function UsersPage(): JSX.Element {
       await api.post(`/api/users/${userId}/reset-password`, { newPassword: pwd, forceTemp: temp });
     },
     onSuccess: () => {
+      console.log('🔐 After reset - Current searchFilter:', searchFilter);
+      console.log('🔐 Reset completed for user');
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Asegurar que el filtro de búsqueda no se modifique al resetear contraseña
+      // No modificamos searchFilter aquí para mantener el estado actual
       setResetUser(null);
       setNewPassword('');
       setForceTemp(false);
@@ -145,10 +189,13 @@ export function UsersPage(): JSX.Element {
   }, [unlockUser, unlockMutation]);
 
   const handleResetSubmit = useCallback(() => {
+    console.log('🔐 Before reset - Current searchFilter:', searchFilter);
+    console.log('🔐 Resetting password for user:', resetUser?.email);
+    
     if (!resetUser || !newPassword.trim()) return;
     if (newPassword.length < 6) return;
     resetMutation.mutate({ userId: resetUser.id, newPassword: newPassword.trim(), forceTemp });
-  }, [resetUser, newPassword, forceTemp, resetMutation]);
+  }, [resetUser, newPassword, forceTemp, resetMutation, searchFilter]);
 
   const roleLabels: Record<UserRole, string> = {
     ADMIN: 'Administrador',
@@ -340,7 +387,11 @@ export function UsersPage(): JSX.Element {
     {
       label: 'Resetear contraseña',
       icon: <RotateCcw className="h-4 w-4" />,
-      onClick: (row: UserRow) => setResetUser(row),
+      onClick: (row: UserRow) => {
+      console.log('🔐 Reset button clicked - Current searchFilter:', searchFilter);
+      console.log('🔐 Reset button clicked - User:', row.email);
+      setResetUser(row);
+    },
       className: 'text-blue-600 hover:bg-blue-50',
     },
     {
@@ -558,13 +609,24 @@ export function UsersPage(): JSX.Element {
                       type="text"
                       placeholder="Buscar por nombre, email, teléfono..."
                       value={searchFilter}
-                      onChange={(e) => setSearchFilter(e.target.value)}
+                      onChange={(e) => {
+  const value = e.target.value;
+  
+  // 🔥 Protección adicional: Validar que el valor venga de una interacción real del usuario
+  if (!document.hasFocus() && value === 'admin@barberiaspa.com') {
+    console.warn('🚫 IGNORANDO valor "admin@barberiaspa.com" - Sin foco del documento');
+    return;
+  }
+  
+  debugSetSearchFilter(value);
+}}
+                      autoComplete="off"
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                     />
                     {searchFilter && (
                       <button
                         type="button"
-                        onClick={() => setSearchFilter('')}
+                        onClick={() => debugSetSearchFilter('')}
                         className="absolute inset-y-0 right-0 pr-4 flex items-center"
                       >
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
@@ -609,7 +671,7 @@ export function UsersPage(): JSX.Element {
                           setRoleFilter('');
                           setIsActiveFilter('');
                           setUnitFilter('');
-                          setSearchFilter('');
+                          debugSetSearchFilter('');
                           setPage(1);
                         }}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
@@ -1198,7 +1260,7 @@ export function UsersPage(): JSX.Element {
                     </div>
                   </div>
                   
-                  {/* Premium Action Buttons - Estilo Eliminar Servicio */}
+                  {/* Premium Action Buttons - Eliminar siempre a la izquierda */}
                   <div className="flex gap-4 mt-6">
                     <button
                       onClick={() => {
@@ -1207,25 +1269,24 @@ export function UsersPage(): JSX.Element {
                         }
                       }}
                       disabled={deleteUserMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                     >
                       {deleteUserMutation.isPending ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
                           Eliminando...
-                        </>
+                        </span>
                       ) : (
-                        <>
+                        <span className="flex items-center justify-center gap-2">
                           <Trash2 className="h-4 w-4" />
                           Eliminar Usuario
-                        </>
+                        </span>
                       )}
                     </button>
                     <button
                       onClick={() => setDeleteUser(null)}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
+                      className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
                     >
-                      <X className="h-4 w-4" />
                       Cancelar
                     </button>
                   </div>

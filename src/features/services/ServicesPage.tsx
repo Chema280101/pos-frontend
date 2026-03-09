@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Plus, Edit, Trash2, FolderPlus, Clock, DollarSign, Tag, Building2, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, TrendingDown, CheckCircle, Package } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { Service, ServiceCategory } from '@/types/service';
@@ -16,12 +17,10 @@ export function ServicesPage(): JSX.Element {
   const [unit, setUnit] = useState<string>('');
   const [categoryId, setServiceCategoryId] = useState<string>('');
   const [search, setSearch] = useState<string>('');
-  const [showServiceCategoryForm, setShowServiceCategoryForm] = useState(false);
-  const [newServiceCategoryName, setNewServiceCategoryName] = useState('');
-  const [newServiceCategoryUnit, setNewServiceCategoryUnit] = useState<'SPA' | 'BARBERIA'>('SPA');
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Date range filter states (like inventory)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -36,7 +35,7 @@ export function ServicesPage(): JSX.Element {
   const router = useRouter();
 
   const { data: servicesData, isLoading } = useQuery({
-    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, search],
+    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, search, statusFilter],
     queryFn: async (): Promise<{ data: Service[], pagination: any }> => {
       const params = new URLSearchParams();
       if (unit) params.set('unit', unit);
@@ -51,6 +50,9 @@ export function ServicesPage(): JSX.Element {
       
       // Add search filter
       if (search) params.set('search', search);
+      
+      // Add status filter
+      if (statusFilter) params.set('isActive', statusFilter === 'active' ? 'true' : 'false');
       
       const { data } = await api.get(`/api/services?${params}`);
       return data;
@@ -68,21 +70,7 @@ export function ServicesPage(): JSX.Element {
     },
   });
 
-  const createServiceCategoryMutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.post<ServiceCategory>('/api/services/categories', {
-        name: newServiceCategoryName.trim(),
-        unit: newServiceCategoryUnit,
-      });
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-categories'] });
-      setShowServiceCategoryForm(false);
-      setNewServiceCategoryName('');
-    },
-  });
-
+  
   const deleteServiceCategoryMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data } = await api.delete(`/api/services/categories/${id}`);
@@ -106,8 +94,8 @@ export function ServicesPage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
-      setDeleteConfirm(null);
-      alert('Servicio eliminado correctamente');
+      setShowDeleteDialog(false);
+      setSelectedService(null);
     },
     onError: (error: any) => {
       console.error('Error deleting service:', error);
@@ -127,7 +115,7 @@ export function ServicesPage(): JSX.Element {
   });
 
   const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
+  const canEdit = user?.role === 'ADMIN'; // RECEPTIONIST can only view, not edit
 
   // Helper functions
   const getPriceRange = (price: number) => {
@@ -402,7 +390,8 @@ export function ServicesPage(): JSX.Element {
       label: 'Eliminar',
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: Service) => {
-        setDeleteConfirm(row.id);
+        setSelectedService(row);
+        setShowDeleteDialog(true);
       },
       className: 'text-red-600 hover:bg-red-50',
       disabled: (row: Service) => !canEdit,
@@ -440,19 +429,10 @@ export function ServicesPage(): JSX.Element {
           {/* Enhanced Action Buttons - Exacto estilo InventoryPage */}
           <div className="flex flex-wrap items-center justify-center gap-4">
             {canEdit && (
-              <>
-                <Link href="/services/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <Plus className="h-5 w-5" />
-                  Nuevo Servicio
-                </Link>
-                <button
-                  onClick={() => setShowServiceCategoryForm(true)}
-                  className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <FolderPlus className="h-5 w-5" />
-                  Nueva Categoría
-                </button>
-              </>
+              <Link href="/services/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+                <Plus className="h-5 w-5" />
+                Nuevo Servicio
+              </Link>
             )}
           </div>
         </div>
@@ -653,165 +633,112 @@ export function ServicesPage(): JSX.Element {
             className="rounded-xl"
           />
         </div>
+      </div>
 
-        {/* Delete Confirmation Modal - Estilo Eliminar Gasto */}
-        {deleteConfirm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-6 max-w-md w-full">
-              {/* Background Pattern - Estilo Eliminar Gasto */}
-              <div className="absolute inset-0 opacity-5">
+        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {showDeleteDialog && selectedService && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteDialog(false);
+              setSelectedService(null);
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
                 <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23DC2626' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
-              
-              <div className="relative">
-                {/* Premium Header - Estilo Eliminar Gasto */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                      <Trash2 className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-red-900">Eliminar Servicio</h3>
-                      <p className="text-sm text-red-700">Esta acción es irreversible</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 hover:bg-red-200 border-2 border-red-300/50 transition-all hover:scale-105"
-                  >
-                    <X className="h-4 w-4 text-red-600" />
-                  </button>
-                </div>
-                
-                {/* Warning Content - Estilo Eliminar Gasto */}
-                <div className="space-y-6">
-                  {/* Warning Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-100 to-red-200 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20 mt-1">
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-red-900">
-                          ¿Estás seguro de que deseas eliminar este servicio?
-                        </p>
-                        <p className="text-xs text-red-700 mt-1">
-                          Esta acción no se puede deshacer y el servicio será eliminado permanentemente del sistema.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Service Details */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-gray-500/30 bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Servicio</span>
-                        <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                          {services.find(s => s.id === deleteConfirm)?.name || 'Servicio'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Precio</span>
-                        <span className="text-sm font-bold text-gray-900">
-                          S/ {services.find(s => s.id === deleteConfirm)?.price.toFixed(2) || '0.00'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Premium Action Buttons - Estilo Eliminar Gasto */}
-                  <div className="flex gap-4 mt-6">
-                    <button
-                      onClick={() => deleteServiceMutation.mutate(deleteConfirm)}
-                      disabled={deleteServiceMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {deleteServiceMutation.isPending ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                          Eliminando...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar Servicio
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* New ServiceCategory Modal */}
-        {showServiceCategoryForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="mx-4 w-full max-w-md rounded-[var(--unit-border-radius)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] p-6">
-              <h2 className="mb-4 text-xl font-semibold text-[var(--unit-text-muted)]">Nueva categoría</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--unit-text-muted)]">
-                    Nombre *
-                  </label>
-                  <input
-                    type="text"
-                    value={newServiceCategoryName}
-                    onChange={(e) => setNewServiceCategoryName(e.target.value)}
-                    className="w-full rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)] bg-[var(--unit-surface)] px-3 py-2 text-[var(--unit-text-muted)] focus:border-[var(--unit-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-primary)]"
-                    placeholder="Ej: Faciales, Masajes, Cortes..."
-                    autoFocus
-                  />
+              {/* Header */}
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                  <Trash2 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--unit-text-muted)]">
-                    Unidad *
-                  </label>
-                  <select
-                    value={newServiceCategoryUnit}
-                    onChange={(e) => setNewServiceCategoryUnit(e.target.value as 'SPA' | 'BARBERIA')}
-                    className="w-full rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)] bg-[var(--unit-surface)] px-3 py-2 text-[var(--unit-text-muted)] focus:border-[var(--unit-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-primary)]"
-                  >
-                    <option value="SPA">SPA</option>
-                    <option value="BARBERIA">Barbería</option>
-                  </select>
+                  <h3 className="text-xl font-bold text-red-900">Eliminar Servicio</h3>
+                  <p className="text-sm text-red-700">Esta acción es permanente</p>
                 </div>
               </div>
-              <div className="mt-6 flex gap-3">
+
+              {/* Content */}
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-red-900">
+                        ¿Estás seguro de que deseas eliminar el servicio "{selectedService.name}"?
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Esta acción no se puede deshacer y el servicio será eliminado permanentemente del sistema.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Info */}
+                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Servicio</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {selectedService.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Precio</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        S/ {selectedService.price?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Duración</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedService.durationMin} min
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 mt-6">
                 <button
-                  type="button"
                   onClick={() => {
-                    setShowServiceCategoryForm(false);
-                    setNewServiceCategoryName('');
+                    deleteServiceMutation.mutate(selectedService.id);
                   }}
-                  className="flex-1 rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)] px-4 py-2 text-[var(--unit-accent)] hover:bg-[var(--unit-primary)] hover:text-[var(--unit-text)]"
+                  disabled={deleteServiceMutation.isPending}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                  {deleteServiceMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                      Eliminando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Servicio
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedService(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
                 >
                   Cancelar
                 </button>
-                <button
-                  type="button"
-                  onClick={() => createServiceCategoryMutation.mutate()}
-                  disabled={!newServiceCategoryName.trim() || createServiceCategoryMutation.isPending}
-                  className="flex-1 rounded-[var(--unit-radius-sm)] bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 font-medium text-white hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50"
-                >
-                  {createServiceCategoryMutation.isPending ? 'Creando...' : 'Crear categoría'}
-                </button>
               </div>
             </div>
           </div>
         )}
-      </div>
 
       {/* View Details Modal - Premium Glassmorphism */}
       {viewModal && selectedService && (

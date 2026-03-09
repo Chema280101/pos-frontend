@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { ExpensesMetrics } from './ExpensesMetrics';
@@ -35,6 +36,7 @@ export function ExpensesPage(): JSX.Element {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Date range filter states (como en appointments)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -95,7 +97,8 @@ export function ExpensesPage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      setDeleteConfirm(null);
+      setShowDeleteDialog(false);
+      setSelectedExpense(null);
     },
   });
 
@@ -241,7 +244,8 @@ export function ExpensesPage(): JSX.Element {
       label: 'Eliminar',
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: Expense) => {
-        setDeleteConfirm(row.id);
+        setSelectedExpense(row);
+        setShowDeleteDialog(true);
       },
       className: 'text-red-600 hover:bg-red-50',
       disabled: (row: Expense) => !canEdit,
@@ -350,10 +354,14 @@ export function ExpensesPage(): JSX.Element {
                     onChange={(e) => setCategoryFilter(e.target.value)}
                   >
                     <option value="">Todas las categorías</option>
-                    <option value="servicios">Servicios</option>
-                    <option value="productos">Productos</option>
-                    <option value="operativos">Operativos</option>
-                    <option value="administrativos">Administrativos</option>
+                    <option value="other">Otros</option>
+                    <option value="supplies">Insumos</option>
+                    <option value="services">Servicios</option>
+                    <option value="maintenance">Mantenimiento</option>
+                    <option value="rent">Alquiler</option>
+                    <option value="utilities">Servicios básicos</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="office">Oficina</option>
                   </select>
                 </div>
 
@@ -398,102 +406,112 @@ export function ExpensesPage(): JSX.Element {
           />
         </div>
 
-        {/* Delete Confirmation Modal */}
-        {deleteConfirm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-6 max-w-md w-full">
+        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {showDeleteDialog && selectedExpense && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteDialog(false);
+              setSelectedExpense(null);
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
               {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-5">
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
                 <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23DC2626' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
-              
-              <div className="relative">
-                {/* Premium Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                      <Trash2 className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-red-900">Eliminar Gasto</h3>
-                      <p className="text-sm text-red-700">Esta acción no se puede deshacer</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 hover:bg-red-200 border-2 border-red-300/50 transition-all hover:scale-105"
-                  >
-                    <X className="h-4 w-4 text-red-600" />
-                  </button>
+
+              {/* Header */}
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                  <Trash2 className="h-6 w-6 text-white" />
                 </div>
-                
-                {/* Warning Content */}
-                <div className="space-y-6">
-                  {/* Warning Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-100 to-red-200 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20 mt-1">
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-red-900">
-                          ¿Estás seguro de que deseas eliminar este gasto?
-                        </p>
-                        <p className="text-xs text-red-700 mt-1">
-                          Esta acción eliminará permanentemente el registro del gasto y no se puede deshacer.
-                        </p>
-                      </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Eliminar Gasto</h3>
+                  <p className="text-sm text-red-700">Esta acción es permanente</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
+                      <AlertCircle className="h-4 w-4 text-white" />
                     </div>
-                  </div>
-                  
-                  {/* Expense Details */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-gray-500/30 bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Concepto</span>
-                        <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                          {expenses.find((e: Expense) => e.id === deleteConfirm)?.reason || 'Gasto'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Monto</span>
-                        <span className="text-sm font-bold text-red-600">
-                          S/ {expenses.find((e: Expense) => e.id === deleteConfirm)?.amount.toFixed(2) || '0.00'}
-                        </span>
-                      </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-red-900">
+                        ¿Estás seguro de que deseas eliminar el gasto "{selectedExpense.reason}" por S/ {selectedExpense.amount.toFixed(2)}?
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Esta acción eliminará permanentemente el registro del gasto y no se puede deshacer.
+                      </p>
                     </div>
-                  </div>
-                  
-                  {/* Premium Action Buttons */}
-                  <div className="flex gap-4 mt-6">
-                    <button
-                      onClick={() => deleteMutation.mutate(deleteConfirm)}
-                      disabled={deleteMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {deleteMutation.isPending ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                          Eliminando...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar Gasto
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancelar
-                    </button>
                   </div>
                 </div>
+
+                {/* Expense Info */}
+                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Motivo</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {selectedExpense.reason}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Monto</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        S/ {selectedExpense.amount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Categoría</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedExpense.category}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {new Date(selectedExpense.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    deleteMutation.mutate(selectedExpense.id);
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                  {deleteMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                      Eliminando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Gasto
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedExpense(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>

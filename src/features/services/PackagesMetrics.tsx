@@ -6,20 +6,23 @@ interface PackagesMetricsProps {
 }
 
 export function PackagesMetrics({ packages }: PackagesMetricsProps) {
-  const total = packages.length;
-  const active = packages.filter(p => p.status === 'ACTIVE').length;
-  const inactive = packages.filter(p => p.status === 'INACTIVE').length;
-  const avgPrice = packages.length > 0 ? packages.reduce((sum, p) => sum + p.fixedPrice, 0) / packages.length : 0;
-  const avgDuration = packages.length > 0 ? packages.reduce((sum, p) => sum + p.durationMin, 0) / packages.length : 0;
-  const avgServices = packages.length > 0 ? packages.reduce((sum, p) => sum + p.services.length, 0) / packages.length : 0;
-  const mostValuable = packages.length > 0 ? packages.reduce((max, p) => p.fixedPrice > max.fixedPrice ? p : max, packages[0]) : null;
-  const withMostServices = packages.length > 0 ? packages.reduce((max, p) => p.services.length > max.services.length ? p : max, packages[0]) : null;
+  // ✅ FIXED: Validar que packages sea un array antes de usar métodos de array
+  const packagesArray = Array.isArray(packages) ? packages : [];
+  
+  const total = packagesArray.length;
+  const active = packagesArray.filter(p => p.status === 'ACTIVE').length;
+  const inactive = packagesArray.filter(p => p.status === 'INACTIVE').length;
+  const avgPrice = packagesArray.length > 0 ? packagesArray.reduce((sum, p) => sum + p.fixedPrice, 0) / packagesArray.length : 0;
+  const avgDuration = packagesArray.length > 0 ? packagesArray.reduce((sum, p) => sum + p.durationMin, 0) / packagesArray.length : 0;
+  const avgServices = packagesArray.length > 0 ? packagesArray.reduce((sum, p) => sum + p.services.length, 0) / packagesArray.length : 0;
+  const mostValuable = packagesArray.length > 0 ? packagesArray.reduce((max, p) => p.fixedPrice > max.fixedPrice ? p : max, packagesArray[0]) : null;
+  const withMostServices = packagesArray.length > 0 ? packagesArray.reduce((max, p) => p.services.length > max.services.length ? p : max, packagesArray[0]) : null;
 
   // Additional metrics
-  const premiumPackages = packages.filter(p => p.fixedPrice > avgPrice * 1.5).length;
-  const longDurationPackages = packages.filter(p => p.durationMin > avgDuration * 1.5).length;
-  const complexPackages = packages.filter(p => p.services.length > avgServices * 1.5).length;
-  const totalServicesInPackages = packages.reduce((sum, p) => sum + p.services.length, 0);
+  const premiumPackages = packagesArray.filter(p => p.fixedPrice > avgPrice * 1.5).length;
+  const longDurationPackages = packagesArray.filter(p => p.durationMin > avgDuration * 1.5).length;
+  const complexPackages = packagesArray.filter(p => p.services.length > avgServices * 1.5).length;
+  const totalServicesInPackages = packagesArray.reduce((sum, p) => sum + p.services.length, 0);
 
   return (
     <>

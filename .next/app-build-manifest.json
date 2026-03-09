@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/(app)/appointments/page": [
+    "/(app)/clients/new/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/appointments/page.js"
+      "static/chunks/app/(app)/clients/new/page.js"
     ],
     "/(app)/layout": [
       "static/chunks/webpack.js",
@@ -21,20 +21,155 @@
       "static/chunks/main-app.js",
       "static/chunks/app/not-found.js"
     ],
+    "/(app)/clients/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/clients/[id]/page.js"
+    ],
+    "/(app)/clients/[id]/edit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/clients/[id]/edit/page.js"
+    ],
+    "/(app)/clients/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/clients/page.js"
+    ],
+    "/(app)/services/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/services/page.js"
+    ],
+    "/(app)/services/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/services/new/page.js"
+    ],
+    "/(app)/inventory/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/page.js"
+    ],
+    "/(app)/inventory/products/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/products/new/page.js"
+    ],
+    "/(app)/inventory/entry/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/entry/page.js"
+    ],
+    "/(app)/inventory/movements/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/movements/page.js"
+    ],
+    "/(app)/inventory/alerts/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/alerts/page.js"
+    ],
+    "/(app)/inventory/use/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/use/page.js"
+    ],
+    "/(app)/suppliers/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/suppliers/page.js"
+    ],
+    "/(app)/packages/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/packages/page.js"
+    ],
+    "/(app)/packages/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/packages/new/page.js"
+    ],
+    "/(app)/commissions/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/commissions/page.js"
+    ],
+    "/(app)/commissions/admin/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/commissions/admin/page.js"
+    ],
+    "/(app)/reports/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/reports/page.js"
+    ],
+    "/(app)/appointments/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/appointments/page.js"
+    ],
     "/(app)/pos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/pos/page.js"
+    ],
+    "/(app)/cash-register/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/cash-register/page.js"
+    ],
+    "/(app)/expenses/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/expenses/page.js"
+    ],
+    "/(app)/inventory/products/[id]/edit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/inventory/products/[id]/edit/page.js"
+    ],
+    "/(app)/services/[id]/edit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/services/[id]/edit/page.js"
+    ],
+    "/(app)/admin/users/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/admin/users/page.js"
+    ],
+    "/(app)/users/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/users/new/page.js"
     ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/_not-found/page.js"
     ],
-    "/(app)/cash-register/page": [
+    "/(app)/users/[id]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/cash-register/page.js"
+      "static/chunks/app/(app)/users/[id]/page.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/(app)/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/dashboard/page.js"
+    ],
+    "/(app)/admin/audit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/admin/audit/page.js"
     ],
     "/(auth)/login/page": [
       "static/chunks/webpack.js",
@@ -46,15 +181,35 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(auth)/layout.js"
     ],
-    "/(app)/dashboard/page": [
+    "/(app)/admin/backups/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/dashboard/page.js"
+      "static/chunks/app/(app)/admin/backups/page.js"
     ],
-    "/(app)/clients/page": [
+    "/(app)/packages/[id]/edit/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/clients/page.js"
+      "static/chunks/app/(app)/packages/[id]/edit/page.js"
+    ],
+    "/(app)/appointments/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/appointments/new/page.js"
+    ],
+    "/(app)/suppliers/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/suppliers/new/page.js"
+    ],
+    "/(app)/suppliers/[id]/edit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/suppliers/[id]/edit/page.js"
+    ],
+    "/(app)/income/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/income/page.js"
     ]
   }
 }

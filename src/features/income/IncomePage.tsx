@@ -35,6 +35,10 @@ export function IncomePage(): JSX.Element {
   const [viewModal, setViewModal] = useState(false);
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
   
+  // Success confirmation state
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  
   // Date range filter states (como en appointments)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
@@ -98,6 +102,11 @@ export function IncomePage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['income'] });
+      setSuccessMessage('¡Ingreso eliminado exitosamente!');
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 2000);
       setDeleteConfirm(null);
     },
   });
@@ -693,6 +702,22 @@ export function IncomePage(): JSX.Element {
                     Cerrar
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Message Toast */}
+        {showSuccessMessage && (
+          <div className="fixed top-4 right-4 z-50 animate-pulse">
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-lg border-2 border-green-400/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="font-medium">{successMessage}</span>
               </div>
             </div>
           </div>

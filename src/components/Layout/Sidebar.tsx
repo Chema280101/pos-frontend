@@ -51,16 +51,16 @@ interface SubmenuState {
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
-  { href: '/clients', label: 'Clientes', icon: <Users className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
+  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, roles: ['ADMIN'] },
+  { href: '/clients', label: 'Clientes', icon: <Users className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST'] },
   { href: '/appointments', label: 'Agenda', icon: <Calendar className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
-  { href: '/pos', label: 'POS', icon: <ShoppingCart className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
+  { href: '/pos', label: 'POS', icon: <ShoppingCart className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST'] },
   { 
     label: 'Caja', 
     icon: <Wallet className="h-5 w-5" />, 
-    roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'],
+    roles: ['ADMIN', 'RECEPTIONIST'],
     children: [
-      { href: '/cash-register', label: 'Apertura/Cierre', icon: <Wallet className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
+      { href: '/cash-register', label: 'Apertura/Cierre', icon: <Wallet className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
       { href: '/expenses', label: 'Gastos', icon: <Receipt className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
       { href: '/income', label: 'Ingresos', icon: <TrendingUp className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
     ]
@@ -68,29 +68,29 @@ const navItems: NavItem[] = [
   { 
     label: 'Inventario', 
     icon: <Package className="h-5 w-5" />, 
-    roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'],
+    roles: ['ADMIN', 'RECEPTIONIST'],
     children: [
-      { href: '/inventory', label: 'Productos', icon: <Package className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
-      { href: '/suppliers', label: 'Proveedores', icon: <Users className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
+      { href: '/inventory', label: 'Productos', icon: <Package className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
+      { href: '/suppliers', label: 'Proveedores', icon: <Users className="h-4 w-4" />, roles: ['ADMIN'] },
     ]
   },
   { 
     label: 'Servicios', 
     icon: <Scissors className="h-5 w-5" />, 
-    roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'],
+    roles: ['ADMIN', 'RECEPTIONIST'],
     children: [
-      { href: '/services', label: 'Servicios', icon: <Scissors className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
-      { href: '/packages', label: 'Paquetes', icon: <Package className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
+      { href: '/services', label: 'Servicios', icon: <Scissors className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
+      { href: '/packages', label: 'Paquetes', icon: <Package className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
     ]
   },
   { href: '/commissions', label: 'Comisiones', icon: <Percent className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
   { 
     label: 'Reportes', 
     icon: <FileText className="h-5 w-5" />, 
-    roles: ['ADMIN', 'RECEPTIONIST'],
+    roles: ['ADMIN'],
     children: [
-      { href: '/reports', label: 'Reportes Generales', icon: <BarChart3 className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
-      { href: '/reports/detailed', label: 'Reportes Particulares', icon: <FileText className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
+      { href: '/reports', label: 'Reportes Generales', icon: <BarChart3 className="h-4 w-4" />, roles: ['ADMIN'] },
+      { href: '/reports/detailed', label: 'Reportes Particulares', icon: <FileText className="h-4 w-4" />, roles: ['ADMIN'] },
     ]
   },
   { 

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
@@ -41,6 +42,10 @@ export function ProductForm(): JSX.Element {
   // Category creation state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // Success confirmation state
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const { data: product } = useQuery({
     queryKey: ['inventory-product', id],
@@ -81,6 +86,25 @@ export function ProductForm(): JSX.Element {
   const productType = watch('type');
   const showPrices = productType === 'FOR_SALE' || productType === 'BOTH';
 
+  // Reset form with product data when editing
+  useEffect(() => {
+    if (isEdit && product) {
+      reset({
+        name: product.name || '',
+        description: product.description || '',
+        unit: product.unit || userUnit,
+        type: product.type || 'BOTH',
+        categoryId: product.category?.id || null,
+        measureUnit: product.measureUnit || '',
+        salePrice: product.salePrice || null,
+        costPrice: product.costPrice || null,
+        barcode: product.barcode || '',
+        minStock: product.minStock || 5,
+        maxStock: product.maxStock || null,
+      });
+    }
+  }, [isEdit, product, reset, userUnit]);
+
   const createMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const response = await api.post('/api/inventory/products', {
@@ -93,7 +117,12 @@ export function ProductForm(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      router.replace('/inventory');
+      setSuccessMessage('¡Producto creado exitosamente!');
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        router.replace('/inventory');
+      }, 2000);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
@@ -158,7 +187,12 @@ export function ProductForm(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      router.replace('/inventory');
+      setSuccessMessage('¡Producto actualizado exitosamente!');
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        router.replace('/inventory');
+      }, 2000);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
@@ -564,6 +598,22 @@ export function ProductForm(): JSX.Element {
           </div>
         )}
       </div>
+
+        {/* Success Message Toast */}
+        {showSuccessMessage && (
+          <div className="fixed top-4 right-4 z-50 animate-pulse">
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-lg border-2 border-green-400/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="font-medium">{successMessage}</span>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

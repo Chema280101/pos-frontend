@@ -8,10 +8,9 @@ import { ChevronLeft, User, X, Search, Plus, Calendar, Clock, Scissors } from 'l
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
 import { 
-  type AppointmentFormCustomer, 
-  type AppointmentFormService, 
-  type AppointmentFormUser,
-  type CreateAppointmentItem 
+  type CreateAppointmentInput,
+  type Appointment,
+  type BusinessUnit 
 } from '@/types/appointment';
 
 const DEBOUNCE_MS = 300;
@@ -47,6 +46,10 @@ export function AppointmentFormNew(): JSX.Element {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Success confirmation state
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Read URL parameters and set initial values
   useEffect(() => {
@@ -116,7 +119,7 @@ export function AppointmentFormNew(): JSX.Element {
     employees: employees.map((e: any) => ({ id: e.id, name: e.name, role: e.role }))
   });
 
-  const handleSelectCustomer = useCallback((c: AppointmentFormCustomer) => {
+  const handleSelectCustomer = useCallback((c: any) => {
     setCustomerId(c.id);
     setCustomerDisplay(`${c.name} – ${c.phone}`);
     setClientSearch('');
@@ -135,7 +138,7 @@ export function AppointmentFormNew(): JSX.Element {
 
   const createClientMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await api.post<AppointmentFormCustomer>('/api/clients', {
+      const { data } = await api.post<any>('/api/clients', {
         name: newClientName.trim(),
         phone: newClientPhone.trim(),
         email: newClientEmail.trim() || undefined,
@@ -197,7 +200,12 @@ export function AppointmentFormNew(): JSX.Element {
         detail: { appointment: data.data }
       }));
       
-      router.push('/appointments');
+      setSuccessMessage('¡Cita creada exitosamente!');
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        router.push('/appointments');
+      }, 2000);
     },
     onError: (error) => {
       console.error('❌ Error creating appointment:', error);
@@ -353,7 +361,7 @@ export function AppointmentFormNew(): JSX.Element {
                               </>
                             ) : (
                               <>
-                                {searchResults.map((c: AppointmentFormCustomer) => (
+                                {searchResults.map((c: any) => (
                                   <li key={c.id}>
                                     <button
                                       type="button"
@@ -591,6 +599,22 @@ export function AppointmentFormNew(): JSX.Element {
           </div>
         </div>
       )}
+
+        {/* Success Message Toast */}
+        {showSuccessMessage && (
+          <div className="fixed top-4 right-4 z-50 animate-pulse">
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-lg border-2 border-green-400/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="font-medium">{successMessage}</span>
+              </div>
+            </div>
+          </div>
+        )}
         </div>
       </div>
     </div>

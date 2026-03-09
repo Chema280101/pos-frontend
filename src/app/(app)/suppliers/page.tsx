@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Building2, Phone, Mail, MapPin, Plus, Edit, Trash2, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, Phone, Mail, MapPin, Plus, Edit, Trash2, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Users, TrendingUp, Package, UserCheck, Calendar, CheckCircle, DollarSign, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
@@ -30,18 +30,21 @@ interface Supplier {
 export default function SuppliersPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [viewModal, setViewModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  
+  const [viewModal, setViewModal] = useState(false);
+
   // Date range filter states (like inventory)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(true);
-  
+
   // Filter states
   const [contactStatusFilter, setContactStatusFilter] = useState<string>('');
   const [addressStatusFilter, setAddressStatusFilter] = useState<string>('');
-  
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
+
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
@@ -58,11 +61,11 @@ export default function SuppliersPage() {
       params.set('activeOnly', (!showInactive).toString());
       params.set('page', currentPage.toString());
       params.set('limit', pageSize.toString());
-      
+
       // Add date range filters
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
-      
+
       const { data } = await api.get(`/api/inventory/suppliers?${params}`);
       return data;
     },
@@ -99,6 +102,8 @@ export default function SuppliersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setDeleteConfirm(null);
+      setShowDeleteDialog(false);
+      setSelectedSupplier(null);
     },
     onError: (error) => {
       console.error('Error deleting supplier:', error);
@@ -157,7 +162,7 @@ export default function SuppliersPage() {
       render: (row: Supplier) => (
         <span className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.isActive 
+          row.isActive
             ? 'bg-green-100 text-green-800'
             : 'bg-red-100 text-red-800'
         )}>
@@ -229,7 +234,8 @@ export default function SuppliersPage() {
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: Supplier) => {
         if (row.isActive) {
-          setDeleteConfirm(row.id);
+          setSelectedSupplier(row);
+          setShowDeleteDialog(true);
         } else {
           // Reactivate inactive suppliers
           router.push(`/suppliers/${row.id}/edit`);
@@ -245,14 +251,66 @@ export default function SuppliersPage() {
     if (!suppliers) return [];
 
     return suppliers.filter((supplier: Supplier) => {
-      // showInactive filter - only show active unless checked
-      if (!supplier.isActive) {
-        return false; // DataTable will handle this filter
+      // Estado filter
+      if (statusFilter === 'active' && !supplier.isActive) {
+        return false;
+      }
+      if (statusFilter === 'inactive' && supplier.isActive) {
+        return false;
       }
 
-      return true; // DataTable will handle other filters
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesName = supplier.name.toLowerCase().includes(searchLower);
+        const matchesContactName = supplier.contactName?.toLowerCase().includes(searchLower);
+        const matchesPhone = supplier.phone?.toLowerCase().includes(searchLower);
+        const matchesEmail = supplier.email?.toLowerCase().includes(searchLower);
+        const matchesAddress = supplier.address?.toLowerCase().includes(searchLower);
+
+        if (!matchesName && !matchesContactName && !matchesPhone && !matchesEmail && !matchesAddress) {
+          return false;
+        }
+      }
+
+      // Contacto filter
+      if (contactStatusFilter) {
+        const hasPhone = !!supplier.phone;
+        const hasEmail = !!supplier.email;
+
+        switch (contactStatusFilter) {
+          case 'hasPhone':
+            if (!hasPhone) return false;
+            break;
+          case 'hasEmail':
+            if (!hasEmail) return false;
+            break;
+          case 'hasContact':
+            if (!hasPhone && !hasEmail) return false;
+            break;
+          case 'noContact':
+            if (hasPhone || hasEmail) return false;
+            break;
+        }
+      }
+
+      // Dirección filter
+      if (addressStatusFilter) {
+        const hasAddress = !!supplier.address;
+
+        switch (addressStatusFilter) {
+          case 'hasAddress':
+            if (!hasAddress) return false;
+            break;
+          case 'noAddress':
+            if (hasAddress) return false;
+            break;
+        }
+      }
+
+      return true;
     });
-  }, [suppliers]);
+  }, [suppliers, statusFilter, contactStatusFilter, addressStatusFilter, searchTerm]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
@@ -262,9 +320,9 @@ export default function SuppliersPage() {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
       </div>
-      
+
       <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header - Exacto estilo AppointmentsPage */}
+        {/* Enhanced Header */}
         <div className="mb-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
@@ -279,13 +337,13 @@ export default function SuppliersPage() {
             </p>
           </div>
 
-          {/* Supplier Metrics - Nueva sección de métricas espectaculares */}
+          {/* Supplier Metrics */}
           <SupplierMetrics suppliers={suppliers || []} />
 
-          {/* Enhanced Action Buttons - Exacto estilo AppointmentsPage */}
+          {/* Enhanced Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4">
             {canEdit && (
-              <button 
+              <button
                 className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
                 onClick={() => router.push('/suppliers/new')}
               >
@@ -296,7 +354,7 @@ export default function SuppliersPage() {
           </div>
         </div>
 
-        {/* Enhanced Suppliers Filters - Exacto estilo AppointmentsPage */}
+        {/* Enhanced Suppliers Filters - CAJA 1 */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
           {/* Filter Header */}
           <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
@@ -349,9 +407,9 @@ export default function SuppliersPage() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
                   <select
-                    value={showInactive ? 'inactive' : 'active'}
+                    value={statusFilter}
                     className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => setShowInactive(e.target.value === 'inactive')}
+                    onChange={(e) => setStatusFilter(e.target.value)}
                   >
                     <option value="active">Activos</option>
                     <option value="inactive">Inactivos</option>
@@ -371,6 +429,7 @@ export default function SuppliersPage() {
                     <option value="hasPhone">Con teléfono</option>
                     <option value="hasEmail">Con email</option>
                     <option value="hasContact">Con teléfono o email</option>
+                    <option value="noContact">Sin contacto</option>
                   </select>
                 </div>
 
@@ -397,55 +456,63 @@ export default function SuppliersPage() {
                 <input
                   type="text"
                   placeholder="Buscar por nombre, contacto, teléfono, email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-4 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                 />
               </div>
 
-              {/* Enhanced Active Filters Summary */}
-              {(showInactive || contactStatusFilter || addressStatusFilter) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
+              {/* Active Filters Summary */}
+              {(statusFilter !== 'active' || contactStatusFilter || addressStatusFilter || searchTerm) && (
+                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border border-[var(--unit-border)]/30">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {showInactive && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 border border-red-200">
-                            Estado: Inactivos
-                          </span>
-                        )}
-                        {contactStatusFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
-                            Contacto: {contactStatusFilter === 'hasPhone' ? 'Con teléfono' : contactStatusFilter === 'hasEmail' ? 'Con email' : 'Con teléfono o email'}
-                          </span>
-                        )}
-                        {addressStatusFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Dirección: {addressStatusFilter === 'hasAddress' ? 'Con dirección' : 'Sin dirección'}
-                          </span>
-                        )}
-                      </div>
+                      {statusFilter !== 'active' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--unit-accent)]/20 text-[var(--unit-accent)] text-xs font-medium border border-[var(--unit-accent)]/30">
+                          Estado: {statusFilter === 'inactive' ? 'Inactivos' : 'Todos'}
+                        </span>
+                      )}
+                      {contactStatusFilter && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium border border-blue-200">
+                          Contacto: {
+                            contactStatusFilter === 'hasPhone' ? 'Con teléfono' :
+                            contactStatusFilter === 'hasEmail' ? 'Con email' :
+                            contactStatusFilter === 'hasContact' ? 'Con teléfono o email' :
+                            'Sin contacto'
+                          }
+                        </span>
+                      )}
+                      {addressStatusFilter && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium border border-green-200">
+                          Dirección: {addressStatusFilter === 'hasAddress' ? 'Con dirección' : 'Sin dirección'}
+                        </span>
+                      )}
+                      {searchTerm && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-medium border border-purple-200">
+                          Búsqueda: "{searchTerm}"
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => {
-                        setShowInactive(false);
+                        setStatusFilter('active');
                         setContactStatusFilter('');
                         setAddressStatusFilter('');
-                        setDateFrom(startOfDay(subDays(new Date(), 7)));
-                        setDateTo(endOfDay(new Date()));
+                        setSearchTerm('');
                       }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
+                      className="text-xs font-medium text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors"
                     >
-                      <X className="h-4 w-4" />
                       Limpiar filtros
                     </button>
                   </div>
                 </div>
               )}
             </div>
-          )}
+          )} {/* AQUI CERRAMOS LOS FILTROS CORRECTAMENTE */}
         </div>
 
-        {/* Enhanced Suppliers Table - Exacto estilo AppointmentsPage */}
+        {/* Enhanced Suppliers Table - CAJA 2 (AFUERA DE LOS FILTROS) */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
           {/* Table Header */}
           <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
@@ -461,7 +528,7 @@ export default function SuppliersPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                  {suppliers?.length || 0} proveedores
+                  {filteredSuppliers?.length || 0} proveedores
                 </span>
               </div>
             </div>
@@ -470,7 +537,7 @@ export default function SuppliersPage() {
           {/* Enhanced Table */}
           <DataTable
             columns={columns}
-            data={suppliers}
+            data={filteredSuppliers}
             keyExtractor={(row) => row.id}
             loading={isLoading}
             searchPlaceholder=""
@@ -484,170 +551,295 @@ export default function SuppliersPage() {
         </div>
 
         {/* Delete Confirmation Modal */}
-        {deleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl border-2 border-[var(--unit-border)] p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-[var(--unit-text-muted)] mb-4">
-                Confirmar Eliminación
-              </h3>
-              <p className="text-[var(--unit-text-muted)] mb-6">
-                ¿Estás seguro de que deseas eliminar este proveedor? Esta acción se puede deshacer activando el proveedor nuevamente.
-              </p>
-              <div className="flex gap-3 justify-end">
+        {showDeleteDialog && selectedSupplier && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteDialog(false);
+              setSelectedSupplier(null);
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
+                <div className="h-full w-full bg-repeat" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }}></div>
+              </div>
+
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                  <Trash2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Eliminar Proveedor</h3>
+                  <p className="text-sm text-red-700">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-red-900">
+                        ¿Estás seguro de que deseas eliminar el proveedor "{selectedSupplier.name}"?
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Esta acción eliminará permanentemente el proveedor y toda su información asociada. No se podrá recuperar.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Proveedor</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">{selectedSupplier.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Contacto</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedSupplier.contactName || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Teléfono</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedSupplier.phone || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Email</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedSupplier.email || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Entradas</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedSupplier._count?.stockEntries || 0} {(selectedSupplier._count?.stockEntries || 0) === 1 ? 'entrada' : 'entradas'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-6">
                 <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 text-[var(--unit-accent)] bg-[var(--unit-surface)] rounded-lg hover:bg-[var(--unit-primary)] hover:text-white transition-colors"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedSupplier(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => deleteMutation.mutate(deleteConfirm)}
+                  onClick={() => deleteMutation.mutate(selectedSupplier.id)}
                   disabled={deleteMutation.isPending}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                 >
-                  {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+                  {deleteMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                      Eliminando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Proveedor
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* View Modal */}
+        {/* View Details Modal */}
         {viewModal && selectedSupplier && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-600/10">
-                    <Eye className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Detalles del Proveedor</h3>
-                    <p className="text-sm text-gray-500">{selectedSupplier.name}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setViewModal(false)}
-                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="absolute inset-0 opacity-5">
+                <div className="h-full w-full bg-repeat" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }}></div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Información General</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-sm text-gray-500">Nombre</span>
-                      <span className="font-medium text-gray-900">{selectedSupplier.name}</span>
-                    </div>
-                    {selectedSupplier.contactName && (
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-500">Contacto</span>
-                        <span className="font-medium text-gray-900">{selectedSupplier.contactName}</span>
+              <div className="relative">
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                        <Eye className="h-5 w-5 text-white" />
                       </div>
-                    )}
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-sm text-gray-500">Estado</span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        selectedSupplier.isActive 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {selectedSupplier.isActive ? 'Activo' : 'Inactivo'}
-                      </span>
+                      <div>
+                        <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Proveedor</h3>
+                        <p className="text-sm text-[var(--unit-text-muted)]">{selectedSupplier.name}</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-500">Fecha de Creación</span>
-                      <span className="font-medium text-gray-900">
-                        {new Date(selectedSupplier.createdAt).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })}
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => setViewModal(false)}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
+                    >
+                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
+                    </button>
                   </div>
                 </div>
 
-                {/* Contact Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Información de Contacto</h4>
-                  <div className="space-y-3">
-                    {selectedSupplier.phone && (
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-500">Teléfono</span>
-                        <span className="font-medium text-gray-900">{selectedSupplier.phone}</span>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Basic Information */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <Eye className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
                       </div>
-                    )}
-                    {selectedSupplier.email && (
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-500">Email</span>
-                        <span className="font-medium text-gray-900">{selectedSupplier.email}</span>
-                      </div>
-                    )}
-                    {selectedSupplier.address && (
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-500">Dirección</span>
-                        <span className="font-medium text-gray-900">{selectedSupplier.address}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-500">Entradas de Stock</span>
-                      <span className="font-medium text-gray-900">{selectedSupplier._count.stockEntries}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Movements Section */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Movimientos Recientes</h4>
-                {movements.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No hay movimientos registrados</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-200">
-                    {movements.slice(0, 10).map((movement: any) => (
-                      <div key={movement.id} className="p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Building2 className="h-4 w-4 text-blue-600" />
-                              <span className="font-medium text-gray-900">
-                                {movement.productName || 'Producto desconocido'}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {movement.quantity} {movement.unit || 'unidades'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>Motivo: {movement.reason || 'Entrada de stock'}</span>
-                              <span>
-                                {new Date(movement.createdAt).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })}
-                              </span>
-                            </div>
+                      <div className="space-y-4">
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Nombre</span>
                           </div>
-                          <div className="text-right">
-                            <span className="font-semibold text-emerald-600 tabular-nums">
-                              +{movement.quantity}
+                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
+                            {selectedSupplier.name}
+                          </span>
+                        </div>
+                        {selectedSupplier.contactName && (
+                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                              <span className="text-sm font-medium text-[var(--unit-text)]">Contacto</span>
+                            </div>
+                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
+                              {selectedSupplier.contactName}
                             </span>
                           </div>
+                        )}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Estado</span>
+                          </div>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${selectedSupplier.isActive ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                            {selectedSupplier.isActive ? 'Activo' : 'Inactivo'}
+                          </span>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => setViewModal(false)}
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cerrar
-                </button>
+                  {/* Contact Information */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <Phone className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información de Contacto</h4>
+                      </div>
+                      <div className="space-y-4">
+                        {selectedSupplier.phone && (
+                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                              <span className="text-sm font-medium text-[var(--unit-text)]">Teléfono</span>
+                            </div>
+                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                              {selectedSupplier.phone}
+                            </span>
+                          </div>
+                        )}
+                        {selectedSupplier.email && (
+                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                              <span className="text-sm font-medium text-[var(--unit-text)]">Email</span>
+                            </div>
+                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
+                              {selectedSupplier.email}
+                            </span>
+                          </div>
+                        )}
+                        {selectedSupplier.address && (
+                          <div className="group/item flex justify-between items-start py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                              <span className="text-sm font-medium text-[var(--unit-text)]">Dirección</span>
+                            </div>
+                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs text-right">
+                              {selectedSupplier.address}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Statistics */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <TrendingUp className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Estadísticas y Actividad</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 transition-all">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-emerald-600" />
+                            <span className="text-sm font-bold text-emerald-800">Entradas de Inventario</span>
+                          </div>
+                          <span className="font-bold text-emerald-800 bg-white px-3 py-1 rounded-lg border-2 border-emerald-300/30 shadow-lg">
+                            {selectedSupplier._count?.stockEntries || 0}
+                          </span>
+                        </div>
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Fecha de Creación</span>
+                          </div>
+                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                            {new Date(selectedSupplier.createdAt).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })}
+                          </span>
+                        </div>
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-[var(--unit-primary)]/30 bg-gradient-to-r from-[var(--unit-primary)]/5 to-[var(--unit-accent)]/5 hover:from-[var(--unit-primary)]/10 hover:to-[var(--unit-accent)]/10 transition-all">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-[var(--unit-primary)]" />
+                            <span className="text-sm font-bold text-[var(--unit-primary)]">Antigüedad</span>
+                          </div>
+                          <span className="font-bold text-[var(--unit-primary)] bg-white px-3 py-1 rounded-lg border-2 border-[var(--unit-primary)]/30 shadow-lg">
+                            {Math.floor((new Date().getTime() - new Date(selectedSupplier.createdAt).getTime()) / (1000 * 60 * 60 * 24))} días
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                        <Eye className="h-4 w-4 text-[var(--unit-accent)]" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--unit-text-muted)]">Resumen del Proveedor</p>
+                        <p className="text-sm font-bold text-[var(--unit-text)]">
+                          {selectedSupplier.name} • {selectedSupplier._count?.stockEntries || 0} entradas • {selectedSupplier.isActive ? 'Activo' : 'Inactivo'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setViewModal(false)}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Cerrar Detalles
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

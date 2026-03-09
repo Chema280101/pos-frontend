@@ -32,9 +32,7 @@ const schema = z.object({
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email('Email inválido').max(100).optional().nullable(),
   address: z.string().max(500).optional().nullable(),
-  website: z.string().url('Website inválido').max(200).optional().nullable(),
-  notes: z.string().max(2000).optional().nullable(),
-});
+    });
 
 type FormData = z.infer<typeof schema>;
 
@@ -45,9 +43,7 @@ interface SupplierDetail {
   phone: string | null;
   email: string | null;
   address: string | null;
-  website: string | null;
-  notes: string | null;
-  isActive: boolean;
+      isActive: boolean;
   createdAt: string;
   _count: {
     stockEntries: number;
@@ -88,8 +84,6 @@ export function SupplierForm() {
       phone: '',
       email: '',
       address: '',
-      website: '',
-      notes: '',
     },
   });
 
@@ -104,8 +98,6 @@ export function SupplierForm() {
           phone: supplierData.phone || '',
           email: supplierData.email || '',
           address: supplierData.address || '',
-          website: supplierData.website || '',
-          notes: supplierData.notes || '',
         });
       }
     }
@@ -338,23 +330,6 @@ export function SupplierForm() {
                     </p>
                   )}
                 </div>
-
-                {/* Enhanced Website Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Website</label>
-                  <input
-                    type="url"
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    placeholder="Ej: https://www.proveedor.com"
-                    {...register('website')}
-                  />
-                  {errors.website && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.website.message}
-                    </p>
-                  )}
-                </div>
               </div>
 
               {/* Location Section */}
@@ -379,35 +354,6 @@ export function SupplierForm() {
                       {errors.address.message}
                     </p>
                   )}
-                </div>
-              </div>
-
-              {/* Additional Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Briefcase className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información adicional</h4>
-                </div>
-
-                {/* Enhanced Notes Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Notas</label>
-                  <textarea 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
-                    rows={4}
-                    placeholder="Información adicional relevante sobre el proveedor..."
-                    {...register('notes')} 
-                  />
-                  {errors.notes && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.notes.message}
-                    </p>
-                  )}
-                  <p className="text-xs text-[var(--unit-text-muted)] mt-2 flex items-center gap-1">
-                    <Info className="h-4 w-4" />
-                    Agrega cualquier información importante sobre el proveedor
-                  </p>
                 </div>
               </div>
             </div>

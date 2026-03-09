@@ -11,6 +11,7 @@ interface Props {
 export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
+  const [category, setCategory] = useState('supplies');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
@@ -37,6 +38,7 @@ export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
           body: JSON.stringify({
             amount: parsedAmount,
             reason: reason.trim(),
+            category: category,
           }),
         }
       );
@@ -50,6 +52,7 @@ export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
 
       setAmount('');
       setReason('');
+      setCategory('supplies');
       onSuccess?.();
     } catch (err: any) {
       alert(err.message);
@@ -81,6 +84,24 @@ export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
           onChange={(e) => setReason(e.target.value)}
           placeholder="Ej: Compra de agua, movilidad, etc."
         />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Categoría</label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-lg bg-[var(--unit-surface)] text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)] focus:border-[var(--unit-accent)]"
+        >
+          <option value="other">Otros</option>
+          <option value="supplies">Insumos</option>
+          <option value="services">Servicios</option>
+          <option value="maintenance">Mantenimiento</option>
+          <option value="rent">Alquiler</option>
+          <option value="utilities">Servicios básicos</option>
+          <option value="marketing">Marketing</option>
+          <option value="office">Oficina</option>
+        </select>
       </div>
 
       <Button onClick={handleSubmit} disabled={loading}>

@@ -6,15 +6,17 @@ import { useRouter } from 'next/navigation';
 import { format, startOfDay, endOfDay, isWithinInterval, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
-import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Edit, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2 } from 'lucide-react';
+import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Eye, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
+import { useAuthStore } from '@/store/authStore';
 import { LazyCalendar } from '@/components/Calendar/LazyCalendar';
 import type { CalendarAppointment } from '@/components/Calendar/AppointmentCalendar';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { AppointmentDetailDrawer } from './AppointmentDetailDrawer';
-import { DataTable } from '@/components/ui/DataTable';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { DataTable } from '@/components/ui/DataTable';
 import { OptimizedScheduleView } from './OptimizedScheduleView';
 import { AppointmentsMetrics } from './AppointmentsMetrics';
 import { cn } from '@/lib/utils';
@@ -26,6 +28,7 @@ export function AppointmentsPage(): JSX.Element {
   const router = useRouter();
   const queryClient = useQueryClient();
   const activeUnit = useUnitStore((s) => s.activeUnit);
+  const user = useAuthStore((s) => s.user);
   const unit = activeUnit ?? 'SPA';
 
   const [viewStart, setViewStart] = useState<Date>(() => startOfDay(subDays(new Date(), 30))); // Start 30 days ago
@@ -48,6 +51,13 @@ export function AppointmentsPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [serviceFilter, setServiceFilter] = useState<string>('');
   const [employeeFilter, setEmployeeFilter] = useState<string>('');
+
+  // Hide employee filter for BARBER and SPA_SPECIALIST roles
+  const canFilterByEmployee = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
+  
+  // State for delete confirmation dialog
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   // Get real employees from API
   const { data: employees = [] } = useQuery({
@@ -77,11 +87,11 @@ export function AppointmentsPage(): JSX.Element {
 
   // ✅ QUERY UNIFICADA - Reemplaza calendar y table queries
   const { data: appointments = [], isLoading } = useQuery({
-    queryKey: ['appointments', unit, viewStart.toISOString(), viewEnd.toISOString(), unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, employeeFilter, search],
+    queryKey: ['appointments', unit, viewStart.toISOString(), viewEnd.toISOString(), unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, canFilterByEmployee ? employeeFilter : null, search],
     queryFn: async (): Promise<Appointment[]> => {
       console.log('📅 Unified fetching appointments for unit:', unit);
       console.log('📅 Date range:', { viewStart, viewEnd });
-      console.log('📅 Filters:', { unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, employeeFilter, search });
+      console.log('📅 Filters:', { unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, employeeFilter: canFilterByEmployee ? employeeFilter : null, search, userRole: user?.role });
       
       const params = new URLSearchParams();
       
@@ -91,13 +101,28 @@ export function AppointmentsPage(): JSX.Element {
       params.set('end', viewEnd.toISOString());
       params.set('include', 'service,employee,customer');
       
-      // Additional filters (siempre se aplican, pero pueden estar vacíos)
+      // Filter appointments for RECEPTIONIST by unit, and for BARBER/SPA_SPECIALIST by user
+      if (user && (user.role === 'BARBER' || user.role === 'SPA_SPECIALIST')) {
+        params.set('employeeId', user.id);
+        console.log('🔒 Filtering appointments for user:', user.id, 'Role:', user.role);
+      } else if (user && user.role === 'RECEPTIONIST') {
+        // RECEPTIONIST can only see appointments from their assigned unit
+        params.set('unit', user.unit || unit);
+        console.log('🏢 Filtering appointments for RECEPTIONIST unit:', user.unit || unit);
+      }
+      
+      // Additional filters (solo para ADMIN y RECEPTIONIST)
       if (unitFilter) params.set('unitFilter', unitFilter);
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
       if (statusFilter) params.set('status', statusFilter);
       if (serviceFilter) params.set('serviceId', serviceFilter);
-      if (employeeFilter) params.set('employeeId', employeeFilter);
+      
+      // Employee filter solo para ADMIN y RECEPTIONIST
+      if (employeeFilter && (user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST')) {
+        params.set('employeeId', employeeFilter);
+      }
+      
       if (search) params.set('search', search);
       
       console.log('📅 Unified API URL:', `/api/appointments?${params}`);
@@ -269,7 +294,7 @@ export function AppointmentsPage(): JSX.Element {
             }}
             className="p-1 text-[var(--unit-text)] hover:bg-[var(--unit-accent)] rounded"
           >
-            <Edit className="h-4 w-4" />
+            <Eye className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -286,7 +311,7 @@ export function AppointmentsPage(): JSX.Element {
     router.push(`/appointments/new?${params}`);
   }, [router]);
 
-  const handleEditAppointment = useCallback((appointmentId: string) => {
+  const handleViewAppointment = useCallback((appointmentId: string) => {
     setDrawerAppointmentId(appointmentId);
     setDrawerOpen(true);
   }, []);
@@ -309,12 +334,20 @@ export function AppointmentsPage(): JSX.Element {
       });
       
       console.log('✅ Appointment rescheduled successfully');
+      // ✅ Invalidar queries específicas para actualizar el drawer
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
+      
+      // ✅ Si el drawer está abierto para esta cita, invalidar para que se actualice
+      if (drawerAppointmentId === appointmentId) {
+        queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
+      }
     } catch (error) {
       console.error('❌ Failed to reschedule appointment:', error);
       throw error; // Re-throw to let OptimizedScheduleView handle the revert
     }
-  }, [queryClient, scheduleAppointments]);
+  }, [queryClient, scheduleAppointments, drawerAppointmentId]);
 
   // Listen for calendar filter changes from Header
   useEffect(() => {
@@ -488,20 +521,20 @@ export function AppointmentsPage(): JSX.Element {
 
   const actions = [
     {
-      label: 'Editar',
-      icon: <Edit className="h-4 w-4" />,
+      label: 'Ver',
+      icon: <Eye className="h-4 w-4" />,
       onClick: (row: Appointment) => {
         setDrawerAppointmentId(row.id);
         setDrawerOpen(true);
       },
-      className: 'text-yellow-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
+      className: 'text-blue-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
     },
     {
       label: 'Eliminar',
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: Appointment) => {
-        // TODO: delete with confirmation
-        console.log('Delete appointment', row.id);
+        setSelectedAppointment(row);
+        setShowDeleteDialog(true);
       },
       className: 'text-red-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
     },
@@ -583,7 +616,7 @@ export function AppointmentsPage(): JSX.Element {
               appointments={scheduleAppointments as any}
               selectedUnit={selectedUnit}
               onNewAppointment={handleNewAppointment}
-              onEditAppointment={handleEditAppointment}
+              onViewAppointment={handleViewAppointment}
               onReschedule={handleReschedule}
             />
           </div>
@@ -674,29 +707,31 @@ export function AppointmentsPage(): JSX.Element {
                   </select>
                 </div>
 
-                {/* Employee Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Empleado</label>
-                  <select
-                    value={employeeFilter}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => {
-                      console.log('👥 Frontend - Employee filter changed:', {
-                        oldValue: employeeFilter,
-                        newValue: e.target.value,
-                        employeeName: employees.find((emp: any) => emp.id === e.target.value)?.name
-                      });
-                      setEmployeeFilter(e.target.value);
-                    }}
-                  >
-                    <option value="">Todos los empleados</option>
-                    {employees.map((employee: any) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Employee Filter - Solo para ADMIN y RECEPTIONIST */}
+                {canFilterByEmployee && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Empleado</label>
+                    <select
+                      value={employeeFilter}
+                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                      onChange={(e) => {
+                        console.log('👥 Frontend - Employee filter changed:', {
+                          oldValue: employeeFilter,
+                          newValue: e.target.value,
+                          employeeName: employees.find((emp: any) => emp.id === e.target.value)?.name
+                        });
+                        setEmployeeFilter(e.target.value);
+                      }}
+                    >
+                      <option value="">Todos los empleados</option>
+                      {employees.map((employee: any) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Enhanced Search Bar */}
@@ -728,7 +763,7 @@ export function AppointmentsPage(): JSX.Element {
               </div>
 
               {/* Enhanced Active Filters Summary */}
-              {(statusFilter || serviceFilter || employeeFilter || search || unitFilter) && (
+              {(statusFilter || serviceFilter || (employeeFilter && canFilterByEmployee) || search || unitFilter) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -748,7 +783,7 @@ export function AppointmentsPage(): JSX.Element {
                             Servicio: {servicesList.find((s: any) => s.id === serviceFilter)?.name || serviceFilter}
                           </span>
                         )}
-                        {employeeFilter && (
+                        {employeeFilter && canFilterByEmployee && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 border border-green-200">
                             Empleado: {employees.find((e: any) => e.id === employeeFilter)?.name || employeeFilter}
                           </span>
@@ -769,7 +804,7 @@ export function AppointmentsPage(): JSX.Element {
                       onClick={() => {
                         setStatusFilter('');
                         setServiceFilter('');
-                        setEmployeeFilter('');
+                        if (canFilterByEmployee) setEmployeeFilter('');
                         setSearch('');
                         setUnitFilter('');
                       }}
@@ -833,6 +868,112 @@ export function AppointmentsPage(): JSX.Element {
               setDrawerAppointmentId(null);
             }}
           />
+        )}
+
+        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {showDeleteDialog && selectedAppointment && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteDialog(false);
+              setSelectedAppointment(null);
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
+                <div className="h-full w-full bg-repeat" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }}></div>
+              </div>
+
+              {/* Header */}
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                  <Trash2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Eliminar Cita</h3>
+                  <p className="text-sm text-red-700">Esta acción es permanente</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-red-900">
+                        ¿Estás seguro de que deseas eliminar la cita de "{selectedAppointment.customer?.name}"?
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Esta acción no se puede deshacer y se perderá toda la información de la cita.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appointment Info */}
+                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Cliente</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {selectedAppointment.customer?.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {new Date(selectedAppointment.startTime).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Hora</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {new Date(selectedAppointment.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Estado</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedAppointment.status === 'SCHEDULED' ? 'Programada' : selectedAppointment.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedAppointment(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    // TODO: Implement delete appointment mutation
+                    console.log('Delete appointment:', selectedAppointment.id);
+                    setShowDeleteDialog(false);
+                    setSelectedAppointment(null);
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar Cita
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -243,19 +243,60 @@ export function AuditPage(): JSX.Element {
     return data.data;
   }, [data]);
 
-  // Get unique entities for filter
-  const getUniqueEntities = useCallback(() => {
-    if (!data?.data) return [];
-    const entities = [...new Set(data.data.map(row => row.entity))];
-    return entities.map(entity => ({ value: entity, label: entity }));
-  }, [data]);
+  // ✅ CORRECCIÓN: Obtener opciones de filtros con fallback a datos actuales
+  const { data: allAuditData } = useQuery({
+    queryKey: ['audit-filter-options'],
+    queryFn: async (): Promise<AuditResponse> => {
+      const params = new URLSearchParams();
+      params.set('limit', '2000'); // Más registros para opciones
+      
+      // Obtener datos de un rango más amplio para más opciones
+      const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
+      params.set('from', thirtyDaysAgo.toISOString());
+      params.set('to', endOfDay(new Date()).toISOString());
+      
+      const { data: res } = await api.get<AuditResponse>(`/api/audit?${params}`);
+      return res;
+    },
+    staleTime: 15 * 60 * 1000, // 15 minutos
+    retry: 2,
+  });
 
-  // Get unique actions for filter
+  // ✅ MEJORADO: Cache de opciones para evitar recálculos
+  const filterOptions = useMemo(() => {
+    // Usar datos actuales como base, enriquecer con datos históricos si disponibles
+    const dataSource = data?.data || [];
+    const historicalSource = allAuditData?.data || [];
+    
+    // Combinar datos actuales con históricos para más opciones
+    const combinedData = [...dataSource, ...historicalSource];
+    
+    if (combinedData.length === 0) {
+      return { entities: [], actions: [] };
+    }
+    
+    const entities = [...new Set(combinedData.map(row => row.entity))]
+      .filter(Boolean)
+      .map(entity => ({ value: entity, label: entity }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    
+    const actions = [...new Set(combinedData.map(row => row.action))]
+      .filter(Boolean)
+      .map(action => ({ value: action, label: getActionLabel(action as any) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    
+    return { entities, actions };
+  }, [data, allAuditData]);
+
+  // Get unique entities for filter - usar cache
+  const getUniqueEntities = useCallback(() => {
+    return filterOptions.entities;
+  }, [filterOptions]);
+
+  // Get unique actions for filter - usar cache
   const getUniqueActions = useCallback(() => {
-    if (!data?.data) return [];
-    const actions = [...new Set(data.data.map(row => row.action))];
-    return actions.map(action => ({ value: action, label: getActionLabel(action as any) }));
-  }, [data]);
+    return filterOptions.actions;
+  }, [filterOptions]);
 
   if (error) {
     return (
@@ -424,7 +465,7 @@ export function AuditPage(): JSX.Element {
                     </div>
                     <input
                       type="text"
-                      placeholder="Buscar en auditoría..."
+                      placeholder="Buscar por usuario, acción, entidad, ID, IP o dispositivo..."
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
@@ -441,6 +482,9 @@ export function AuditPage(): JSX.Element {
                       </button>
                     )}
                   </div>
+                  <p className="text-xs text-[var(--unit-text-muted)] italic">
+                    Busca en: nombre de usuario, acción, entidad, ID, dirección IP o dispositivo
+                  </p>
                 </div>
               </div>
 

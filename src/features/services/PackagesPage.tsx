@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp } from 'lucide-react';
+import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, Scissors } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { Package } from '@/types/service';
@@ -16,6 +17,7 @@ export function PackagesPage(): JSX.Element {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Date range filter states (like services)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -28,7 +30,7 @@ export function PackagesPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<string>('');
   
   const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
+  const canEdit = user?.role === 'ADMIN'; // RECEPTIONIST can only view, not edit
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -36,7 +38,8 @@ export function PackagesPage(): JSX.Element {
     queryKey: ['packages'],
     queryFn: async (): Promise<Package[]> => {
       const { data } = await api.get<{ data: Package[] }>('/api/packages');
-      return data.data; // Acceder al array dentro del objeto paginado
+      // ✅ FIXED: Validar que data.data exista y sea un array
+      return Array.isArray(data?.data) ? data.data : [];
     },
   });
 
@@ -59,8 +62,8 @@ export function PackagesPage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
-      setDeleteConfirm(null);
-      alert('Paquete eliminado correctamente');
+      setShowDeleteDialog(false);
+      setSelectedPackage(null);
     },
     onError: (error: any) => {
       console.error('Error deleting package:', error);
@@ -212,7 +215,8 @@ export function PackagesPage(): JSX.Element {
       label: 'Eliminar',
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: Package) => {
-        setDeleteConfirm(row.id);
+        setSelectedPackage(row);
+        setShowDeleteDialog(true);
       },
       className: 'text-red-600 hover:bg-red-50',
       disabled: (row: Package) => !canEdit,
@@ -419,182 +423,319 @@ export function PackagesPage(): JSX.Element {
           />
         </div>
 
-        {/* Delete Confirmation Modal */}
-        {deleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl border-2 border-[var(--unit-border)] p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-[var(--unit-text-muted)] mb-4">
-                Confirmar Eliminación
-              </h3>
-              <p className="text-[var(--unit-text-muted)] mb-6">
-                ¿Estás seguro de que deseas eliminar este paquete? Esta acción no se puede deshacer.
-              </p>
-              <div className="flex gap-3 justify-end">
+        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {showDeleteDialog && selectedPackage && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteDialog(false);
+              setSelectedPackage(null);
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
+                <div className="h-full w-full bg-repeat" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }}></div>
+              </div>
+
+              {/* Header */}
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                  <Trash2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Eliminar Paquete</h3>
+                  <p className="text-sm text-red-700">Esta acción es permanente</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-red-900">
+                        ¿Estás seguro de que deseas eliminar el paquete "{selectedPackage.name}"?
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Esta acción no se puede deshacer y el paquete será eliminado permanentemente del sistema.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Package Info */}
+                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Paquete</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {selectedPackage.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Precio</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        S/ {selectedPackage.fixedPrice?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Servicios</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedPackage.services?.length || 0} servicios
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 mt-6">
                 <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 text-[var(--unit-accent)] bg-[var(--unit-surface)] rounded-lg hover:bg-[var(--unit-primary)] hover:text-white transition-colors"
+                  onClick={() => {
+                    deleteMutation.mutate(selectedPackage.id);
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                 >
-                  Cancelar
+                  {deleteMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                      Eliminando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Paquete
+                    </span>
+                  )}
                 </button>
                 <button
-                  onClick={() => deleteMutation.mutate(deleteConfirm)}
-                  disabled={deleteMutation.isPending}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedPackage(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
                 >
-                  {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+                  Cancelar
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* View Modal */}
+        {/* View Details Modal - Exacto Estilo Detalles de Producto */}
         {viewModal && selectedPackage && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-600/10">
-                    <Eye className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Detalles del Paquete</h3>
-                    <p className="text-sm text-gray-500">{selectedPackage.name}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setViewModal(false)}
-                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern - Exacto estilo Producto */}
+              <div className="absolute inset-0 opacity-5">
+                <div className="h-full w-full bg-repeat" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }}></div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Información General</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-sm text-gray-500">Nombre</span>
-                      <span className="font-medium text-gray-900">{selectedPackage.name}</span>
-                    </div>
-                    {selectedPackage.description && (
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-500">Descripción</span>
-                        <span className="font-medium text-gray-900 max-w-xs truncate">{selectedPackage.description}</span>
+              
+              <div className="relative">
+                {/* Enhanced Header - Exacto estilo Producto */}
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                        <PackageIcon className="h-5 w-5 text-white" />
                       </div>
-                    )}
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-sm text-gray-500">Estado</span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        selectedPackage.status === 'ACTIVE' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {selectedPackage.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-500">Servicios Incluidos</span>
-                      <span className="font-medium text-gray-900">{selectedPackage.services.length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pricing and Duration */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Precios y Duración</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-sm text-gray-500">Precio Fijo</span>
-                      <span className="font-semibold text-emerald-600">S/ {selectedPackage.fixedPrice.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-sm text-gray-500">Duración Total</span>
-                      <span className="font-medium text-gray-900">{selectedPackage.durationMin} minutos</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-500">Precio por Minuto</span>
-                      <span className="font-medium text-gray-900">
-                        S/ {(selectedPackage.fixedPrice / selectedPackage.durationMin).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Services Section */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Servicios Incluidos</h4>
-                <div className="space-y-3">
-                  {selectedPackage.services.map((serviceItem, index) => (
-                    <div key={serviceItem.serviceId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-sm font-medium">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{serviceItem.service.name}</p>
-                          {serviceItem.commissionShare && (
-                            <p className="text-sm text-gray-500">Comisión: {serviceItem.commissionShare}%</p>
-                          )}
-                        </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Paquete</h3>
+                        <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedPackage.id}</p>
                       </div>
-                      <PackageIcon className="h-4 w-4 text-gray-400" />
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Movements Section */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Movimientos Recientes</h4>
-                {movements.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No hay movimientos registrados</p>
+                    <button
+                      onClick={() => setViewModal(false)}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
+                    >
+                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
+                    </button>
                   </div>
-                ) : (
-                  <div className="divide-y divide-gray-200">
-                    {movements.slice(0, 10).map((movement: any) => (
-                      <div key={movement.id} className="p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Clock className="h-4 w-4 text-blue-600" />
-                              <span className="font-medium text-gray-900">
-                                {movement.type || 'Venta'}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {movement.date ? new Date(movement.date).toLocaleDateString('es-PE', { timeZone: 'America/Lima' }) : 'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>Cliente: {movement.customerName || 'No especificado'}</span>
-                              <span>Precio: S/ {movement.price || selectedPackage.fixedPrice}</span>
-                            </div>
+                </div>
+
+                {/* Enhanced Content Grid - Exacto estilo Producto */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Enhanced General Information - Glassmorphism Card */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      {/* Card Header */}
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <PackageIcon className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
+                      </div>
+
+                      {/* Enhanced Package Info List */}
+                      <div className="space-y-4">
+                        {/* Name */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Nombre</span>
                           </div>
-                          <div className="text-right">
-                            <span className="font-semibold text-emerald-600 tabular-nums">
-                              S/ {(movement.price || selectedPackage.fixedPrice).toFixed(2)}
-                            </span>
+                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
+                            {selectedPackage.name}
+                          </span>
+                        </div>
+
+                        {/* Description */}
+                        {selectedPackage.description && (
+                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[var(--unit-text)]">Descripción</span>
+                            </div>
+                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
+                            {selectedPackage.description}
+                          </span>
+                        </div>
+                        )}
+
+                        {/* Status */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Estado</span>
                           </div>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
+                            selectedPackage.status === 'ACTIVE' 
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                              : 'bg-gray-100 text-gray-800 border-gray-200'
+                          }`}>
+                            {selectedPackage.status === 'ACTIVE' ? '✅ Activo' : '❌ Inactivo'}
+                          </span>
+                        </div>
+
+                        {/* Services Count */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <Scissors className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Servicios Incluidos</span>
+                          </div>
+                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                            {selectedPackage.services.length}
+                          </span>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => setViewModal(false)}
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cerrar
-                </button>
+                  {/* Enhanced Pricing and Duration - Glassmorphism Card */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      {/* Card Header */}
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precios y Duración</h4>
+                      </div>
+
+                      {/* Enhanced Pricing List */}
+                      <div className="space-y-4">
+                        {/* Fixed Price */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-green-500/30 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-bold text-green-800">Precio Fijo</span>
+                          </div>
+                          <span className="font-bold text-green-800 bg-white px-3 py-1 rounded-lg border-2 border-green-300/30 shadow-lg tabular-nums">
+                            S/ {selectedPackage.fixedPrice.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Duration */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-blue-500/30 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-bold text-blue-800">Duración Total</span>
+                          </div>
+                          <span className="font-bold text-blue-800 bg-white px-3 py-1 rounded-lg border-2 border-blue-300/30 shadow-lg tabular-nums">
+                            {selectedPackage.durationMin} minutos
+                          </span>
+                        </div>
+
+                        {/* Price per Minute */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-purple-500/30 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-purple-600" />
+                            <span className="text-sm font-bold text-purple-800">Precio por Minuto</span>
+                          </div>
+                          <span className="font-bold text-purple-800 bg-white px-3 py-1 rounded-lg border-2 border-purple-300/30 shadow-lg tabular-nums">
+                            S/ {(selectedPackage.fixedPrice / selectedPackage.durationMin).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Services List - Glassmorphism Card */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      {/* Card Header */}
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <Scissors className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Servicios del Paquete</h4>
+                      </div>
+
+                      {/* Enhanced Services List */}
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {selectedPackage.services.map((serviceItem, index) => (
+                          <div key={serviceItem.serviceId} className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                                <span className="text-xs font-bold text-[var(--unit-accent)]">{index + 1}</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-[var(--unit-text)]">{serviceItem.service.name}</p>
+                                {serviceItem.commissionShare && (
+                                  <p className="text-xs text-[var(--unit-text-muted)]">Comisión: {serviceItem.commissionShare}%</p>
+                                )}
+                              </div>
+                            </div>
+                            <Scissors className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Footer Actions - Exacto estilo Producto */}
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                        <PackageIcon className="h-4 w-4 text-[var(--unit-accent)]" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--unit-text-muted)]">Resumen del Paquete</p>
+                        <p className="text-sm font-bold text-[var(--unit-text)]">
+                          {selectedPackage.name} • {selectedPackage.services.length} servicios • {selectedPackage.durationMin} min
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setViewModal(false)}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Cerrar Detalles
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
