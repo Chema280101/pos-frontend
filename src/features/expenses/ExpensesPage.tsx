@@ -278,15 +278,15 @@ export function ExpensesPage(): JSX.Element {
 
           {/* Enhanced Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-            {canEdit && (
-              <Link
-                href="/expenses/new"
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Plus className="h-5 w-5" />
-                Nuevo Gasto
-              </Link>
-            )}
+            {/* ✅ Botón "Nuevo Gasto" eliminado - usar flujo de Caja Registradora */}
+            <div className="text-center">
+              <p className="text-sm text-[var(--unit-text-muted)]">
+                Para registrar nuevos egresos, utiliza la página de 
+                <Link href="/cash-register" className="font-bold text-[var(--unit-accent)] hover:underline ml-1">
+                  Caja Registradora
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
 
