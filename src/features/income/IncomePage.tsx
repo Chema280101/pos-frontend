@@ -302,10 +302,21 @@ export function IncomePage(): JSX.Element {
             </p>
           </div>
 
-          </div>
-
         {/* Incomes Metrics - Nueva sección de métricas espectaculares */}
         <IncomesMetrics incomes={income} />
+
+        {/* Enhanced Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+            <div className="text-center">
+              <p className="text-sm text-[var(--unit-text-muted)]">
+                Para registrar nuevos ingresos, utiliza la página de 
+                <Link href="/cash-register" className="font-bold text-[var(--unit-accent)] hover:underline ml-1">
+                  Caja Registradora
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Enhanced Income Filters */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
