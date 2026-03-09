@@ -1,0 +1,984 @@
+'use client';
+
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { format, startOfDay, endOfDay, isWithinInterval, parseISO, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
+import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Edit, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useUnitStore } from '@/store/unitStore';
+import { LazyCalendar } from '@/components/Calendar/LazyCalendar';
+import type { CalendarAppointment } from '@/components/Calendar/AppointmentCalendar';
+import { FixedSizeList, ListChildComponentProps } from 'react-window';
+import { AppointmentDetailDrawer } from './AppointmentDetailDrawer';
+import { DataTable } from '@/components/ui/DataTable';
+import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { OptimizedScheduleView } from './OptimizedScheduleView';
+import { cn } from '@/lib/utils';
+import { statusConfig, type Appointment } from '@/types/appointment';
+
+const DAY_QUEUE_ROW_HEIGHT = 120;
+
+export function AppointmentsPage(): JSX.Element {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const activeUnit = useUnitStore((s) => s.activeUnit);
+  const unit = activeUnit ?? 'SPA';
+
+  const [viewStart, setViewStart] = useState<Date>(() => startOfDay(subDays(new Date(), 30))); // Start 30 days ago
+  const [viewEnd, setViewEnd] = useState<Date>(() => endOfDay(new Date())); // End today
+  const [calendarView, setCalendarView] = useState<'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'>('timeGridDay');
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+  const [drawerAppointmentId, setDrawerAppointmentId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [showFilters, setShowFilters] = useState(true);
+  const [selectedUnit, setSelectedUnit] = useState<'SPA' | 'BARBERIA' | null>(null);
+  const [search, setSearch] = useState('');
+  
+  // Date range filter states
+  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
+  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
+  const [unitFilter, setUnitFilter] = useState<string>('');
+  
+  // Additional filter states
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [serviceFilter, setServiceFilter] = useState<string>('');
+  const [employeeFilter, setEmployeeFilter] = useState<string>('');
+
+  // Get real employees from API
+  const { data: employees = [] } = useQuery({
+    queryKey: ['users-employees'],
+    queryFn: async () => {
+      const { data } = await api.get('/api/users/employees');
+      console.log('👥 Frontend - Raw employees data:', data);
+      const processedEmployees = data.map((emp: any) => ({
+        id: emp.id,
+        name: emp.name,
+        unit: emp.unit || 'SPA',
+        color: emp.unit === 'BARBERIA' ? '#3B82F6' : '#A855F7'
+      }));
+      console.log('👥 Frontend - Processed employees:', processedEmployees);
+      return processedEmployees;
+    },
+  });
+
+  // Get services for service filter dropdown
+  const { data: servicesList = [] } = useQuery({
+    queryKey: ['services-all'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: any[] }>('/api/services?activeOnly=false');
+      return data.data || [];
+    },
+  });
+
+  // Query for calendar (always shows all appointments for the unit, independent of filters)
+  const { data: calendarAppointments = [], isLoading: isLoadingCalendar } = useQuery({
+    queryKey: ['appointments-calendar', unit, viewStart.toISOString(), viewEnd.toISOString()],
+    queryFn: async (): Promise<Appointment[]> => {
+      console.log('📅 Calendar fetching appointments for unit:', unit);
+      console.log('📅 Date range:', { viewStart, viewEnd });
+      
+      const params = new URLSearchParams();
+      params.set('unit', unit);
+      params.set('start', viewStart.toISOString());
+      params.set('end', viewEnd.toISOString());
+      params.set('include', 'service,employee,customer');
+      
+      console.log('📅 Calendar API URL:', `/api/appointments?${params}`);
+      const response = await api.get(`/api/appointments?${params}`);
+      console.log('📅 Calendar Raw API response:', response);
+      console.log('📅 Calendar Response data:', response.data);
+      
+      // Extract the array from paginated response
+      const data = response.data?.data || [];
+      console.log('📅 Calendar Extracted array data:', data);
+      console.log('📅 Calendar Number of appointments:', data.length);
+      
+      // Log detailed structure of first appointment
+      if (data.length > 0) {
+        console.log('📅 First appointment structure:', {
+          id: data[0].id,
+          hasCustomer: !!data[0].customer,
+          customer: data[0].customer,
+          hasEmployee: !!data[0].employee,
+          employee: data[0].employee,
+          hasItems: !!data[0].items,
+          items: data[0].items,
+          itemsLength: data[0].items?.length,
+          firstItem: data[0].items?.[0],
+          hasServiceInFirstItem: !!data[0].items?.[0]?.service,
+          serviceInFirstItem: data[0].items?.[0]?.service
+        });
+      }
+      
+      return data;
+    },
+  });
+
+  // Query for filtered table (affected by all filters)
+  const { data: filteredAppointments = [], isLoading: isLoadingTable } = useQuery({
+    queryKey: ['appointments-table', unit, viewStart.toISOString(), viewEnd.toISOString(), unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, employeeFilter, search],
+    queryFn: async (): Promise<Appointment[]> => {
+      console.log('� Table fetching filtered appointments for unit:', unit);
+      console.log('� Date range:', { viewStart, viewEnd });
+      console.log('� Table Filters:', { unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, employeeFilter, search });
+      
+      const params = new URLSearchParams();
+      
+      // Basic params
+      params.set('unit', unit);
+      params.set('start', viewStart.toISOString());
+      params.set('end', viewEnd.toISOString());
+      params.set('include', 'service,employee,customer');
+      
+      // Additional filters for table
+      if (unitFilter) params.set('unitFilter', unitFilter);
+      if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
+      if (dateTo) params.set('dateTo', dateTo.toISOString());
+      if (statusFilter) params.set('status', statusFilter);
+      if (serviceFilter) params.set('serviceId', serviceFilter);
+      if (employeeFilter) params.set('employeeId', employeeFilter);
+      if (search) params.set('search', search);
+      
+      console.log('� Table API URL:', `/api/appointments?${params}`);
+      const response = await api.get(`/api/appointments?${params}`);
+      console.log('� Table Raw API response:', response);
+      console.log('� Table Response data:', response.data);
+      
+      // Extract the array from paginated response
+      const data = response.data?.data || [];
+      console.log('� Table Extracted array data:', data);
+      console.log('📊 Table Number of appointments:', data.length);
+      
+      return data;
+    },
+  });
+
+  // Transform appointments for OptimizedScheduleView (Appointment format)
+  const scheduleAppointments = useMemo(() => {
+    const transformed = calendarAppointments.map((apt: any) => {
+      console.log('📅 Transforming appointment for schedule:', {
+        id: apt.id,
+        hasEmployee: !!apt.employee,
+        employeeName: apt.employee?.name,
+        customerName: apt.customer?.name,
+        serviceName: apt.items?.[0]?.service?.name
+      });
+      
+      return {
+        id: apt.id,
+        startTime: apt.startTime,        // ✅ String from backend
+        endTime: apt.endTime,            // ✅ String from backend
+        status: apt.status,
+        notes: apt.notes || null,
+        customer: apt.customer || { id: '', name: 'Sin cliente' },
+        employee: apt.employee || { id: '', name: 'Sin empleado' },
+        service: apt.items?.[0]?.service || { id: '', name: 'Sin servicio' },
+        unit: apt.unit as 'SPA' | 'BARBERIA',
+        sale: apt.sale
+      };
+    });
+    
+    console.log('📅 Schedule appointments transformed:', {
+      total: transformed.length,
+      appointments: transformed.map(t => ({
+        id: t.id,
+        startTime: t.startTime,
+        endTime: t.endTime,
+        customerName: t.customer.name,
+        employeeName: t.employee.name,
+        serviceName: t.service.name,
+        unit: t.unit
+      }))
+    });
+    
+    return transformed;
+  }, [calendarAppointments]);
+
+  const normalizedAppointments = useMemo(() => {
+    return calendarAppointments.map((apt: any) => {
+      console.log('📅 Normalizing appointment:', {
+        id: apt.id,
+        hasEmployee: !!apt.employee,
+        employeeName: apt.employee?.name,
+        hasItems: !!apt.items,
+        firstItemEmployee: apt.items?.[0]?.employee?.name,
+        customerName: apt.customer?.name,
+        serviceName: apt.items?.[0]?.service?.name
+      });
+      
+      return {
+        id: apt.id,
+        title: `${apt.customer?.name || 'Sin cliente'} - ${apt.items?.[0]?.service?.name || 'Sin servicio'}`,
+        start: new Date(apt.startTime),
+        end: new Date(apt.endTime),
+        extendedProps: {
+          appointmentId: apt.id,
+          customer: apt.customer,
+          service: apt.items?.[0]?.service,
+          employee: apt.employee, // Usar el empleado directo de la cita
+          unit: apt.unit,
+          status: apt.status,
+          notes: apt.notes
+        }
+      };
+    });
+  }, [calendarAppointments]);
+
+  // Estado para mostrar última actualización
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  // Actualizar timestamp cuando se refrescan los datos
+  useEffect(() => {
+    if (calendarAppointments && calendarAppointments.length > 0) {
+      setLastUpdate(new Date());
+    }
+  }, [calendarAppointments]);
+
+  const forceRefreshAppointments = useCallback(() => {
+    console.log('🔄 Forcing appointments refresh...');
+    setLastUpdate(new Date()); // Update timestamp immediately for feedback
+    queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
+    queryClient.invalidateQueries({ queryKey: ['appointments-table'] });
+  }, [queryClient]);
+
+  // Filter calendar appointments to show only today and future dates
+  const calendarFilteredAppointments = useMemo(() => {
+    const today = startOfDay(new Date());
+    return normalizedAppointments.filter((a: any) => {
+      const aptDate = startOfDay(new Date(a.start));
+      return aptDate >= today;
+    });
+  }, [normalizedAppointments]);
+
+  const dayAppointments = useMemo(() => {
+    const today = startOfDay(new Date());
+    const todayApts = normalizedAppointments
+      .filter((apt: any) => isWithinInterval(new Date(apt.start), { start: today, end: endOfDay(today) }))
+      .sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    
+    console.log('📅 Today appointments:', todayApts.map((apt: any) => ({
+      id: apt.id,
+      customer: apt.extendedProps.customer?.name,
+      service: apt.extendedProps.service?.name,
+      employee: apt.extendedProps.employee?.name,
+      employeeId: (apt as any).employeeId,
+      hasEmployee: !!apt.extendedProps.employee,
+      notes: apt.extendedProps.notes
+    })));
+    
+    return todayApts;
+  }, [normalizedAppointments]);
+
+  const Row = useCallback(({ index, style }: ListChildComponentProps) => {
+    const apt = dayAppointments[index];
+    if (!apt) return null;
+    const status = statusConfig[apt.extendedProps.status] || statusConfig.SCHEDULED;
+    return (
+      <div style={style} className="border-b border-[var(--unit-border)] p-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.bg} ${status.text}`}>
+                {status.label}
+              </span>
+              <span className="text-xs text-[var(--unit-text-muted)]">
+                {format(apt.start, 'HH:mm')} - {format(apt.end, 'HH:mm')}
+              </span>
+            </div>
+            <div className="font-medium text-[var(--unit-text)]">
+              {apt.extendedProps.customer?.name || 'Sin cliente'}
+            </div>
+            <div className="text-sm text-[var(--unit-text)]">
+              {apt.extendedProps.service?.name}
+            </div>
+            <div className="text-sm text-[var(--unit-text)]">
+              con {apt.extendedProps.employee?.name}
+            </div>
+            {apt.extendedProps.notes && (
+              <div className="text-xs text-[var(--unit-text)] mt-1">
+                Nota: {apt.extendedProps.notes}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              setDrawerAppointmentId(apt.id);
+              setDrawerOpen(true);
+            }}
+            className="p-1 text-[var(--unit-text)] hover:bg-[var(--unit-accent)] rounded"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }, [dayAppointments]);
+
+  // Handlers for OptimizedScheduleView
+  const handleNewAppointment = useCallback((employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => {
+    const params = new URLSearchParams({
+      employeeId,
+      unit,
+      start: time.toISOString(),
+    });
+    router.push(`/appointments/new?${params}`);
+  }, [router]);
+
+  const handleEditAppointment = useCallback((appointmentId: string) => {
+    setDrawerAppointmentId(appointmentId);
+    setDrawerOpen(true);
+  }, []);
+
+  const handleReschedule = useCallback(async (appointmentId: string, newEmployeeId: string, newTime: Date) => {
+    try {
+      console.log('🔄 Rescheduling appointment:', { appointmentId, newEmployeeId, newTime });
+      
+      // Find the appointment to get its duration from scheduleAppointments
+      const appointment = scheduleAppointments.find((apt: any) => apt.id === appointmentId);
+      const duration = appointment?.service?.durationMin || 30;
+      
+      const endTime = new Date(newTime.getTime() + duration * 60 * 1000);
+      
+      await api.patch(`/api/appointments/${appointmentId}`, {
+        employeeId: newEmployeeId,
+        startTime: newTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+      
+      console.log('✅ Appointment rescheduled successfully');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    } catch (error) {
+      console.error('❌ Failed to reschedule appointment:', error);
+      throw error; // Re-throw to let OptimizedScheduleView handle the revert
+    }
+  }, [queryClient, scheduleAppointments]);
+
+  // Listen for calendar filter changes from Header
+  useEffect(() => {
+    const handleCalendarFilterChange = (event: CustomEvent) => {
+      const { unit } = event.detail;
+      console.log('Calendar filter event received:', unit);
+      setSelectedUnit(unit);
+    };
+
+    window.addEventListener('calendarFilterChange', handleCalendarFilterChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('calendarFilterChange', handleCalendarFilterChange as EventListener);
+    };
+  }, []);
+
+  // Sync selectedUnit with global active unit on mount and when activeUnit changes
+  useEffect(() => {
+    if (activeUnit && !selectedUnit) {
+      setSelectedUnit(activeUnit);
+    }
+  }, [activeUnit, selectedUnit]);
+
+  const columns = [
+    {
+      key: 'startTime',
+      header: 'Fecha y Hora',
+      sortable: true,
+      render: (row: any) => {
+        const date = new Date(row.start);
+        // Custom formatting for "2 mar. 2026" and "1:00 p. m."
+        const day = format(date, 'd');
+        const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const month = monthNames[date.getMonth()];
+        const year = format(date, 'yyyy');
+        
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = minutes.toString().padStart(2, '0');
+
+  return (
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
+            <div>
+              <div className="font-medium text-[var(--unit-text-muted)]">
+                {day} {month}. {year}
+              </div>
+              <div className="text-sm text-[var(--unit-text-muted)]">
+                {displayHours}:{displayMinutes} {ampm}
+              </div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'customer',
+      header: 'Cliente',
+      render: (row: any) => (
+        <div>
+          <div className="font-medium text-[var(--unit-text-muted)]">{row.extendedProps.customer?.name || 'Cliente'}</div>
+          {row.extendedProps.customer?.phone && (
+            <div className="text-sm text-[var(--unit-text-muted)]">{row.extendedProps.customer.phone}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'service',
+      header: 'Servicio',
+      render: (row: any) => {
+        const serviceName = row.extendedProps.service?.name;
+        const serviceId = row.extendedProps.appointmentId;
+        return (
+          <div>
+            {serviceName ? (
+              <div className="font-medium text-[var(--unit-text-muted)]">{serviceName}</div>
+            ) : (
+              <div className="text-[var(--unit-text-muted)]">
+                Servicio no encontrado
+                <br />
+                ID: {serviceId?.slice(0, 8)}...
+              </div>
+            )}
+            <div className="text-sm text-[var(--unit-text-muted)]">{row.extendedProps.service?.durationMin || 0} min</div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'employee',
+      header: 'Empleado',
+      render: (row: any) => {
+        const employeeName = row.employee?.name;
+        const employeeId = (row as any).employeeId;
+        return (
+          <div>
+            <div className="font-medium text-[var(--unit-text)]">
+              {employeeName || 'Empleado no asignado'}
+            </div>
+            {employeeId && !employeeName && (
+              <div className="text-sm text-[var(--unit-text-muted)]">
+                ID: {employeeId.slice(0, 8)}...
+              </div>
+            )}
+            <div className="text-sm text-[var(--unit-text-muted)]">{row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}</div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'unit',
+      header: 'Unidad',
+      render: (row: Appointment) => (
+        <span className={cn(
+          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+          row.unit === 'SPA'
+            ? 'bg-purple-100 text-purple-800'
+            : 'bg-stone-200 text-stone-800'
+        )}>
+          {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Estado',
+      render: (row: Appointment) => {
+        const status = statusConfig[row.status] || statusConfig.SCHEDULED;
+        return (
+          <span className={cn('px-2 py-1 rounded-full text-xs font-medium', status.bg, status.text)}>
+            {status.label}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'sale',
+      header: 'Venta',
+      render: (row: Appointment) => row.sale?.saleNumber ?? '—',
+    },
+  ];
+
+  const filters = [
+    {
+      key: 'status',
+      label: 'Estado',
+      type: 'select' as const,
+      options: [
+        { label: 'Todos', value: '' },
+        { label: 'Programadas', value: 'SCHEDULED' },
+        { label: 'En curso', value: 'IN_PROGRESS' },
+        { label: 'Completadas', value: 'COMPLETED' },
+        { label: 'Canceladas', value: 'CANCELLED' },
+        { label: 'No asistió', value: 'NO_SHOW' },
+      ],
+    },
+    {
+      key: 'unit',
+      label: 'Unidad',
+      type: 'select' as const,
+      options: [
+        { label: 'Todos', value: '' },
+        { label: 'SPA', value: 'SPA' },
+        { label: 'Barbería', value: 'BARBERIA' },
+      ],
+    },
+  ];
+
+  const actions = [
+    {
+      label: 'Editar',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (row: Appointment) => {
+        setDrawerAppointmentId(row.id);
+        setDrawerOpen(true);
+      },
+      className: 'text-yellow-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
+    },
+    {
+      label: 'Eliminar',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (row: Appointment) => {
+        // TODO: delete with confirmation
+        console.log('Delete appointment', row.id);
+      },
+      className: 'text-red-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="h-full w-full bg-repeat" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }}></div>
+      </div>
+      
+      <div className="relative max-w-7xl mx-auto p-6">
+        {/* Enhanced Header */}
+        <div className="mb-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
+              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
+              <span className="text-sm font-medium text-[var(--unit-text)]">
+                Sistema de Citas
+              </span>
+            </div>
+            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Agenda</h1>
+            <p className="text-[var(--unit-text-muted)]">
+              Gestiona citas y programaciones con control total
+            </p>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 mb-8">
+            {/* Today's Appointments */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-primary)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-primary)]/10 to-[var(--unit-accent)]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-primary)] to-[var(--unit-accent)] border-2 border-[var(--unit-accent)] shadow-lg group-hover:scale-110 transition-transform">
+                    <Calendar className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-full border border-[var(--unit-border)] shadow-sm">Hoy</span>
+                </div>
+                <p className="text-3xl font-bold text-[var(--unit-text)] tabular-nums mb-2">{dayAppointments.length}</p>
+                <p className="text-sm text-[var(--unit-text-muted)] font-medium">
+                  {dayAppointments.length === 1 ? 'Cita hoy' : 'Citas hoy'}
+                </p>
+              </div>
+            </div>
+
+            {/* Total Appointments */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-accent)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] border-2 border-[var(--unit-primary)] shadow-lg group-hover:scale-110 transition-transform">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-full border border-[var(--unit-border)] shadow-sm">Total</span>
+                </div>
+                <p className="text-3xl font-bold text-[var(--unit-text)] tabular-nums mb-2">{normalizedAppointments.length}</p>
+                <p className="text-sm text-[var(--unit-text-muted)] font-medium">
+                  {normalizedAppointments.length === 1 ? 'Cita total' : 'Citas totales'}
+                </p>
+              </div>
+            </div>
+
+            {/* Completed Today */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 hover:shadow-lg transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-100/50 to-emerald-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 border-2 border-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-emerald-800 bg-white px-3 py-1 rounded-full border border-emerald-300 shadow-sm">Completadas</span>
+                </div>
+                <p className="text-3xl font-bold text-emerald-900 tabular-nums mb-2">
+                  {dayAppointments.filter(apt => apt.extendedProps.status === 'COMPLETED').length}
+                </p>
+                <p className="text-sm text-emerald-700 font-medium">
+                  Completadas hoy
+                </p>
+              </div>
+            </div>
+
+            {/* Pending Today */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-amber-500/30 bg-gradient-to-br from-amber-50 to-amber-100 p-6 hover:shadow-lg transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 border-2 border-amber-600 shadow-lg group-hover:scale-110 transition-transform">
+                    <AlertCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-amber-800 bg-white px-3 py-1 rounded-full border border-amber-300 shadow-sm">Pendientes</span>
+                </div>
+                <p className="text-3xl font-bold text-amber-900 tabular-nums mb-2">
+                  {dayAppointments.filter(apt => apt.extendedProps.status === 'SCHEDULED' || apt.extendedProps.status === 'IN_PROGRESS').length}
+                </p>
+                <p className="text-sm text-amber-700 font-medium">
+                  Pendientes hoy
+                </p>
+              </div>
+            </div>
+
+            {/* Canceladas Today */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-6 hover:shadow-lg transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-red-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 border-2 border-red-600 shadow-lg group-hover:scale-110 transition-transform">
+                    <X className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-red-800 bg-white px-3 py-1 rounded-full border border-red-300 shadow-sm">Canceladas</span>
+                </div>
+                <p className="text-3xl font-bold text-red-900 tabular-nums mb-2">
+                  {dayAppointments.filter(apt => apt.extendedProps.status === 'CANCELLED').length}
+                </p>
+                <p className="text-sm text-red-700 font-medium">
+                  Canceladas hoy
+                </p>
+              </div>
+            </div>
+
+            {/* No Show Today */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-gray-500/30 bg-gradient-to-br from-gray-50 to-gray-100 p-6 hover:shadow-lg transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-100/50 to-gray-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-gray-600 shadow-lg group-hover:scale-110 transition-transform">
+                    <AlertCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-gray-800 bg-white px-3 py-1 rounded-full border border-gray-300 shadow-sm">No Show</span>
+                </div>
+                <p className="text-3xl font-bold text-gray-900 tabular-nums mb-2">
+                  {dayAppointments.filter(apt => apt.extendedProps.status === 'NO_SHOW').length}
+                </p>
+                <p className="text-sm text-gray-700 font-medium">
+                  No se presentaron hoy
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/appointments/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+              <Plus className="h-5 w-5" />
+              Nueva Cita
+            </Link>
+            <button
+              onClick={() => setShowCalendar(!showCalendar)}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+            >
+              <Calendar className="h-5 w-5" />
+              {showCalendar ? 'Ocultar' : 'Mostrar'} Calendario
+            </button>
+            <button
+              onClick={forceRefreshAppointments}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-text)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-text)] hover:text-[var(--unit-surface)] transition-all hover:shadow-lg active:scale-[0.98]"
+              title="Forzar actualización de citas"
+            >
+              {isLoadingCalendar ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <span className="text-lg">🔄</span>
+              )}
+              Actualizar
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <span className="text-xs text-[var(--unit-text)]">Última:</span>
+              <span className="text-xs font-bold text-[var(--unit-accent)]">{format(lastUpdate, 'HH:mm:ss')}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar */}
+        {showCalendar && (
+          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
+            <OptimizedScheduleView
+              date={new Date()}
+              employees={employees}
+              appointments={scheduleAppointments as any}
+              selectedUnit={selectedUnit}
+              onNewAppointment={handleNewAppointment}
+              onEditAppointment={handleEditAppointment}
+              onReschedule={handleReschedule}
+            />
+          </div>
+        )}
+
+        {/* Enhanced Appointments Filters */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
+          {/* Filter Header */}
+          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <Filter className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Citas</h3>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
+              >
+                {showFilters ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" />
+                    Ocultar filtros
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4" />
+                    Mostrar filtros
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Content - Conditional Rendering */}
+          {showFilters && (
+            <div className="space-y-6">
+              {/* Date Range Filter */}
+              <DateRangeFilter
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onDateFromChange={setDateFrom}
+                onDateToChange={setDateTo}
+                unit={unitFilter}
+                onUnitChange={setUnitFilter}
+                showUnitFilter={true}
+                showStatusFilter={false}
+                className="rounded-xl"
+              />
+
+              {/* Additional Filter Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Status Filter */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
+                  <select
+                    value={statusFilter}
+                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">Todos los estados</option>
+                    <option value="SCHEDULED">Programadas</option>
+                    <option value="IN_PROGRESS">En curso</option>
+                    <option value="COMPLETED">Completadas</option>
+                    <option value="CANCELLED">Canceladas</option>
+                    <option value="NO_SHOW">No asistió</option>
+                  </select>
+                </div>
+
+                {/* Service Filter */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Servicio</label>
+                  <select
+                    value={serviceFilter}
+                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    onChange={(e) => setServiceFilter(e.target.value)}
+                  >
+                    <option value="">Todos los servicios</option>
+                    {servicesList.map((service: any) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Employee Filter */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Empleado</label>
+                  <select
+                    value={employeeFilter}
+                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    onChange={(e) => {
+                      console.log('👥 Frontend - Employee filter changed:', {
+                        oldValue: employeeFilter,
+                        newValue: e.target.value,
+                        employeeName: employees.find((emp: any) => emp.id === e.target.value)?.name
+                      });
+                      setEmployeeFilter(e.target.value);
+                    }}
+                  >
+                    <option value="">Todos los empleados</option>
+                    {employees.map((employee: any) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Enhanced Search Bar */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar por cliente, servicio, empleado..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    console.log('Search:', e.target.value);
+                  }}
+                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-4 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                  >
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
+                      <X className="h-3 w-3" />
+                    </div>
+                  </button>
+                )}
+              </div>
+
+              {/* Enhanced Active Filters Summary */}
+              {(statusFilter || serviceFilter || employeeFilter || search || unitFilter) && (
+                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {statusFilter && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
+                            Estado: {statusFilter === 'SCHEDULED' ? 'Programadas' : 
+                                    statusFilter === 'IN_PROGRESS' ? 'En curso' :
+                                    statusFilter === 'COMPLETED' ? 'Completadas' :
+                                    statusFilter === 'CANCELLED' ? 'Canceladas' :
+                                    statusFilter === 'NO_SHOW' ? 'No asistió' : statusFilter}
+                          </span>
+                        )}
+                        {serviceFilter && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
+                            Servicio: {servicesList.find((s: any) => s.id === serviceFilter)?.name || serviceFilter}
+                          </span>
+                        )}
+                        {employeeFilter && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 border border-green-200">
+                            Empleado: {employees.find((e: any) => e.id === employeeFilter)?.name || employeeFilter}
+                          </span>
+                        )}
+                        {unitFilter && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
+                            Unidad: {unitFilter === 'SPA' ? 'SPA' : 'Barbería'}
+                          </span>
+                        )}
+                        {search && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
+                            Búsqueda: {search}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setStatusFilter('');
+                        setServiceFilter('');
+                        setEmployeeFilter('');
+                        setSearch('');
+                        setUnitFilter('');
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
+                    >
+                      <X className="h-4 w-4" />
+                      Limpiar filtros
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Enhanced Appointments Table */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+          {/* Table Header */}
+          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <Calendar className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Lista de Citas</h3>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Historial completo de citas</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                  {normalizedAppointments.length} citas
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Table */}
+          <DataTable
+            columns={columns}
+            data={normalizedAppointments as any}
+            keyExtractor={(row) => row.id}
+            loading={isLoadingCalendar}
+            searchPlaceholder=""
+            filters={[]}
+            actions={actions}
+            emptyMessage="No se encontraron citas con los filtros aplicados."
+            pageSize={15}
+            pageSizeOptions={[10, 15, 30, 50]}
+            className="rounded-xl"
+          />
+        </div>
+
+        {/* Enhanced Drawer */}
+        {drawerOpen && (
+          <AppointmentDetailDrawer
+            appointmentId={drawerAppointmentId}
+            open={drawerOpen}
+            onClose={() => {
+              setDrawerOpen(false);
+              setDrawerAppointmentId(null);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default / SPA - tonos suaves */
+  --unit-primary: #FCFCFC;
+  --unit-secondary: #f5f0e8;
+  --unit-accent: #c9a96e;
+  --unit-text: #FCFCFC;
+  --unit-surface: #fdf8ff;
+}
