@@ -305,6 +305,7 @@ export function AppointmentsPage(): JSX.Element {
         employeeId: newEmployeeId,
         startTime: newTime.toISOString(),
         endTime: endTime.toISOString(),
+        status: 'RESCHEDULED', // ✅ Agregar status de reprogramación
       });
       
       console.log('✅ Appointment rescheduled successfully');

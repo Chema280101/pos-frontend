@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import axios  from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { SkeletonLoader } from '@/components/ui';
 import { routePermissions, hasRole } from '@/lib/permissions';
@@ -102,6 +103,55 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       clearTimeout(timeoutId);
     });
   }, [pathname]);
+
+  // ✅ VIGILANTE DE INACTIVIDAD (2 HORAS)
+  useEffect(() => {
+    // Si estamos en el login o ruta pública, no necesitamos vigilar la inactividad
+    if (routeChecks.isPublic) return;
+
+    let timeoutId: NodeJS.Timeout;
+    
+    // 2 horas en milisegundos. (Cambia a 10 * 1000 para probar en 10 segundos)
+    const TIEMPO_INACTIVIDAD = 2 * 60 * 60 * 1000; 
+
+    const cerrarSesionPorInactividad = async () => {
+      const store = useAuthStore.getState();
+      
+      // Intentamos usar la función de logout de tu store (si la tienes definida)
+      if (store.logout) {
+        await store.logout();
+      } else {
+        // Fallback: llamamos al backend directamente si no está en el store
+        await axios.post('/api/auth/logout').catch(() => console.error("Error al cerrar sesión"));
+      }
+      
+      router.replace('/login');
+    };
+
+    const reiniciarTemporizador = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(cerrarSesionPorInactividad, TIEMPO_INACTIVIDAD);
+    };
+
+    const eventos = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
+
+    // Pegamos los sensores a la ventana
+    eventos.forEach((evento) => {
+      window.addEventListener(evento, reiniciarTemporizador);
+    });
+
+    // Arrancamos el contador
+    reiniciarTemporizador();
+
+    // Limpieza al desmontar el componente (vital para no dejar procesos fantasma)
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      eventos.forEach((evento) => {
+        window.removeEventListener(evento, reiniciarTemporizador);
+      });
+    };
+  }, [routeChecks.isPublic, router]);
+
 
   // Early returns al final - después de todos los hooks
   if (routeChecks.isPublic) {

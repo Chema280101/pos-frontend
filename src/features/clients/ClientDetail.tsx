@@ -236,7 +236,7 @@ export function ClientDetail(): JSX.Element {
                     </span>
                   )}
                   {isRecentClient(client.createdAt) && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--unit-text)] px-2 py-1 text-[10px] font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)] shadow-sm">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--unit-surface)] px-2 py-1 text-[10px] font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)] shadow-sm">
                       <Sparkles className="h-3 w-3" />
                       Nuevo
                     </span>
