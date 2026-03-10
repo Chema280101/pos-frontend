@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShoppingBag, Trash2, UserCircle, Search, Printer, X, Package, Scissors, Box, TrendingUp, Clock, Star, Zap, CreditCard, Smartphone, DollarSign, ChevronRight, Plus, Minus, ChevronLeft } from 'lucide-react';
+import { ShoppingBag, Trash2, UserCircle, Search, Printer, X, Package, Scissors, Box, TrendingUp, Clock, Star, Zap, CreditCard, Smartphone, DollarSign, ChevronRight, Plus, Minus, ChevronLeft, AlertCircle, Lock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
 import { useAuthStore } from '@/store/authStore';
@@ -245,6 +245,17 @@ export function POSPage(): JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Check if cash register is open
+  const { data: openRegister, isLoading: loadingRegister } = useQuery({
+    queryKey: ['cash-register-open', unit],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/cash-register/open?unit=${unit}`);
+      return data;
+    },
+    staleTime: 30 * 1000, // 30 segundos
+    refetchInterval: 60 * 1000, // Polling cada minuto
+  });
+
   const { data: pendingSales = [], isLoading: loadingPending } = useQuery({
     queryKey: ['pos-pending', unit],
     queryFn: async (): Promise<PendingSale[]> => {
@@ -428,8 +439,23 @@ const popularServices = useMemo(() => {
   const subtotalCart = cart.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
   const totalCart = Math.max(0, subtotalCart - discountAmount);
 
+  // State for cash register warning modal
+  const [showCashRegisterWarning, setShowCashRegisterWarning] = useState(false);
+
+  // Handle create sale error to show cash register warning
+  const handleCreateSaleError = (error: any) => {
+    if (error.message === 'CAJA_CERRADA') {
+      setShowCashRegisterWarning(true);
+    }
+  };
+
   const createSaleMutation = useMutation({
     mutationFn: async () => {
+      // Check if cash register is open before creating sale
+      if (!openRegister) {
+        throw new Error('CAJA_CERRADA');
+      }
+      
       const payload = {
         unit,
         customerId: selectedCustomer?.id,
@@ -456,6 +482,7 @@ const popularServices = useMemo(() => {
       setSelectedCustomer(null); // ✅ Limpia el cliente seleccionado
       queryClient.invalidateQueries({ queryKey: ['pos-pending', unit] });
     },
+    onError: handleCreateSaleError,
   });
 
   const cancelSaleMutation = useMutation({
@@ -470,8 +497,8 @@ const popularServices = useMemo(() => {
     },
     onError: (error: any) => {
       console.error('Error al cancelar venta:', error);
-      // Mostrar toast de error
-    }
+      handleCreateSaleError(error);
+    },
   });
 
   const closeSaleMutation = useMutation({
@@ -1365,6 +1392,38 @@ const popularServices = useMemo(() => {
         cancelText=""
         isLoading={false}
       />
+
+      {/* Cash Register Warning Modal */}
+      {showCashRegisterWarning && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto mb-6">
+              <Lock className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-center text-gray-900 mb-4">
+              Caja Cerrada
+            </h3>
+            <p className="text-gray-600 text-center mb-8">
+              No hay una caja abierta para {unit === 'SPA' ? 'SPA' : 'Barbería'}. 
+              Debes abrir la caja antes de poder realizar ventas.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowCashRegisterWarning(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+              >
+                Entendido
+              </button>
+              <Link
+                href="/cash-register"
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors text-center"
+              >
+                Abrir Caja
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
   );
 }

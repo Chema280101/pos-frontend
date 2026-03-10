@@ -1,9 +1,9 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(app)/cash-register/page": "app/(app)/cash-register/page.js",
   "/(app)/suppliers/page": "app/(app)/suppliers/page.js",
-  "/(app)/inventory/page": "app/(app)/inventory/page.js",
-  "/(app)/inventory/products/new/page": "app/(app)/inventory/products/new/page.js",
-  "/(app)/inventory/movements/page": "app/(app)/inventory/movements/page.js",
-  "/(app)/expenses/page": "app/(app)/expenses/page.js",
-  "/(app)/services/page": "app/(app)/services/page.js",
-  "/(app)/services/new/page": "app/(app)/services/new/page.js"
+  "/(app)/pos/page": "app/(app)/pos/page.js",
+  "/(app)/admin/users/page": "app/(app)/admin/users/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js"
 }
