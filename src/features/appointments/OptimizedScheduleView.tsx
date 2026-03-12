@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format, addMinutes, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Plus, Clock, User, Calendar, ChevronLeft, ChevronRight, Scissors, Sparkles, TrendingUp } from 'lucide-react';
@@ -23,6 +23,7 @@ interface OptimizedScheduleViewProps {
   onNewAppointment: (employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => void;
   onViewAppointment: (appointmentId: string) => void;
   onReschedule: (appointmentId: string, newEmployeeId: string, newTime: Date) => void;
+  onDateChange?: (date: Date) => void;
 }
 
 const TIME_SLOTS = [
@@ -53,9 +54,15 @@ export function OptimizedScheduleView({
   onNewAppointment,
   onViewAppointment,
   onReschedule,
+  onDateChange,
 }: OptimizedScheduleViewProps) {
   const [selectedDate, setSelectedDate] = useState(date);
   const [draggedAppointment, setDraggedAppointment] = useState<string | null>(null);
+
+  // Sincronizar selectedDate con la prop date cuando cambia
+  useEffect(() => {
+    setSelectedDate(date);
+  }, [date]);
 
   // Group employees by unit
   const employeesByUnit = useMemo(() => {
@@ -70,10 +77,32 @@ export function OptimizedScheduleView({
     // ✅ SAFETY: Ensure appointments is an array
     if (!Array.isArray(appointments)) return [];
     
-    return appointments.filter(apt => {
-      const aptDate = new Date(apt.startTime);
-      return isWithinInterval(aptDate, { start: startOfDay(selectedDate), end: endOfDay(selectedDate) });
+    console.log('📅 OptimizedScheduleView: Filtering appointments for date:', {
+      selectedDate: selectedDate.toLocaleDateString(),
+      totalAppointments: appointments.length,
+      appointments: appointments.map(apt => ({
+        id: apt.id,
+        startTime: apt.startTime,
+        date: new Date(apt.startTime).toLocaleDateString(),
+        customer: apt.customer?.name
+      }))
     });
+    
+    const filtered = appointments.filter(apt => {
+      const aptDate = new Date(apt.startTime);
+      const isWithin = isWithinInterval(aptDate, { start: startOfDay(selectedDate), end: endOfDay(selectedDate) });
+      console.log('📅 OptimizedScheduleView: Checking appointment:', {
+        id: apt.id,
+        startTime: apt.startTime,
+        aptDate: aptDate.toLocaleDateString(),
+        selectedDate: selectedDate.toLocaleDateString(),
+        isWithin
+      });
+      return isWithin;
+    });
+    
+    console.log('📅 OptimizedScheduleView: Filtered appointments:', filtered.length);
+    return filtered;
   }, [appointments, selectedDate]);
 
   // Group appointments by employee and time
@@ -100,15 +129,21 @@ export function OptimizedScheduleView({
   }, [dayAppointments, employees]);
 
   const handlePrevDay = () => {
-    setSelectedDate(prev => new Date(prev.getTime() - 24 * 60 * 60 * 1000));
+    const newDate = new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000);
+    setSelectedDate(newDate);
+    onDateChange?.(newDate);
   };
 
   const handleNextDay = () => {
-    setSelectedDate(prev => new Date(prev.getTime() + 24 * 60 * 60 * 1000));
+    const newDate = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+    setSelectedDate(newDate);
+    onDateChange?.(newDate);
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date());
+    const newDate = new Date();
+    setSelectedDate(newDate);
+    onDateChange?.(newDate);
   };
 
   const handleTimeSlotClick = (employeeId: string, time: string, unit: 'SPA' | 'BARBERIA') => {

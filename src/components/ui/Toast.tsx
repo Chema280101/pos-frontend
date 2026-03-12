@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,36 +23,41 @@ const styles: Record<ToastVariant, string> = {
   info: 'bg-blue-100 border-blue-200 text-blue-800',
 };
 
-export function Toast({ message, variant = 'info', duration = 5000, onClose }: ToastProps): JSX.Element {
-  const Icon = icons[variant];
-  useEffect(() => {
-    const t = setTimeout(onClose, duration);
-    return () => clearTimeout(t);
-  }, [duration, onClose]);
+export const Toast = forwardRef<HTMLDivElement, ToastProps>(
+  ({ message, variant = 'info', duration = 5000, onClose }, ref) => {
+    const Icon = icons[variant];
+    useEffect(() => {
+      const t = setTimeout(onClose, duration);
+      return () => clearTimeout(t);
+    }, [duration, onClose]);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className={cn(
-        'flex items-center gap-3 rounded-[var(--unit-border-radius)] border px-4 py-3 shadow-unit',
-        styles[variant]
-      )}
-    >
-      <Icon className="h-5 w-5 shrink-0" aria-hidden />
-      <p className="flex-1 text-sm font-medium">{message}</p>
-      <button
-        type="button"
-        onClick={onClose}
-        className="shrink-0 rounded p-1 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
-        aria-label="Cerrar notificación"
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        className={cn(
+          'flex items-center gap-3 rounded-[var(--unit-border-radius)] border px-4 py-3 shadow-unit',
+          styles[variant]
+        )}
       >
-        <X className="h-4 w-4" />
-      </button>
-    </motion.div>
-  );
-}
+        <Icon className="h-5 w-5 shrink-0" aria-hidden />
+        <p className="flex-1 text-sm font-medium">{message}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 rounded p-1 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
+          aria-label="Cerrar notificación"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </motion.div>
+    );
+  }
+);
+
+Toast.displayName = 'Toast';
 
 export interface ToastContainerProps {
   toasts: Array<{ id: string; message: string; variant?: ToastVariant; duration?: number }>;

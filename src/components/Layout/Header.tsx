@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, memo, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Key, LogOut, User, Menu } from 'lucide-react';
+import { Search, Users, ChevronDown, LogOut, Settings, Menu, X, User, Key } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
 import { usePrefetchQueries } from '@/hooks/usePrefetchQueries';
@@ -13,6 +13,8 @@ import { useAppointmentReminders } from '@/hooks/useAppointmentReminders';
 import { ConfirmModal, Drawer } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from '@/components/Notifications/NotificationBell';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -43,17 +45,89 @@ RemindersComponent.displayName = 'RemindersComponent';
 
 export function Header({ onMenuClick }: HeaderProps): JSX.Element {
   const router = useRouter();
+  
   // ✅ OPTIMIZACIÓN: Única subscripción a useAuthStore
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const setUnit = useUnitStore((s) => s.setUnit);
-  const online = useOnlineStatus();
-  const prefetchRoute = usePrefetchQueries();
+  
+  // Estados
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [open, setOpen] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  
+  // Refs
   const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  
+  // Hooks
+  const online = useOnlineStatus();
+  const prefetchRoute = usePrefetchQueries();
+  
+  // ✅ OPTIMIZACIÓN: Memoizar logo para evitar re-calculos
+  const logoConfig = useMemo(() => ({
+    src: activeUnit === 'BARBERIA' ? '/logo-barberia.png' : '/logo-spa.png',
+    alt: activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA',
+  }), [activeUnit]);
+
+  // Query para búsqueda optimizada - Solo clientes
+  const { data: clients } = useQuery({
+    queryKey: ['clients-search', activeUnit],
+    queryFn: async () => {
+      if (!activeUnit) return [];
+      const { data } = await api.get(`/api/clients?unit=${activeUnit}&limit=100`);
+      return data?.data || [];
+    },
+    enabled: searchQuery.length > 2 && !!activeUnit,
+  });
+
+  // Lógica de búsqueda optimizada - Solo clientes
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    
+    if (query.length < 3) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const results: any[] = [];
+    
+    // Buscar solo en clientes
+    if (clients && Array.isArray(clients)) {
+      clients.forEach((client: any) => {
+        const clientName = typeof client.name === 'string' ? client.name : '';
+        const clientDni = typeof client.dni === 'string' ? client.dni : '';
+        const clientPhone = typeof client.phone === 'string' ? client.phone : '';
+        
+        if (
+          clientName.toLowerCase().includes(query.toLowerCase()) ||
+          clientDni.includes(query) ||
+          clientPhone.includes(query)
+        ) {
+          results.push({
+            type: 'client',
+            icon: <Users className="h-4 w-4" />,
+            title: clientName,
+            subtitle: `DNI: ${clientDni} | Tel: ${clientPhone}`,
+            href: `/clients/${client.id}`
+          });
+        }
+      });
+    }
+    
+    setSearchResults(results.slice(0, 8)); // Limitar a 8 resultados
+    setShowSearchResults(results.length > 0);
+  }, [clients]);
+
+  // Actualizar búsqueda cuando cambia el query
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [searchQuery, handleSearch]);
 
   // ✅ OPTIMIZACIÓN: Memoizar initial
   const initial = useMemo(
@@ -64,10 +138,15 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (open || showSearchResults) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [open, showSearchResults]);
 
   const handleLogout = async () => {
     await logout();
@@ -93,7 +172,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
       className="sticky top-0 z-40 border-2 border-[var(--unit-border)]/30 bg-gradient-to-r from-white/95 to-white/85 backdrop-blur-md shadow-2xl px-6 py-4"
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 lg:ml-56">
           {onMenuClick && (
             <button
               type="button"
@@ -108,6 +187,57 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
             {activeUnit === 'SPA' && 'SPA'}
               {activeUnit === 'BARBERIA' && 'BARMAN BARBERIA'}
             {!activeUnit && 'Barbería y Spa POS'}
+          </div>
+        </div>
+
+        {/* Barra de búsqueda central */}
+        <div className="hidden lg:flex flex-1 max-w-md mx-8" ref={searchRef}>
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--unit-text-muted)]" />
+            <input
+              type="text"
+              placeholder="Buscar clientes, productos, citas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setShowSearchResults(searchResults.length > 0)}
+              className="w-full pl-10 pr-4 py-2 border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 rounded-xl text-sm text-[var(--unit-text)] placeholder-[var(--unit-text-muted)] focus:border-[var(--unit-accent)]/50 focus:bg-[var(--unit-accent)]/10 focus:outline-none transition-all"
+            />
+            
+            {/* Dropdown de resultados */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-[var(--unit-border)]/50 rounded-xl shadow-2xl max-h-96 overflow-y-auto z-50">
+                <div className="p-2">
+                  {searchResults.map((result, index) => (
+                    <Link
+                      key={index}
+                      href={result.href}
+                      className="flex items-center gap-3 p-3 hover:bg-[var(--unit-surface)]/50 rounded-lg transition-colors group"
+                      onClick={() => {
+                        setShowSearchResults(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      <div className="flex-shrink-0 text-[var(--unit-accent)] group-hover:scale-110 transition-transform">
+                        {result.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-[var(--unit-text)] truncate">
+                          {result.title}
+                        </div>
+                        <div className="text-sm text-[var(--unit-text-muted)] truncate">
+                          {result.subtitle}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {searchResults.length === 0 && searchQuery.length >= 3 && (
+                  <div className="p-4 text-center text-[var(--unit-text-muted)]">
+                    No se encontraron resultados para "{searchQuery}"
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

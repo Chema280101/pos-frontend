@@ -1,17 +1,21 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useToastStore } from '../../store/toastStore';
 import { DollarSign, User, Calendar, Receipt, Building2, CheckCircle, Clock, XCircle, Eye, X, RefreshCw, Download, Search, Filter, ChevronDown, ChevronUp, AlertCircle, TrendingUp } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { CommissionsMetrics } from './CommissionsMetrics';
 import { cn } from '@/lib/utils';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import type { Commission, CommissionsResponse } from '@/types/commission';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 // Interface para grouped commissions (agrupadas por empleado y fecha)
 interface GroupedCommission {
@@ -30,17 +34,32 @@ interface GroupedCommission {
 
 export function AdminCommissions(): JSX.Element {
   const queryClient = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
-  const [showFilters, setShowFilters] = useState(true);
-  
+  const [showFilters, setShowFilters] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [viewModal, setViewModal] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState<GroupedCommission | null>(null);
+  const [recalculatingId, setRecalculatingId] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel');
+  const [exportConfig, setExportConfig] = useState({
+    unit: 'ALL' as 'ALL' | 'SPA' | 'BARBERIA',
+    dateFrom: startOfDay(subDays(new Date(), 30)),
+    dateTo: endOfDay(new Date()),
+    includeLogo: true,
+    includeTotals: true,
+    includeBorders: true,
+    filterByEmployee: false,
+    filterByPaymentMethod: false,
+    selectedEmployee: '',
+    selectedPaymentMethod: ''
+  });
 
   // ✅ MEJORADO: Enviar filtros al backend
   const { data: commissionsResponse, isLoading, error } = useQuery({
@@ -52,15 +71,27 @@ export function AdminCommissions(): JSX.Element {
       if (dateFrom) params.append('dateFrom', dateFrom.toISOString());
       if (dateTo) params.append('dateTo', dateTo.toISOString());
       
-      const { data } = await api.get<CommissionsResponse>(
-        `/api/commissions/all?${params.toString()}`
-      );
-      return data;
+      const response = await api.get(`/api/commissions/all?${params}`);
+      return response.data;
     },
   });
 
   // ✅ EXTRAER: Commissions del response (ya viene filtrado del backend)
   const commissions = commissionsResponse?.data ?? [];
+
+  // 🎯 Obtener lista única de empleados para el filtro
+  const uniqueEmployees = useMemo(() => {
+    if (!commissionsResponse?.data) return [];
+    
+    const employees = new Set<string>();
+    commissionsResponse.data.forEach(commission => {
+      if (commission.user?.name) {
+        employees.add(commission.user.name);
+      }
+    });
+    
+    return Array.from(employees).sort();
+  }, [commissionsResponse]);
 
   // Group commissions by employee and date
   const groupedCommissions = useMemo(() => {
@@ -161,51 +192,535 @@ export function AdminCommissions(): JSX.Element {
 
   // Recalculate commission mutation
   const recalculateMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { data } = await api.patch(`/api/commissions/${id}/recalculate`);
-      return data;
+    mutationFn: async (groupId: string) => {
+      // Find the group and recalculate all commissions individually
+      const group = groupedCommissions.find(g => g.id === groupId);
+      if (!group) throw new Error('Group not found');
+      
+      // Recalculate all commissions in the group
+      const promises = group.commissions.map(commission => 
+        api.patch(`/api/commissions/${commission.id}/recalculate`)
+      );
+      
+      await Promise.all(promises);
+      return group;
     },
     onSuccess: () => {
+      setRecalculatingId(null);
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
-      alert('Comisión recalculada exitosamente');
+      addToast('Comisiones recalculadas exitosamente', 'success');
     },
     onError: (error) => {
-      console.error('Error recalculating commission:', error);
-      alert('Error al recalcular la comisión');
+      setRecalculatingId(null);
+      console.error('Error recalculando comisiones:', error);
+      addToast('Error al recalcular comisiones', 'error');
     },
   });
 
-  // Export commissions mutation
-  const exportMutation = useMutation({
+  // Export Excel mutation - Professional version with exceljs and unit colors
+  const exportExcelMutation = useMutation({
     mutationFn: async () => {
-      // Create CSV from filtered data
-      const csvData = generateCSV(commissions);
-      return csvData;
+      // Get unit colors
+      const unitColors = exportConfig.unit === 'ALL' ? {
+        primary: '#4A0E0E',
+        accent: '#0028b3',
+        secondary: '#F8F5FF'
+      } : exportConfig.unit === 'SPA' ? {
+        primary: '#6B46C1',
+        accent: '#9333EA',
+        secondary: '#F3E8FF'
+      } : {
+        primary: '#7A0A0A',
+        accent: '#7A0A0A',
+        secondary: '#FCFCFC'
+      };
+
+      // Create professional Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Reporte de Comisiones');
+
+      // Define styles using unit colors
+      const titleStyle: Partial<ExcelJS.Style> = {
+        font: { name: 'Calibri', size: 16, bold: true, color: { argb: unitColors.primary.replace('#', 'FF') } },
+        alignment: { horizontal: 'center' as const, vertical: 'middle' as const },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: unitColors.secondary.replace('#', 'FF') } }
+      };
+
+      const headerStyle: Partial<ExcelJS.Style> = {
+        font: { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } },
+        alignment: { horizontal: 'center' as const, vertical: 'middle' as const },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: unitColors.accent.replace('#', 'FF') } },
+        border: {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } }
+        }
+      };
+
+      const subHeaderStyle: Partial<ExcelJS.Style> = {
+        font: { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF000000' } },
+        alignment: { horizontal: 'center' as const, vertical: 'middle' as const },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } },
+        border: {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } }
+        }
+      };
+
+      const dataStyle: Partial<ExcelJS.Style> = {
+        font: { name: 'Calibri', size: 11, color: { argb: 'FF000000' } },
+        alignment: { horizontal: 'left' as const, vertical: 'middle' as const },
+        border: {
+          top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+          left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+          right: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+          bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+        }
+      };
+
+      const numberStyle: Partial<ExcelJS.Style> = {
+        ...dataStyle,
+        alignment: { horizontal: 'right' as const, vertical: 'middle' as const },
+        numFmt: '"S/" #,##0.00'
+      };
+
+      const percentStyle: Partial<ExcelJS.Style> = {
+        ...dataStyle,
+        alignment: { horizontal: 'right' as const, vertical: 'middle' as const },
+        numFmt: '0.00%'
+      };
+
+      // Add logo if enabled
+      if (exportConfig.includeLogo) {
+        const logoRow = worksheet.getRow(1);
+        logoRow.height = 60;
+        worksheet.mergeCells('A1:C1');
+        
+        // Add actual logo image
+        const logoCell = worksheet.getCell('A1');
+        
+        try {
+          // Determine which logo to use
+          let logoPath = '';
+          if (exportConfig.unit === 'SPA') {
+            logoPath = '/logo-spa.png';
+          } else if (exportConfig.unit === 'BARBERIA') {
+            logoPath = '/logo-barberia.png';
+          } else {
+            logoPath = '/logo.png'; // Default logo for ALL
+          }
+          
+          // Fetch the logo image
+          const response = await fetch(logoPath);
+          const arrayBuffer = await response.arrayBuffer();
+          
+          // Add image to worksheet with proper typing
+          const imageId = workbook.addImage({
+            buffer: arrayBuffer as any,
+            extension: 'png',
+          });
+          
+          // Add image to merged cell area with simplified positioning
+          worksheet.addImage(imageId, 'A1:C1');
+          
+        } catch (error) {
+          console.warn('Could not load logo, using text placeholder:', error);
+          // Fallback to text placeholder if image fails
+          logoCell.value = exportConfig.unit === 'ALL' ? 'LOGO' : 
+                          exportConfig.unit === 'SPA' ? 'SPA LOGO' : 'BARBERÍA LOGO';
+          logoCell.style = {
+            font: { name: 'Calibri', size: 14, bold: true, color: { argb: unitColors.primary.replace('#', 'FF') } },
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: unitColors.secondary.replace('#', 'FF') } },
+            border: {
+              top: { style: 'thin', color: { argb: unitColors.primary.replace('#', 'FF') } },
+              left: { style: 'thin', color: { argb: unitColors.primary.replace('#', 'FF') } },
+              right: { style: 'thin', color: { argb: unitColors.primary.replace('#', 'FF') } },
+              bottom: { style: 'thin', color: { argb: unitColors.primary.replace('#', 'FF') } }
+            }
+          };
+        }
+      }
+
+      // Add title row (merged)
+      const titleRowNumber = exportConfig.includeLogo ? 2 : 1;
+      const titleRow = worksheet.getRow(titleRowNumber);
+      titleRow.height = 25;
+      const unitName = exportConfig.unit === 'ALL' ? 'TODAS LAS UNIDADES' : 
+                      exportConfig.unit === 'SPA' ? 'SPA' : 'BARBERÍA';
+      titleRow.values = [`LIBRO DE REPORTE DE COMISIONES - ${unitName}`];
+      titleRow.getCell(1).style = titleStyle;
+      worksheet.mergeCells(`A${titleRowNumber}:L${titleRowNumber}`);
+
+      // Add date row (merged)
+      const dateRowNumber = exportConfig.includeLogo ? 3 : 2;
+      const dateRow = worksheet.getRow(dateRowNumber);
+      dateRow.height = 20;
+      dateRow.values = [`Fecha: ${new Date().toLocaleDateString('es-ES')} | Período: ${exportConfig.dateFrom.toLocaleDateString('es-ES')} al ${exportConfig.dateTo.toLocaleDateString('es-ES')}`];
+      dateRow.getCell(1).style = {
+        font: { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF666666' } },
+        alignment: { horizontal: 'center', vertical: 'middle' }
+      };
+      worksheet.mergeCells(`A${dateRowNumber}:L${dateRowNumber}`);
+
+      // Add empty row
+      worksheet.addRow([]);
+
+      // Add main headers (2 levels)
+      const headerStartRow = exportConfig.includeLogo ? 5 : 4;
+      const headerRow1 = worksheet.getRow(headerStartRow);
+      headerRow1.height = 20;
+      headerRow1.values = ['', 'DATOS DEL EMPLEADO', '', '', 'DETALLE DE VENTA', '', '', '', '', 'DETALLE DE PAGO', '', ''];
+      
+      // Style main headers
+      headerRow1.getCell(2).style = headerStyle;
+      headerRow1.getCell(5).style = headerStyle;
+      headerRow1.getCell(10).style = headerStyle;
+      
+      // Merge main headers
+      worksheet.mergeCells(`B${headerStartRow}:D${headerStartRow}`); // Datos del Empleado
+      worksheet.mergeCells(`E${headerStartRow}:I${headerStartRow}`); // Detalle de Venta  
+      worksheet.mergeCells(`J${headerStartRow}:L${headerStartRow}`); // Detalle de Pago
+
+      // Add sub headers
+      const headerRow2 = worksheet.getRow(headerStartRow + 1);
+      headerRow2.height = 18;
+      headerRow2.values = ['ID', 'Nombre', 'Unidad', 'Estado', 'ID Venta', 'Número Venta', 'Fecha Creación', 'Monto', '% Comisión', 'Fecha Pago', 'Método Pago', 'Notas'];
+      
+      // Style sub headers
+      for (let i = 1; i <= 12; i++) {
+        headerRow2.getCell(i).style = subHeaderStyle;
+      }
+
+      // Filter commissions by unit and date
+      const filteredCommissions = commissions.filter(c => {
+        const commissionDate = new Date(c.createdAt);
+        const unitMatch = exportConfig.unit === 'ALL' || c.user.unit === exportConfig.unit;
+        const dateMatch = commissionDate >= exportConfig.dateFrom && commissionDate <= exportConfig.dateTo;
+        return unitMatch && dateMatch;
+      });
+
+      // Add data rows
+      filteredCommissions.forEach((commission, index) => {
+        const dataRow = worksheet.getRow((headerStartRow + 2) + index);
+        dataRow.height = 15;
+        dataRow.values = [
+          commission.id,
+          commission.user.name,
+          commission.user.unit || '',
+          commission.status === 'PENDING' ? 'Pendiente' : 
+           commission.status === 'APPROVED' ? 'Aprobada' : 'Pagada',
+          commission.sale?.id || '',
+          commission.sale?.saleNumber || '',
+          new Date(commission.createdAt).toLocaleString('es-PE'),
+          commission.amount,
+          commission.pctApplied / 100, // Convert to decimal for percentage format
+          commission.paidAt ? new Date(commission.paidAt).toLocaleString('es-PE') : '',
+          commission.paymentMethod || '',
+          commission.paymentNotes || ''
+        ];
+
+        // Apply styles to data cells
+        dataRow.getCell(1).style = dataStyle; // ID
+        dataRow.getCell(2).style = dataStyle; // Nombre
+        dataRow.getCell(3).style = dataStyle; // Unidad
+        dataRow.getCell(4).style = dataStyle; // Estado
+        dataRow.getCell(5).style = dataStyle; // ID Venta
+        dataRow.getCell(6).style = dataStyle; // Número Venta
+        dataRow.getCell(7).style = dataStyle; // Fecha Creación
+        dataRow.getCell(8).style = numberStyle; // Monto
+        dataRow.getCell(9).style = percentStyle; // % Comisión
+        dataRow.getCell(10).style = dataStyle; // Fecha Pago
+        dataRow.getCell(11).style = dataStyle; // Método Pago
+        dataRow.getCell(12).style = dataStyle; // Notas
+      });
+
+      // Set column widths
+      worksheet.getColumn(1).width = 15; // ID
+      worksheet.getColumn(2).width = 25; // Nombre
+      worksheet.getColumn(3).width = 12; // Unidad
+      worksheet.getColumn(4).width = 12; // Estado
+      worksheet.getColumn(5).width = 20; // ID Venta
+      worksheet.getColumn(6).width = 18; // Número Venta
+      worksheet.getColumn(7).width = 20; // Fecha Creación
+      worksheet.getColumn(8).width = 15; // Monto
+      worksheet.getColumn(9).width = 12; // % Comisión
+      worksheet.getColumn(10).width = 20; // Fecha Pago
+      worksheet.getColumn(11).width = 15; // Método Pago
+      worksheet.getColumn(12).width = 25; // Notas
+
+      // Add totals row
+      const totalRow = worksheet.getRow((headerStartRow + 2) + filteredCommissions.length);
+      totalRow.height = 20;
+      const totalAmount = filteredCommissions.reduce((sum, c) => sum + c.amount, 0);
+      totalRow.values = ['', '', '', '', '', '', '', 'TOTAL:', totalAmount, '', '', '', ''];
+      
+      totalRow.getCell(8).style = {
+        font: { name: 'Calibri', size: 12, bold: true, color: { argb: unitColors.primary.replace('#', 'FF') } },
+        alignment: { horizontal: 'right', vertical: 'middle' },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: unitColors.secondary.replace('#', 'FF') } },
+        border: {
+          top: { style: 'double', color: { argb: unitColors.primary.replace('#', 'FF') } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'double', color: { argb: unitColors.primary.replace('#', 'FF') } }
+        },
+        numFmt: '"S/" #,##0.00'
+      };
+
+      // Generate buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      return buffer;
     },
     onSuccess: (data) => {
-      // Create download link
-      const blob = new Blob([data], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      
-      // Generate filename with filters
+      // Generate filename with export config
       const dateStr = new Date().toISOString().split('T')[0];
-      let filename = `commissions_${dateStr}`;
-      if (unitFilter) filename += `_${unitFilter.toLowerCase()}`;
-      if (statusFilter) filename += `_${statusFilter.toLowerCase()}`;
-      if (dateFrom && dateTo) {
-        filename += `_${format(dateFrom, 'dd-MM-yyyy')}_to_${format(dateTo, 'dd-MM-yyyy')}`;
-      }
-      filename += '.csv';
-      
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      let filename = `reporte_comisiones_${dateStr}`;
+      if (exportConfig.unit !== 'ALL') filename += `_${exportConfig.unit.toLowerCase()}`;
+      filename += '.xlsx';
+
+      // Save file using file-saver
+      saveAs(new Blob([data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      }), filename);
+
+      addToast('Reporte de comisiones exportado a Excel exitosamente', 'success');
+      setShowExportModal(false);
     },
     onError: (error) => {
-      console.error('Error exporting commissions:', error);
-      alert('Error al exportar comisiones');
+      console.error('Error exporting commissions to Excel:', error);
+      addToast('Error al exportar comisiones a Excel', 'error');
+    },
+  });
+
+  // Helper function to group commissions (moved outside mutation to avoid hook error)
+  const groupCommissionsByEmployeeAndDate = (commissionsToGroup: Commission[]): GroupedCommission[] => {
+    const groups: Record<string, Commission[]> = {};
+    
+    commissionsToGroup.forEach(commission => {
+      const commissionDate = new Date(commission.createdAt);
+      const dateKey = commissionDate.toISOString().split('T')[0];
+      const groupKey = `${commission.user.id}_${dateKey}`;
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(commission);
+    });
+    
+    return Object.entries(groups).map(([groupKey, commissionList]) => {
+      const [employeeId, date] = groupKey.split('_');
+      const firstCommission = commissionList[0];
+      
+      const totalAmount = commissionList.reduce((sum, c) => sum + c.amount, 0);
+      const totalSales = commissionList.length;
+      const allPaid = commissionList.every(c => c.status === 'PAID');
+      const allPending = commissionList.every(c => c.status === 'PENDING');
+      
+      let status = 'MIXED';
+      if (allPaid) status = 'PAID';
+      else if (allPending) status = 'PENDING';
+      
+      return {
+        id: groupKey,
+        employeeId,
+        employeeName: firstCommission.user.name,
+        employeeUnit: firstCommission.user.unit || '',
+        date,
+        totalAmount,
+        totalSales,
+        status,
+        commissions: commissionList,
+        createdAt: firstCommission.createdAt,
+        sale: firstCommission.sale,
+      };
+    });
+  };
+
+  // Export PDF mutation - Profesional con jsPDF
+  const exportPDFMutation = useMutation({
+    mutationFn: async () => {
+      // Get unit colors for PDF styling
+      const unitColors = exportConfig.unit === 'ALL' ? {
+        primary: '#4A0E0E',
+        accent: '#0028b3',
+        secondary: '#F8F5FF'
+      } : exportConfig.unit === 'SPA' ? {
+        primary: '#6B46C1',
+        accent: '#9333EA',
+        secondary: '#F3E8FF'
+      } : {
+        primary: '#7A0A0A',
+        accent: '#7A0A0A',
+        secondary: '#FCFCFC'
+      };
+
+      // Filter commissions based on export configuration
+      let filteredCommissions = commissions;
+      
+      // Filter by unit
+      if (exportConfig.unit !== 'ALL') {
+        filteredCommissions = filteredCommissions.filter(commission => 
+          commission.user.unit === exportConfig.unit
+        );
+      }
+      
+      // Filter by date range
+      filteredCommissions = filteredCommissions.filter(commission => {
+        const commissionDate = new Date(commission.createdAt);
+        return commissionDate >= exportConfig.dateFrom && commissionDate <= exportConfig.dateTo;
+      });
+      
+      // Filter by employee
+      if (exportConfig.filterByEmployee && exportConfig.selectedEmployee) {
+        filteredCommissions = filteredCommissions.filter(commission => 
+          commission.user.name === exportConfig.selectedEmployee
+        );
+      }
+      
+      // Filter by payment method
+      if (exportConfig.filterByPaymentMethod && exportConfig.selectedPaymentMethod) {
+        filteredCommissions = filteredCommissions.filter(commission => 
+          commission.paymentMethod === exportConfig.selectedPaymentMethod
+        );
+      }
+
+      // Group filtered commissions by employee and date (using helper function)
+      const filteredGroupedCommissions = groupCommissionsByEmployeeAndDate(filteredCommissions);
+
+      // Create professional PDF with jsPDF
+      const doc = new jsPDF();
+      
+      // Set font to support Spanish characters
+      doc.setFont('helvetica');
+      
+      // Add custom font for better Spanish support (if needed)
+      // For now, we'll use built-in fonts
+      
+      // Get page dimensions
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Header Section
+      let currentY = 20;
+      
+      // Title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('REPORTE DE COMISIONES', pageWidth / 2, currentY, { align: 'center' });
+      
+      // Unit name
+      currentY += 10;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      const unitName = exportConfig.unit === 'ALL' ? 'TODAS LAS UNIDADES' : 
+                      exportConfig.unit === 'SPA' ? 'SPA' : 'BARBERÍA';
+      doc.text(`Unidad: ${unitName}`, pageWidth / 2, currentY, { align: 'center' });
+      
+      // Date and period info (right aligned)
+      currentY += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const dateStr = new Date().toLocaleDateString('es-ES');
+      const periodStr = `${format(exportConfig.dateFrom, 'dd/MM/yyyy')} al ${format(exportConfig.dateTo, 'dd/MM/yyyy')}`;
+      doc.text(`Fecha: ${dateStr}`, pageWidth - 60, currentY);
+      currentY += 6;
+      doc.text(`Período: ${periodStr}`, pageWidth - 60, currentY);
+      
+      // Logo placeholder if enabled
+      if (exportConfig.includeLogo) {
+        currentY += 15;
+        doc.setDrawColor(unitColors.primary.replace('#', ''));
+        doc.setFillColor(unitColors.secondary.replace('#', ''));
+        doc.rect(pageWidth / 2 - 30, currentY, 60, 20, 'F');
+        doc.setDrawColor(0);
+        doc.text('LOGO', pageWidth / 2, currentY + 12, { align: 'center' });
+        currentY += 25;
+      } else {
+        currentY += 15;
+      }
+      
+      // Prepare table data
+      const tableData = filteredGroupedCommissions.map((group, index) => [
+        index + 1, // ID
+        group.employeeName,
+        (group.employeeUnit as string) === 'BARBERIA' ? 'Barbería' : 'SPA',
+        format(new Date(group.date), 'dd/MM/yyyy'),
+        group.totalSales.toString(),
+        group.status === 'PENDING' ? 'Pendiente' : 
+        group.status === 'APPROVED' ? 'Aprobada' : 
+        group.status === 'PAID' ? 'Pagada' : 'Mixto',
+        `S/ ${group.totalAmount.toFixed(2)}`
+      ]);
+      
+      // Calculate totals
+      const totalAmount = filteredGroupedCommissions.reduce((sum, group) => sum + group.totalAmount, 0);
+      
+      // Add table with autoTable
+      autoTable(doc, {
+        head: [['ID', 'Empleado', 'Unidad', 'Fecha', 'Ventas', 'Estado', 'Monto Total']],
+        body: tableData,
+        startY: currentY,
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [parseInt(unitColors.primary.slice(1, 3), 16), 
+                     parseInt(unitColors.primary.slice(3, 5), 16), 
+                     parseInt(unitColors.primary.slice(5, 7), 16)],
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 15 }, // ID
+          1: { cellWidth: 40 }, // Empleado
+          2: { halign: 'center', cellWidth: 25 }, // Unidad
+          3: { halign: 'center', cellWidth: 25 }, // Fecha
+          4: { halign: 'center', cellWidth: 20 }, // Ventas
+          5: { halign: 'center', cellWidth: 25 }, // Estado
+          6: { halign: 'right', cellWidth: 30 }, // Monto Total
+        },
+        // didDrawCell and didDrawRow removed for compatibility
+        foot: [[
+          { content: `TOTAL GENERAL`, colSpan: 6, styles: { fillColor: unitColors.secondary.replace('#', ''), textColor: unitColors.primary.replace('#', ''), fontStyle: 'bold' } },
+          { content: `S/ ${totalAmount.toFixed(2)}`, styles: { halign: 'right', fillColor: unitColors.secondary.replace('#', ''), textColor: unitColors.primary.replace('#', ''), fontStyle: 'bold' } }
+        ]],
+        footStyles: {
+          fillColor: unitColors.secondary.replace('#', ''),
+          textColor: unitColors.primary.replace('#', ''),
+          fontStyle: 'bold',
+          lineWidth: 0.1,
+        },
+      });
+      
+      // Add page numbers (simplified for compatibility)
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página 1 de 1', pageWidth / 2, pageHeight - 10, { align: 'center' });
+      
+      // Save the PDF
+      const fileName = `reporte_comisiones_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      doc.save(fileName);
+      
+      addToast('PDF exportado exitosamente', 'success');
+      setShowExportModal(false); // Close modal after successful export
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commissions'] });
+    },
+    onError: (error) => {
+      console.error('Error exporting commissions to PDF:', error);
+      addToast('Error al exportar comisiones a PDF', 'error');
     },
   });
 
@@ -242,7 +757,22 @@ export function AdminCommissions(): JSX.Element {
       c.sale?.saleNumber || ''
     ]);
     
-    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    // Create CSV with proper formatting for Excel
+    const csvContent = [headers, ...rows]
+      .map(row => 
+        row.map(cell => {
+          // Handle special characters and commas
+          const cellStr = cell.toString();
+          // If cell contains comma, quote, or newline, wrap in quotes and escape quotes
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return '"' + cellStr.replace(/"/g, '""') + '"';
+          }
+          return cellStr;
+        }).join(',')
+      )
+      .join('\n');
+      
+    return csvContent;
   };
 
   // Helper functions
@@ -266,8 +796,8 @@ export function AdminCommissions(): JSX.Element {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PAID': return 'bg-green-100 text-green-800';
-      case 'APPROVED': return 'bg-blue-100 text-blue-800';
-      case 'PENDING': return 'bg-gray-100 text-gray-800';
+      case 'APPROVED': return 'bg-green-100 text-green-800';
+      case 'PENDING': return 'bg-amber-100 text-amber-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -278,18 +808,24 @@ export function AdminCommissions(): JSX.Element {
       header: 'Empleado',
       sortable: true,
       render: (row: any) => (
-        <div>
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span className="font-medium text-[var(--unit-text-muted)]">{row.employeeName}</span>
-          </div>
-          {row.employeeUnit && (
-            <div className="flex items-center gap-1 mt-1">
-              <Building2 className="h-3 w-3 text-[var(--unit-text-muted)]" />
-              <span className="text-sm text-[var(--unit-text-muted)]">{row.employeeUnit}</span>
-            </div>
-          )}
-        </div>
+        <span className="font-medium text-[var(--unit-text-muted)]">
+          {row.employeeName}
+        </span>
+      ),
+    },
+    {
+      key: 'unit',
+      header: 'Unidad',
+      sortable: true,
+      render: (row: any) => (
+        <span className={cn(
+          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+          row.employeeUnit === 'SPA'
+            ? 'bg-purple-100 text-purple-800'
+            : 'bg-red-100 text-red-800'
+        )}>
+          {row.employeeUnit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+        </span>
       ),
     },
     {
@@ -297,12 +833,9 @@ export function AdminCommissions(): JSX.Element {
       header: 'Fecha',
       sortable: true,
       render: (row: any) => (
-        <div className="flex items-center gap-1">
-          <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">
-            {format(new Date(row.date), 'd MMM yyyy', { locale: es })}
-          </span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+          {format(new Date(row.date), 'd MMM yyyy', { locale: es })}
+        </span>
       ),
     },
     {
@@ -310,10 +843,9 @@ export function AdminCommissions(): JSX.Element {
       header: 'Ventas',
       sortable: true,
       render: (row: any) => (
-        <div className="flex items-center gap-1">
-          <Receipt className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text-muted)]">{row.totalSales}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+          {row.totalSales}
+        </span>
       ),
     },
     {
@@ -321,10 +853,9 @@ export function AdminCommissions(): JSX.Element {
       header: 'Comisión Total',
       sortable: true,
       render: (row: any) => (
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text-muted)]">S/ {row.totalAmount.toFixed(2)}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+          S/ {row.totalAmount.toFixed(2)}
+        </span>
       ),
     },
     {
@@ -335,12 +866,9 @@ export function AdminCommissions(): JSX.Element {
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           getStatusColor(row.status)
         )}>
-          {getStatusIcon(row.status)}
-          <span className="ml-1">
-            {row.status === 'PENDING' ? 'Pendiente' : 
-             row.status === 'APPROVED' ? 'Aprobada' : 
-             row.status === 'PAID' ? 'Pagada' : 'Mixto'}
-          </span>
+          {row.status === 'PENDING' ? 'Pendiente' : 
+           row.status === 'APPROVED' ? 'Aprobada' : 
+           row.status === 'PAID' ? 'Pagada' : 'Mixto'}
         </span>
       ),
     },
@@ -350,18 +878,14 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => {
         const date = new Date(row.createdAt);
-        // ✅ MEJORADO: Usar date-fns para formato consistente
         return (
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
-            <div>
-              <div className="font-medium text-[var(--unit-text-muted)]">
-                {format(date, "d MMM yyyy", { locale: es })}
-              </div>
-              <div className="text-sm text-[var(--unit-text-muted)]">
-                {format(date, "h:mm a", { locale: es })}
-              </div>
-            </div>
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+              {format(date, "d MMM yyyy", { locale: es })}
+            </span>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+              {format(date, "h:mm a", { locale: es })}
+            </span>
           </div>
         );
       },
@@ -393,15 +917,11 @@ export function AdminCommissions(): JSX.Element {
       label: 'Recalcular',
       icon: <RefreshCw className="h-4 w-4" />,
       onClick: (row: any) => {
-        if (confirm('¿Estás seguro de recalcular todas las comisiones de este día?')) {
-          // Recalculate all commissions in this group
-          row.commissions.forEach((commission: Commission) => {
-            recalculateMutation.mutate(commission.id);
-          });
-        }
+        setRecalculatingId(row.id);
+        recalculateMutation.mutate(row.id);
       },
       className: 'text-amber-600 hover:bg-amber-50',
-      disabled: (row: any) => row.status === 'PAID',
+      disabled: (row: any) => row.status === 'PAID' || recalculateMutation.isPending,
     },
     {
       label: 'Anular',
@@ -499,12 +1019,26 @@ export function AdminCommissions(): JSX.Element {
           {/* Enhanced Action Buttons - Exacto estilo ServicesPage */}
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button
-              onClick={() => exportMutation.mutate()}
-              disabled={exportMutation.isPending}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-600/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              onClick={() => {
+                setExportType('excel');
+                setShowExportModal(true);
+              }}
+              disabled={exportExcelMutation.isPending}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
               <Download className="h-5 w-5" />
-              {exportMutation.isPending ? 'Exportando...' : 'Exportar'}
+              {exportExcelMutation.isPending ? 'Exportando...' : 'Exportar Excel'}
+            </button>
+            <button
+              onClick={() => {
+                setExportType('pdf');
+                setShowExportModal(true);
+              }}
+              disabled={exportPDFMutation.isPending}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-600/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            >
+              <Download className="h-5 w-5" />
+              {exportPDFMutation.isPending ? 'Exportando...' : 'Exportar PDF'}
             </button>
             <Link href="/commissions" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
               <DollarSign className="h-5 w-5" />
@@ -637,177 +1171,143 @@ export function AdminCommissions(): JSX.Element {
           />
         </div>
 
-        {/* Payment Modal - Premium Glassmorphism */}
+        {/* Payment Modal - Estilo Eliminar Gasto */}
         {payingId && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-5">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setPayingId(null);
+              setPaymentMethod('');
+              setPaymentNotes('');
+            }
+          }}>
+            <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-50/95 to-emerald-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern - Estilo Eliminar Gasto */}
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
                 <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2310b981' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
-              
-              <div className="relative">
-                {/* Enhanced Header - Exacto estilo ServicesPage */}
-                <div className="relative bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 px-6 py-4 border-b border-emerald-200/30 -mx-8 -mt-8 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
-                        <DollarSign className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-[var(--unit-text)]">Liquidar Comisión</h3>
-                        <p className="text-sm text-[var(--unit-text-muted)]">Registrar pago de comisión</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setPayingId(null);
-                        setPaymentMethod('');
-                        setPaymentNotes('');
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
-                    >
-                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-red-500 transition-colors" />
-                    </button>
-                  </div>
+
+              {/* Header - Estilo Eliminar Gasto */}
+              <div className="relative flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
+                <div>
+                  <h3 className="text-xl font-bold text-emerald-900">Liquidar Comisión</h3>
+                  <p className="text-sm text-emerald-700">Esta acción registrará el pago</p>
+                </div>
+              </div>
 
-                {/* Enhanced Form Content */}
-                <div className="space-y-6">
-                  {/* Payment Method Field - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-emerald-600/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Field Header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-300/30">
-                          <DollarSign className="h-4 w-4 text-emerald-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Método de pago</label>
-                          <p className="text-xs text-[var(--unit-text-muted)]">Selecciona el método de pago</p>
-                        </div>
-                      </div>
-
-                      {/* Enhanced Select */}
-                      <div className="relative">
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="w-full rounded-xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-50 to-emerald-100 px-4 py-3 text-[var(--unit-text)] font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none cursor-pointer hover:border-emerald-400/50"
-                          required
-                        >
-                          <option value="" className="text-[var(--unit-text-muted)]">Seleccionar método...</option>
-                          <option value="Efectivo" className="text-[var(--unit-text)]">💵 Efectivo</option>
-                          <option value="Transferencia" className="text-[var(--unit-text)]">🏦 Transferencia</option>
-                          <option value="Yape" className="text-[var(--unit-text)]">📱 Yape</option>
-                          <option value="Plin" className="text-[var(--unit-text)]">📱 Plin</option>
-                          <option value="Tarjeta" className="text-[var(--unit-text)]">💳 Tarjeta</option>
-                          <option value="Depósito" className="text-[var(--unit-text)]">🏧 Depósito</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                          <ChevronDown className="h-5 w-5 text-emerald-600" />
-                        </div>
-                      </div>
+              {/* Content - Estilo Eliminar Gasto */}
+              <div className="relative space-y-4">
+                <div className="rounded-xl border-2 border-emerald-200/50 bg-gradient-to-br from-emerald-50 to-emerald-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 shadow-lg mt-1">
+                      <CheckCircle className="h-4 w-4 text-white" />
                     </div>
-                  </div>
-
-                  {/* Notes Field - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Field Header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Receipt className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Notas</label>
-                          <p className="text-xs text-[var(--unit-text-muted)]">Notas adicionales (opcional)</p>
-                        </div>
-                      </div>
-
-                      {/* Enhanced Textarea */}
-                      <textarea
-                        value={paymentNotes}
-                        onChange={(e) => setPaymentNotes(e.target.value)}
-                        placeholder="Añade notas o referencias del pago..."
-                        className="w-full rounded-xl border-2 border-[var(--unit-accent)]/30 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] px-4 py-3 text-[var(--unit-text)] font-medium placeholder-[var(--unit-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none hover:border-[var(--unit-accent)]/50"
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Summary Card - Glassmorphism */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-100/50 to-emerald-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 border border-emerald-600 shadow-lg">
-                          <CheckCircle className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-emerald-800 uppercase tracking-wider">Resumen de Liquidación</h4>
-                          <p className="text-xs text-emerald-700">Confirma los datos antes de procesar</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center py-2 border-b border-emerald-200/50">
-                          <span className="text-sm font-medium text-emerald-700">Método seleccionado</span>
-                          <span className="font-bold text-emerald-800 bg-white px-3 py-1 rounded-lg border border-emerald-300/50">
-                            {paymentMethod || 'No seleccionado'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                          <span className="text-sm font-medium text-emerald-700">Estado</span>
-                          <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <CheckCircle className="h-3 w-3" />
-                            Listo para liquidar
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-emerald-900">
+                        ¿Estás seguro de que deseas liquidar la comisión?
+                      </p>
+                      <p className="text-sm text-emerald-700 mt-1">
+                        Esta acción registrará el pago de la comisión y no se puede deshacer.
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Enhanced Footer Actions */}
-                <div className="relative bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 px-6 py-4 border-t border-emerald-200/30 -mx-8 -mb-8 mt-6">
-                  <div className="flex gap-4">
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        setPayingId(null);
-                        setPaymentMethod('');
-                        setPaymentNotes('');
-                      }} 
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] text-[var(--unit-text)] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] group"
-                    >
-                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-red-500 transition-colors" />
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => markPaidMutation.mutate({ groupId: payingId, method: paymentMethod, notes: paymentNotes })}
-                      disabled={markPaidMutation.isPending || !paymentMethod.trim()}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-600/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
-                    >
-                      {markPaidMutation.isPending ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                          Liquidando...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4" />
-                          Liquidar Comisión
-                        </>
-                      )}
-                    </button>
+                {/* Commission Info - Estilo Eliminar Gasto */}
+                <div className="rounded-xl border-2 border-emerald-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Empleado</span>
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {groupedCommissions?.find(c => c.id === payingId)?.employeeName || 'Empleado'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Monto</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        S/ {groupedCommissions?.find(c => c.id === payingId)?.totalAmount.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {groupedCommissions?.find(c => c.id === payingId) ? 
+                          new Date(groupedCommissions.find(c => c.id === payingId)!.date).toLocaleDateString() : 
+                          new Date().toLocaleDateString()
+                        }
+                      </span>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[var(--unit-text)]">
+                    Método de pago
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full rounded-[var(--unit-border-radius)] border bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)]"
+                    style={{ borderColor: 'var(--unit-border)' }}
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Yape">Yape</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[var(--unit-text)]">
+                    Notas (opcional)
+                  </label>
+                  <textarea
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    placeholder="Referencia, observaciones..."
+                    className="w-full rounded-[var(--unit-border-radius)] border bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)]"
+                    style={{ borderColor: 'var(--unit-border)' }}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Actions - Estilo Eliminar Gasto */}
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => markPaidMutation.mutate({ groupId: payingId, method: paymentMethod, notes: paymentNotes })}
+                  disabled={markPaidMutation.isPending || !paymentMethod.trim()}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                  {markPaidMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                      Liquidando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Liquidar Comisión
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setPayingId(null);
+                    setPaymentMethod('');
+                    setPaymentNotes('');
+                  }}
+                  disabled={markPaidMutation.isPending}
+                  className="flex-1 rounded-xl border-2 border-emerald-300/50 px-6 py-3 text-sm font-medium text-emerald-700 bg-white/80 hover:bg-emerald-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>
@@ -1022,7 +1522,7 @@ export function AdminCommissions(): JSX.Element {
                       className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <CheckCircle className="h-4 w-4" />
-                      Cerrar Detalles
+                       Cerrar Detalles
                     </button>
                   </div>
                 </div>
@@ -1030,7 +1530,259 @@ export function AdminCommissions(): JSX.Element {
             </div>
           </div>
         )}
+
+      {/* Export Configuration Modal - Estilo Premium como Expenses */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowExportModal(false);
+          }
+        }}>
+          <div className={`relative overflow-hidden rounded-2xl border-2 ${exportType === 'excel' ? 'border-green-500/50 bg-gradient-to-br from-green-50/95 to-green-100/85' : 'border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85'} backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto`}>
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-30 pointer-events-none">
+              <div className="h-full w-full bg-repeat" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23${exportType === 'excel' ? '10b981' : 'ef4444'}' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+              }}></div>
+            </div>
+
+            {/* Header */}
+            <div className="relative flex items-center gap-4 mb-6">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${exportType === 'excel' ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'} shadow-lg`}>
+                <Download className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[var(--unit-text)]">Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}</h3>
+                <p className="text-sm text-[var(--unit-text-muted)]">Configura tu reporte personalizado</p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="relative space-y-4">
+              {/* Unit Selection */}
+              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
+                <label className="block text-sm font-medium text-[var(--unit-text)] mb-2">
+                  Unidad de Negocio
+                </label>
+                <select
+                  value={exportConfig.unit}
+                  onChange={(e) => setExportConfig((prev: any) => ({ ...prev, unit: e.target.value as any }))}
+                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-2.5 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                >
+                  <option value="ALL">Todas las unidades</option>
+                  <option value="SPA">SPA</option>
+                  <option value="BARBERIA">Barbería</option>
+                </select>
+              </div>
+
+              {/* Date Range */}
+              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
+                <label className="block text-sm font-medium text-[var(--unit-text)] mb-3">
+                  Período de Exportación
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--unit-text-muted)] mb-1">
+                      Desde
+                    </label>
+                    <input
+                      type="date"
+                      value={exportConfig.dateFrom.toISOString().split('T')[0]}
+                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, dateFrom: new Date(e.target.value) }))}
+                      className="w-full rounded-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--unit-text-muted)] mb-1">
+                      Hasta
+                    </label>
+                    <input
+                      type="date"
+                      value={exportConfig.dateTo.toISOString().split('T')[0]}
+                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, dateTo: new Date(e.target.value) }))}
+                      className="w-full rounded-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Include Logo */}
+              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="includeLogo"
+                    checked={exportConfig.includeLogo}
+                    onChange={(e) => setExportConfig((prev: any) => ({ ...prev, includeLogo: e.target.checked }))}
+                    className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
+                  />
+                  <label htmlFor="includeLogo" className="text-sm font-medium text-[var(--unit-text)]">
+                    Incluir logo del negocio
+                  </label>
+                </div>
+              </div>
+
+              {/* Additional Options */}
+              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
+                <label className="block text-sm font-medium text-[var(--unit-text)] mb-3">
+                  Opciones Adicionales
+                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="includeTotals"
+                      checked={exportConfig.includeTotals}
+                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, includeTotals: e.target.checked }))}
+                      className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
+                    />
+                    <label htmlFor="includeTotals" className="text-sm font-medium text-[var(--unit-text)]">
+                      Incluir totales y resúmenes
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="includeBorders"
+                      checked={exportConfig.includeBorders}
+                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, includeBorders: e.target.checked }))}
+                      className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
+                    />
+                    <label htmlFor="includeBorders" className="text-sm font-medium text-[var(--unit-text)]">
+                      Incluir bordes en todas las celdas
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="filterByEmployee"
+                      checked={exportConfig.filterByEmployee}
+                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, filterByEmployee: e.target.checked, selectedEmployee: e.target.checked ? prev.selectedEmployee : '' }))}
+                      className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
+                    />
+                    <label htmlFor="filterByEmployee" className="text-sm font-medium text-[var(--unit-text)]">
+                      Filtrar por empleado específico
+                    </label>
+                  </div>
+                  {exportConfig.filterByEmployee && (
+                    <div className="ml-7">
+                      <label className="block text-xs font-medium text-[var(--unit-text-muted)] mb-1">
+                        Seleccionar empleado
+                      </label>
+                      <select
+                        value={exportConfig.selectedEmployee}
+                        onChange={(e) => setExportConfig((prev: any) => ({ ...prev, selectedEmployee: e.target.value }))}
+                        className={`w-full rounded-lg border ${exportType === 'excel' ? 'border-green-300/50 focus:ring-green-500/50 focus:border-green-500' : 'border-red-300/50 focus:ring-red-500/50 focus:border-red-500'} bg-white px-3 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 transition-all`}
+                      >
+                        <option value="">Todos los empleados</option>
+                        {uniqueEmployees.map(employee => (
+                          <option key={employee} value={employee}>
+                            {employee}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="filterByPaymentMethod"
+                      checked={exportConfig.filterByPaymentMethod}
+                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, filterByPaymentMethod: e.target.checked }))}
+                      className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
+                    />
+                    <label htmlFor="filterByPaymentMethod" className="text-sm font-medium text-[var(--unit-text)]">
+                      Filtrar por método de pago
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-300/50 bg-gradient-to-br from-green-50 to-green-100' : 'border-red-300/50 bg-gradient-to-br from-red-50 to-red-100'} p-4`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`h-2 w-2 rounded-full ${exportType === 'excel' ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+                  <span className="text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">Vista Previa</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Unidad</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.unit === 'ALL' ? 'Todas' : exportConfig.unit === 'SPA' ? 'SPA' : 'Barbería'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Período</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.dateFrom.toLocaleDateString('es-ES')} - {exportConfig.dateTo.toLocaleDateString('es-ES')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Logo</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.includeLogo ? 'Incluido' : 'No incluido'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Totales</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.includeTotals ? 'Incluidos' : 'No incluidos'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Bordes</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.includeBorders ? 'Incluidos' : 'No incluidos'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Filtro Empleado</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.filterByEmployee ? (exportConfig.selectedEmployee || 'Todos') : 'No aplicado'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Filtro Pago</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {exportConfig.filterByPaymentMethod ? 'Activado' : 'No aplicado'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => exportType === 'excel' ? exportExcelMutation.mutate() : exportPDFMutation.mutate()}
+                disabled={exportExcelMutation.isPending || exportPDFMutation.isPending}
+                className={`flex-1 rounded-xl bg-gradient-to-r ${exportType === 'excel' ? 'from-green-600 to-green-700 border-green-500/50' : 'from-red-600 to-red-700 border-red-500/50'} text-white font-bold shadow-lg border-2 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
+              >
+                {(exportExcelMutation.isPending || exportPDFMutation.isPending) ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                    Exportando...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Exportar {exportType === 'excel' ? 'Excel' : 'PDF'}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className={`flex-1 rounded-xl border-2 ${exportType === 'excel' ? 'border-green-300/50 text-green-700 hover:bg-green-50' : 'border-red-300/50 text-red-700 hover:bg-red-50'} px-6 py-3 text-sm font-medium bg-white/80 transition-all hover:shadow-lg active:scale-[0.98]`}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
 }
+
+

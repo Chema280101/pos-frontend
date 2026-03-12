@@ -43,12 +43,11 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
-          </div>
-        ))}
+      <div className="text-center py-8">
+        <div className="animate-pulse inline-block">
+          <div className="h-8 w-8 bg-gray-200 rounded-full mx-auto mb-2"></div>
+          <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
+        </div>
       </div>
     );
   }
@@ -63,34 +62,6 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <ReportKPICard
-          title="Ventas Totales"
-          value={overviewStats.totalSales}
-          subtitle={`S/ ${overviewStats.totalRevenue.toFixed(2)}`}
-          icon={DollarSign}
-        />
-        <ReportKPICard
-          title="Citas"
-          value={overviewStats.totalAppointments}
-          subtitle="Período seleccionado"
-          icon={Calendar}
-        />
-        <ReportKPICard
-          title="Clientes"
-          value={overviewStats.totalClients}
-          subtitle="Activos"
-          icon={Users}
-        />
-        <ReportKPICard
-          title="Ticket Promedio"
-          value={`S/ ${overviewStats.avgTicket.toFixed(2)}`}
-          subtitle="Por venta"
-          icon={FileText}
-        />
-      </div>
-
       {/* Quick Access to Detailed Reports - Premium Glassmorphism */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left Column */}

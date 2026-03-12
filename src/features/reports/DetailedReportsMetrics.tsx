@@ -93,13 +93,13 @@ export function DetailedReportsMetrics({
   // Get type icon
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'sale': return <DollarSign className="h-5 w-5" />;
-      case 'appointment': return <Calendar className="h-5 w-5" />;
-      case 'client': return <Users className="h-5 w-5" />;
-      case 'product': return <Package className="h-5 w-5" />;
-      case 'commission': return <Receipt className="h-5 w-5" />;
-      case 'cash-register': return <Building2 className="h-5 w-5" />;
-      default: return <FileText className="h-5 w-5" />;
+      case 'sale': return <DollarSign className="h-6 w-6 text-white" />;
+      case 'appointment': return <Calendar className="h-6 w-6 text-white" />;
+      case 'client': return <Users className="h-6 w-6 text-white" />;
+      case 'product': return <Package className="h-6 w-6 text-white" />;
+      case 'commission': return <Receipt className="h-6 w-6 text-white" />;
+      case 'cash-register': return <Building2 className="h-6 w-6 text-white" />;
+      default: return <FileText className="h-6 w-6 text-white" />;
     }
   };
 

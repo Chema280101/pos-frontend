@@ -1,0 +1,292 @@
+/* ============================================================================
+   SISTEMA DE CODIFICACIÓN POR COLORES PARA TABLAS - CSS SIMPLE
+   ============================================================================ */
+
+/* Base Badge Styles */
+.badge-base {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+}
+
+/* IDENTIFICADORES Y REFERENCIAS - ÍNDIGO */
+.badge-id,
+.badge-reference,
+.badge-sale-number {
+  background-color: rgb(224 231 255);
+  color: rgb(55 48 163);
+}
+
+/* PERSONAS Y CONTACTOS - ROSA/ESMERALDA/SKY/PÚRPURA */
+.badge-person-name,
+.badge-customer-name,
+.badge-user-name {
+  background-color: rgb(252 231 243);
+  color: rgb(131 24 67);
+}
+
+.badge-employee-name {
+  background-color: rgb(209 250 229);
+  color: rgb(5 46 22);
+}
+
+.badge-phone,
+.badge-contact-phone {
+  background-color: rgb(224 242 254);
+  color: rgb(7 89 133);
+}
+
+.badge-email,
+.badge-contact-email {
+  background-color: rgb(233 213 255);
+  color: rgb(91 33 182);
+}
+
+/* DATOS MONETARIOS - ESMERALDA/NARANJA */
+.badge-amount,
+.badge-total,
+.badge-price,
+.badge-monetary {
+  background-color: rgb(209 250 229);
+  color: rgb(5 46 22);
+}
+
+.badge-commission,
+.badge-percentage {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+/* TIEMPO Y FECHAS - ÍNDIGO/SLATE/AZUL */
+.badge-date,
+.badge-fecha {
+  background-color: rgb(224 231 255);
+  color: rgb(55 48 163);
+}
+
+.badge-time,
+.badge-hora {
+  background-color: rgb(241 245 249);
+  color: rgb(71 85 105);
+}
+
+.badge-duration,
+.badge-duracion {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+/* UNIDADES Y UBICACIONES - TEAL/NARANJA */
+.badge-unit-spa,
+.badge-spa {
+  background-color: rgb(204 251 241);
+  color: rgb(13 116 142);
+}
+
+.badge-unit-barberia,
+.badge-barberia {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+/* SERVICIOS Y PRODUCTOS - PÚRPURA/AZUL/GRIS */
+.badge-service-name,
+.badge-servicio {
+  background-color: rgb(233 213 255);
+  color: rgb(91 33 182);
+}
+
+.badge-product-name,
+.badge-producto {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.badge-category,
+.badge-categoria {
+  background-color: rgb(241 245 249);
+  color: rgb(71 85 105);
+}
+
+/* ESTADOS Y ACCIONES - VERDE/ROJO/ÁMBAR/GRIS */
+.badge-status-active,
+.badge-status-completed,
+.badge-status-paid {
+  background-color: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.badge-status-inactive,
+.badge-status-cancelled,
+.badge-status-failed {
+  background-color: rgb(254 226 226);
+  color: rgb(185 28 28);
+}
+
+.badge-status-pending,
+.badge-status-scheduled {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+.badge-status-neutral,
+.badge-status-default {
+  background-color: rgb(241 245 249);
+  color: rgb(71 85 105);
+}
+
+/* MÉTODOS DE PAGO - VERDE/AZUL/PÚRPURA/NARANJA */
+.badge-payment-cash,
+.badge-payment-efectivo {
+  background-color: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.badge-payment-card,
+.badge-payment-tarjeta {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.badge-payment-digital,
+.badge-payment-yape {
+  background-color: rgb(233 213 255);
+  color: rgb(91 33 182);
+}
+
+.badge-payment-transfer,
+.badge-payment-transferencia {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+/* DATOS TÉCNICOS - GRIS/CYAN */
+.badge-technical-id,
+.badge-id-code,
+.badge-identifier {
+  background-color: rgb(241 245 249);
+  color: rgb(71 85 105);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.badge-ip-address,
+.badge-ip {
+  background-color: rgb(207 250 254);
+  color: rgb(6 95 70);
+}
+
+/* ACCIONES DE AUDITORÍA - AZUL/VERDE/ROJO/ÁMBAR */
+.badge-action-login,
+.badge-action-logout {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.badge-action-create {
+  background-color: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.badge-action-delete,
+.badge-action-cancel {
+  background-color: rgb(254 226 226);
+  color: rgb(185 28 28);
+}
+
+.badge-action-update {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+/* ROLES DE USUARIO - ROJO/AZUL/VERDE/ÁMBAR/ROSA/ÍNDIGO */
+.badge-role-admin {
+  background-color: rgb(254 226 226);
+  color: rgb(185 28 28);
+}
+
+.badge-role-receptionist {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.badge-role-spa-specialist {
+  background-color: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.badge-role-barber {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+.badge-role-beautician {
+  background-color: rgb(252 231 243);
+  color: rgb(131 24 67);
+}
+
+.badge-role-manager {
+  background-color: rgb(224 231 255);
+  color: rgb(55 48 163);
+}
+
+/* ENTIDADES DE AUDITORÍA - PÚRPURA/ESMERALDA/ÁMBAR/AZUL/VERDE/NARANJA/ROJO */
+.badge-entity-user {
+  background-color: rgb(233 213 255);
+  color: rgb(91 33 182);
+}
+
+.badge-entity-sale {
+  background-color: rgb(209 250 229);
+  color: rgb(5 46 22);
+}
+
+.badge-entity-cash-register {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+.badge-entity-product {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.badge-entity-service {
+  background-color: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.badge-entity-commission {
+  background-color: rgb(254 243 199);
+  color: rgb(124 45 18);
+}
+
+.badge-entity-expense {
+  background-color: rgb(254 226 226);
+  color: rgb(185 28 28);
+}
+
+/* UTILIDADES PARA DATOS COMPUESTOS */
+.badge-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.badge-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ESPECIALES */
+.badge-bold {
+  font-weight: 700;
+}
+
+.badge-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}

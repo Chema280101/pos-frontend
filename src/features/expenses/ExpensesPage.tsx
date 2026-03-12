@@ -49,9 +49,16 @@ export function ExpensesPage(): JSX.Element {
   const [search, setSearch] = useState<string>('');
   
   const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' || user?.role === 'MANAGER';
   const router = useRouter();
-  const queryClient = useQueryClient();
+  
+  // ✅ Seguridad: Solo usar useQueryClient si estamos en el contexto correcto
+  let queryClient: ReturnType<typeof useQueryClient> | undefined;
+  try {
+    queryClient = useQueryClient();
+  } catch (error) {
+    console.warn('QueryClient no disponible en este contexto');
+  }
 
   // ✅ MEJORADO: Query con paginación real
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,7 +103,9 @@ export function ExpensesPage(): JSX.Element {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      }
       setShowDeleteDialog(false);
       setSelectedExpense(null);
     },
@@ -114,14 +123,14 @@ export function ExpensesPage(): JSX.Element {
       case 'administrativos':
         return 'bg-purple-100 text-purple-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-indigo-100 text-indigo-800';
     }
   }, []);
 
   const getUnitColor = useCallback((unit: string) => {
     return unit === 'SPA' 
-      ? 'bg-blue-100 text-blue-800' 
-      : 'bg-amber-100 text-amber-800';
+      ? 'bg-purple-100 text-purple-800' 
+      : 'bg-red-100 text-red-800';
   }, []);
 
   const getAmountRange = useCallback((amount: number) => {
@@ -166,7 +175,7 @@ export function ExpensesPage(): JSX.Element {
       header: 'Monto',
       sortable: true,
       render: (row: Expense) => (
-        <span className="font-bold text-red-600">
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
           S/ {row.amount.toFixed(2)}
         </span>
       ),
@@ -189,10 +198,9 @@ export function ExpensesPage(): JSX.Element {
       key: 'createdBy',
       header: 'Creado por',
       render: (row: Expense) => (
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">{row.createdBy.name}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+          {row.createdBy.name}
+        </span>
       ),
     },
     {
@@ -200,16 +208,13 @@ export function ExpensesPage(): JSX.Element {
       header: 'Fecha',
       sortable: true,
       render: (row: Expense) => (
-        <div className="flex items-center gap-2 text-[var(--unit-text-muted)]">
-          <Calendar className="h-4 w-4" />
-          <div>
-            <div className="text-sm">
-              {new Date(row.createdAt).toLocaleDateString('es-PE')}
-            </div>
-            <div className="text-xs">
-              {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          </div>
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+            {new Date(row.createdAt).toLocaleDateString('es-PE')}
+          </span>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+            {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       ),
     },
@@ -517,51 +522,56 @@ export function ExpensesPage(): JSX.Element {
           </div>
         )}
 
-        {/* View Details Modal */}
+        {/* View Details Modal - Exacto Estilo Detalles de Producto */}
         {viewModal && selectedExpense && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern */}
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Background Pattern - Exacto estilo Producto */}
               <div className="absolute inset-0 opacity-5">
                 <div className="h-full w-full bg-repeat" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
               
-              <div className="relative p-6">
-                {/* Premium Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <Eye className="h-5 w-5 text-white" />
+              <div className="relative">
+                {/* Enhanced Header - Exacto estilo Producto */}
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                        <Eye className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Gasto</h3>
+                        <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedExpense.id}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Gasto</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">Información completa del registro</p>
-                    </div>
+                    <button
+                      onClick={() => setViewModal(false)}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
+                    >
+                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setViewModal(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/30 transition-all hover:scale-105"
-                  >
-                    <X className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                  </button>
                 </div>
 
-                {/* Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Basic Information */}
+                {/* Enhanced Content Grid - Exacto estilo Producto */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Enhanced General Information - Glassmorphism Card */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     <div className="relative">
+                      {/* Card Header */}
                       <div className="flex items-center gap-3 mb-6">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
                           <Receipt className="h-4 w-4 text-[var(--unit-accent)]" />
                         </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información Básica</h4>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
                       </div>
 
+                      {/* Enhanced Expense Info List */}
                       <div className="space-y-4">
+                        {/* Reason */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <Receipt className="h-4 w-4 text-[var(--unit-text-muted)]" />
@@ -572,6 +582,7 @@ export function ExpensesPage(): JSX.Element {
                           </span>
                         </div>
 
+                        {/* Amount */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-[var(--unit-text-muted)]" />
@@ -582,6 +593,7 @@ export function ExpensesPage(): JSX.Element {
                           </span>
                         </div>
 
+                        {/* Category */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-[var(--unit-text-muted)]" />
@@ -594,14 +606,26 @@ export function ExpensesPage(): JSX.Element {
                             {selectedExpense.category}
                           </span>
                         </div>
+
+                        {/* Date */}
+                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                            <span className="text-sm font-medium text-[var(--unit-text)]">Fecha</span>
+                          </div>
+                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                            {new Date(selectedExpense.createdAt).toLocaleDateString('es-PE')}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* System Information */}
+                  {/* Enhanced System Information - Glassmorphism Card */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     <div className="relative">
+                      {/* Card Header */}
                       <div className="flex items-center gap-3 mb-6">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
                           <Activity className="h-4 w-4 text-[var(--unit-accent)]" />
@@ -609,7 +633,9 @@ export function ExpensesPage(): JSX.Element {
                         <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información del Sistema</h4>
                       </div>
 
+                      {/* Enhanced System Info List */}
                       <div className="space-y-4">
+                        {/* Created By */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-[var(--unit-text-muted)]" />
@@ -649,27 +675,40 @@ export function ExpensesPage(): JSX.Element {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-4 mt-6">
-                  {canEdit && (
-                    <button
-                      onClick={() => {
-                        router.push(`/expenses/${selectedExpense.id}/edit`);
-                        setViewModal(false);
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Editar Gasto
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setViewModal(false)}
-                    className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <X className="h-4 w-4" />
-                    Cerrar
-                  </button>
+                {/* Enhanced Action Buttons - Exacto estilo Producto */}
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                        <CheckCircle className="h-4 w-4 text-[var(--unit-accent)]" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)]">Acciones Disponibles</h4>
+                        <p className="text-xs text-[var(--unit-text-muted)]">Gestiona este gasto</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {canEdit && (
+                        <button
+                          onClick={() => {
+                            router.push(`/expenses/${selectedExpense.id}/edit`);
+                            setViewModal(false);
+                          }}
+                          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Editar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setViewModal(false)}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <X className="h-4 w-4" />
+                        Cerrar Detalles
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -143,7 +143,7 @@ export function DashboardConsolidado(): JSX.Element {
                 value={totalLowStock}
                 subtitle={totalLowStock > 0 ? 'Revisar inventario consolidado' : 'Todo OK'}
                 description="Productos con bajo stock en ambas unidades"
-                href="/inventory"
+                href="/inventory/products"
                 critical={totalLowStock > 0}
                 color="red"
                 icon={<Package className="h-6 w-6 text-white" />}

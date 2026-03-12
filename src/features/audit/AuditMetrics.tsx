@@ -101,8 +101,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-blue-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 shadow-lg">
-                <FileText className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 border-2 border-blue-600 shadow-lg group-hover:scale-110 transition-transform">
+                <FileText className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-blue-800 bg-white px-3 py-1 rounded-full border border-blue-300 shadow-sm">Total</span>
             </div>
@@ -116,8 +116,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-red-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
-                <AlertCircle className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 border-2 border-red-600 shadow-lg group-hover:scale-110 transition-transform">
+                <AlertCircle className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-red-800 bg-white px-3 py-1 rounded-full border border-red-300 shadow-sm">Críticas</span>
             </div>
@@ -131,8 +131,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 to-green-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500 shadow-lg">
-                <Shield className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-600 to-green-700 border-2 border-green-600 shadow-lg group-hover:scale-110 transition-transform">
+                <Shield className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-green-800 bg-white px-3 py-1 rounded-full border border-green-300 shadow-sm">Sesiones</span>
             </div>
@@ -146,8 +146,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500 shadow-lg">
-                <Clock className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-purple-700 border-2 border-purple-600 shadow-lg group-hover:scale-110 transition-transform">
+                <Clock className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-purple-800 bg-white px-3 py-1 rounded-full border border-purple-300 shadow-sm">Recientes</span>
             </div>
@@ -164,8 +164,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-red-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
-                <AlertCircle className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 border-2 border-red-600 shadow-lg group-hover:scale-110 transition-transform">
+                <AlertCircle className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-red-800 bg-white px-3 py-1 rounded-full border border-red-300 shadow-sm">Seguridad</span>
             </div>
@@ -179,8 +179,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-100/50 to-emerald-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 shadow-lg">
-                <TrendingUp className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 border-2 border-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
+                <TrendingUp className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-emerald-800 bg-white px-3 py-1 rounded-full border border-emerald-300 shadow-sm">Negocio</span>
             </div>
@@ -194,8 +194,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-orange-100/50 to-orange-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 shadow-lg">
-                <Eye className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-600 to-orange-700 border-2 border-orange-600 shadow-lg group-hover:scale-110 transition-transform">
+                <Eye className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-orange-800 bg-white px-3 py-1 rounded-full border border-orange-300 shadow-sm">Alerta</span>
             </div>
@@ -209,8 +209,8 @@ export function AuditMetrics({ data, dateFrom, dateTo }: AuditMetricsProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500 shadow-lg">
-                <Clock className="h-4 w-4 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-purple-700 border-2 border-purple-600 shadow-lg group-hover:scale-110 transition-transform">
+                <Clock className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-bold text-purple-800 bg-white px-3 py-1 rounded-full border border-purple-300 shadow-sm">Pico</span>
             </div>

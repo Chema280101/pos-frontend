@@ -146,10 +146,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       sortable: true,
       render: (row: UnifiedReportData) => (
         row.amount ? (
-          <div className="flex items-center gap-1">
-            <DollarSign className="h-3 w-3 text-[var(--unit-text-muted)]" />
-            <span className="font-medium text-[var(--unit-text-muted)]">S/ {row.amount.toFixed(2)}</span>
-          </div>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
+            S/ {row.amount.toFixed(2)}
+          </span>
         ) : (
           <span className="text-[var(--unit-text-muted)]">—</span>
         )
@@ -159,49 +158,40 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       key: 'customer',
       header: 'Cliente',
       render: (row: UnifiedReportData) => (
-        <div className="flex items-center gap-1">
-          {row.customer ? (
-            <>
-              <Users className="h-3 w-3 text-[var(--unit-text-muted)]" />
-              <span className="text-[var(--unit-text-muted)]">{row.customer}</span>
-            </>
-          ) : (
-            <span className="text-[var(--unit-text-muted)]">—</span>
-          )}
-        </div>
+        row.customer ? (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+            {row.customer}
+          </span>
+        ) : (
+          <span className="text-[var(--unit-text-muted)]">—</span>
+        )
       ),
     },
     {
       key: 'employee',
       header: 'Empleado',
       render: (row: UnifiedReportData) => (
-        <div className="flex items-center gap-1">
-          {row.employee ? (
-            <>
-              <User className="h-3 w-3 text-[var(--unit-text-muted)]" />
-              <span className="text-[var(--unit-text-muted)]">{row.employee}</span>
-            </>
-          ) : (
-            <span className="text-[var(--unit-text-muted)]">—</span>
-          )}
-        </div>
+        row.employee ? (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+            {row.employee}
+          </span>
+        ) : (
+          <span className="text-[var(--unit-text-muted)]">—</span>
+        )
       ),
     },
     {
       key: 'unit',
       header: 'Unidad',
       render: (row: UnifiedReportData) => (
-        <div className="flex items-center gap-1">
-          <Building2 className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            row.unit === 'SPA'
-              ? 'bg-purple-100 text-purple-800'
-              : 'bg-stone-200 text-stone-800'
-          )}>
-            {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-          </span>
-        </div>
+        <span className={cn(
+          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+          row.unit === 'SPA'
+            ? 'bg-purple-100 text-purple-800'
+            : 'bg-red-100 text-red-800'
+        )}>
+          {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+        </span>
       ),
     },
     {
@@ -209,12 +199,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       header: 'Fecha',
       sortable: true,
       render: (row: UnifiedReportData) => (
-        <div className="flex items-center gap-1">
-          <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">
-            {format(new Date(row.date), 'd MMM yyyy', { locale: es })}
-          </span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+          {format(new Date(row.date), 'd MMM yyyy', { locale: es })}
+        </span>
       ),
     },
     {

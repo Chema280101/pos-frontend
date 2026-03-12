@@ -1,0 +1,542 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Usuario - Barbería y Spa POS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #10b981;
+            font-size: 2.5em;
+            margin: 0;
+        }
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+            margin: 10px 0 0 0;
+        }
+        .toc {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .toc h2 {
+            color: #10b981;
+            margin-top: 0;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+            padding: 5px 0;
+        }
+        .toc a {
+            color: #10b981;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .section {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+        }
+        .section h2 {
+            color: #10b981;
+            border-bottom: 2px solid #10b981;
+            padding-bottom: 10px;
+            font-size: 1.8em;
+        }
+        .section h3 {
+            color: #059669;
+            font-size: 1.4em;
+            margin-top: 25px;
+        }
+        .section h4 {
+            color: #047857;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+        .step {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .step-number {
+            font-weight: bold;
+            color: #10b981;
+            font-size: 1.1em;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .access-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #1e40af;
+        }
+        .tips {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .tips h4 {
+            color: #0284c7;
+            margin-top: 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            color: #666;
+        }
+        @media print {
+            body { margin: 0; padding: 15px; }
+            .section { page-break-inside: avoid; }
+            h2, h3, h4 { page-break-after: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 Guía Completa del Sistema</h1>
+        <p>Barbería y Spa POS - Versión 2.0.0</p>
+    </div>
+
+    <div class="toc">
+        <h2>📋 Tabla de Contenido</h2>
+        <ul>
+            <li><a href="#administrador">👑 Administrador</a></li>
+            <li><a href="#recepcionista">📋 Recepcionista</a></li>
+            <li><a href="#barbero">💇‍♂️ Barbero/Estilista</a></li>
+            <li><a href="#spa">💄 Especialista Spa</a></li>
+            <li><a href="#manager">🔄 Manager</a></li>
+            <li><a href="#soporte">🆘 Soporte y Ayuda</a></li>
+            <li><a href="#tips">🎯 Tips y Mejores Prácticas</a></li>
+        </ul>
+    </div>
+
+    <div class="section" id="administrador">
+        <h2>👑 Administrador</h2>
+        
+        <h3>🏠 Dashboard Principal</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Inicio → Dashboard
+        </div>
+        
+        <h4>📊 Métricas Principales</h4>
+        <ul>
+            <li><strong>💰 Ingresos del día:</strong> Total de ventas realizadas</li>
+            <li><strong>👥 Clientes atendidos:</strong> Número de clientes únicos</li>
+            <li><strong>📅 Citas del día:</strong> Citas programadas vs completadas</li>
+            <li><strong>📦 Productos vendidos:</strong> Unidades vendidas del inventario</li>
+        </ul>
+
+        <h3>💰 Gestión de Caja (Cash Register)</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Inicio → Caja Registradora
+        </div>
+        
+        <h4>🔄 Flujo de Ventas</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>📋 Seleccionar Cliente</strong><br>
+            Buscar por nombre o DNI / Crear cliente nuevo si no existe
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>🛒 Agregar Servicios/Productos</strong><br>
+            Seleccionar de catálogo / Ajustar cantidades / Verificar precios
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>💳 Procesar Pago</strong><br>
+            <ul>
+                <li><strong>Efectivo:</strong> Recibir dinero y calcular cambio</li>
+                <li><strong>Tarjeta:</strong> Procesar tarjeta</li>
+                <li><strong>Transferencia:</strong> Confirmar transferencia</li>
+                <li><strong>Billetera Digital:</strong> Yape/Plin</li>
+                <li><strong>Mixto:</strong> Combinación de métodos</li>
+            </ul>
+        </div>
+        <div class="step">
+            <div class="step-number">4.</div>
+            <strong>🧾 Comprobante</strong><br>
+            Boleta o Factura / Envío por email o WhatsApp / Impresión opcional
+        </div>
+
+        <h3>📅 Gestión de Citas</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Citas → Gestión de Citas
+        </div>
+        
+        <h4>📋 Creación de Citas</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>👤 Selección de Cliente</strong><br>
+            Buscar cliente existente / Crear nuevo cliente
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>📅 Fecha y Hora</strong><br>
+            Calendario interactivo / Horarios disponibles / Duración estimada
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>💇‍♂️ Selección de Servicio</strong><br>
+            Tipo de servicio / Especialista asignado / Unidad (Barbería/SPA)
+        </div>
+        <div class="step">
+            <div class="step-number">4.</div>
+            <strong>💰 Confirmación</strong><br>
+            Costo del servicio / Método de pago preferido / Recordatorio programado
+        </div>
+    </div>
+
+    <div class="section" id="recepcionista">
+        <h2>📋 Recepcionista</h2>
+        
+        <h3>🏠 Vista Principal del Recepcionista</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Inicio → Dashboard Recepcionista
+        </div>
+        
+        <h4>📊 Panel de Control</h4>
+        <ul>
+            <li><strong>📅 Citas del día:</strong> Lista de citas programadas</li>
+            <li><strong>👥 Clientes esperando:</strong> En sala de espera</li>
+            <li><strong>⏰ Próximas citas:</strong> Próximos 30 minutos</li>
+            <li><strong>💰 Ingresos del día:</strong> Ventas realizadas</li>
+        </ul>
+
+        <h3>📅 Gestión de Citas</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Citas → Mis Citas
+        </div>
+        
+        <h4>📋 Crear Nueva Cita</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>👤 Datos del Cliente</strong><br>
+            Buscar cliente existente / Registrar nuevo cliente / Verificar historial
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>📅 Programación</strong><br>
+            Seleccionar fecha y hora / Verificar disponibilidad / Asignar duración
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>💇‍♂️ Selección de Servicio</strong><br>
+            Elegir tipo de servicio / Seleccionar especialista / Confirmar precio
+        </div>
+        <div class="step">
+            <div class="step-number">4.</div>
+            <strong>✅ Confirmación</strong><br>
+            Enviar recordatorio / Programar alerta / Guardar cita
+        </div>
+
+        <h3>💰 Ventas y Pagos</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Caja Registradora
+        </div>
+        
+        <h4>🛒 Proceso de Venta</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>📋 Identificar Cliente</strong><br>
+            Buscar en sistema / Crear si es nuevo
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>🛍️ Agregar Productos/Servicios</strong><br>
+            Escanear código de barras / Buscar manualmente / Aplicar descuentos
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>💳 Procesar Pago</strong><br>
+            <ul>
+                <li><strong>Efectivo:</strong> Calcular cambio exacto</li>
+                <li><strong>Tarjeta:</strong> Procesar en terminal</li>
+                <li><strong>Digital:</strong> Escanear QR</li>
+                <li><strong>Mixto:</strong> Dividir pago</li>
+            </ul>
+        </div>
+        <div class="step">
+            <div class="step-number">4.</div>
+            <strong>🧾 Entregar Comprobante</strong><br>
+            Imprimir boleta / Enviar por WhatsApp / Email opcional
+        </div>
+    </div>
+
+    <div class="section" id="barbero">
+        <h2>💇‍♂️ Barbero/Estilista</h2>
+        
+        <h3>🏠 Panel Principal del Barbero</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Inicio → Dashboard Barbero
+        </div>
+        
+        <h4>📊 Mi Panel</h4>
+        <ul>
+            <li><strong>📅 Citas de hoy:</strong> Lista de clientes asignados</li>
+            <li><strong>⏰ Próxima cita:</strong> Siguiente cliente</li>
+            <li><strong>💰 Servicios realizados:</strong> Conteo del día</li>
+            <li><strong>⭐ Calificaciones:</strong> Feedback de clientes</li>
+        </ul>
+
+        <h3>📋 Mis Citas</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Citas → Mis Citas
+        </div>
+        
+        <h4>📅 Vista del Día</h4>
+        <ul>
+            <li><strong>🕐 Horario:</strong> Lista cronológica</li>
+            <li><strong>👤 Cliente:</strong> Nombre y historial</li>
+            <li><strong>💇‍♂️ Servicio:</strong> Tipo y duración</li>
+            <li><strong>📝 Notas:</strong> Preferencias especiales</li>
+        </ul>
+
+        <h4>🔄 Durante la Cita</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>👋 Recepción del Cliente</strong><br>
+            Confirmar servicio solicitado / Verificar historial previo / Revisar preferencias
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>💇‍♂️ Ejecución del Servicio</strong><br>
+            Registrar inicio del servicio / Anotar observaciones / Tomar fotos de antes/después
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>✅ Finalización</strong><br>
+            Marcar servicio completado / Calificar satisfacción / Programar siguiente cita
+        </div>
+    </div>
+
+    <div class="section" id="spa">
+        <h2>💄 Especialista Spa</h2>
+        
+        <h3>🏠 Panel Principal del Especialista</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Inicio → Dashboard SPA
+        </div>
+        
+        <h4>📊 Mi Panel</h4>
+        <ul>
+            <li><strong>📅 Tratamientos del día:</strong> Lista de clientes</li>
+            <li><strong>⏰ Próximo tratamiento:</strong> Siguiente cliente</li>
+            <li><strong>💰 Servicios realizados:</strong> Conteo del día</li>
+            <li><strong>⭐ Calificaciones:</strong> Feedback de clientes</li>
+        </ul>
+
+        <h3>📋 Mis Tratamientos</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Citas → Mis Tratamientos
+        </div>
+        
+        <h4>📅 Vista del Día</h4>
+        <ul>
+            <li><strong>🕐 Horario:</strong> Lista cronológica</li>
+            <li><strong>👤 Cliente:</strong> Nombre y historial</li>
+            <li><strong>💆‍♀️ Tratamiento:</strong> Tipo y duración</li>
+            <li><strong>📝 Notas:</strong> Condiciones de piel, preferencias</li>
+        </ul>
+
+        <h4>🔄 Durante el Tratamiento</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>👋 Recepción del Cliente</strong><br>
+            Confirmar tratamiento solicitado / Verificar historial de piel / Revisar contraindicaciones
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>💆‍♀️ Ejecución del Tratamiento</strong><br>
+            Registrar inicio del tratamiento / Anotar reacciones de la piel / Tomar fotos de progreso
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>✅ Finalización</strong><br>
+            Marcar tratamiento completado / Recomendar productos / Programar siguiente sesión
+        </div>
+    </div>
+
+    <div class="section" id="manager">
+        <h2>🔄 Manager</h2>
+        
+        <h3>🏠 Panel Principal del Manager</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Inicio → Dashboard Manager
+        </div>
+        
+        <h4>📊 Panel de Control</h4>
+        <ul>
+            <li><strong>💰 Ingresos totales:</strong> Todas las unidades</li>
+            <li><strong>👥 Personal en línea:</strong> Empleados activos</li>
+            <li><strong>📅 Citas del día:</strong> Todas las unidades</li>
+            <li><strong>📊 Ocupación:</strong> Porcentaje de ocupación</li>
+        </ul>
+
+        <h3>📊 Reportes Gerenciales</h3>
+        <div class="access-info">
+            <strong>Acceso:</strong> Reportes → Reportes Manager
+        </div>
+        
+        <h4>💰 Reportes Financieros</h4>
+        <ul>
+            <li><strong>📈 Ingresos:</strong> Por unidad y total</li>
+            <li><strong>💳 Métodos de pago:</strong> Estadísticas completas</li>
+            <li><strong>📊 Comparativos:</strong> Unidad vs unidad</li>
+            <li><strong>🎯 Metas:</strong> Cumplimiento de objetivos</li>
+        </ul>
+
+        <h4>👥 Reportes de Personal</h4>
+        <ul>
+            <li><strong>📊 Productividad:</strong> Empleados más eficientes</li>
+            <li><strong>💰 Comisiones:</strong> Pagos realizados</li>
+            <li><strong>⭐ Satisfacción:</strong> Calificaciones del personal</li>
+            <li><strong>📈 Retención:</strong> Empleados activos</li>
+        </ul>
+    </div>
+
+    <div class="section" id="soporte">
+        <h2>🆘 Soporte y Ayuda</h2>
+        
+        <h3>📞 Contacto de Soporte</h3>
+        <ul>
+            <li><strong>📱 WhatsApp:</strong> Click en "Soporte" del footer</li>
+            <li><strong>📧 Email:</strong> soporte@barberiaspapos.com</li>
+            <li><strong>📞 Teléfono:</strong> 951 171 534</li>
+        </ul>
+
+        <h3>🔧 Problemas Comunes</h3>
+        
+        <h4>🚫 No puedo iniciar sesión</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>🔐 Verificar credenciales:</strong> Email y contraseña correctos
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>🔄 Intentar de nuevo:</strong> Esperar 5 minutos
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>📱 Contactar soporte:</strong> Si el problema persiste
+        </div>
+
+        <h4>💳 Error en procesamiento de pago</h4>
+        <div class="step">
+            <div class="step-number">1.</div>
+            <strong>🔄 Verificar conexión:</strong> Internet estable
+        </div>
+        <div class="step">
+            <div class="step-number">2.</div>
+            <strong>💳 Reintentar pago:</strong> Con otro método
+        </div>
+        <div class="step">
+            <div class="step-number">3.</div>
+            <strong>📞 Llamar soporte:</strong> Para ayuda inmediata
+        </div>
+    </div>
+
+    <div class="section" id="tips">
+        <h2>🎯 Tips y Mejores Prácticas</h2>
+        
+        <div class="tips">
+            <h4>💡 Para Administradores</h4>
+            <ul>
+                <li>📊 Revisar reportes diariamente</li>
+                <li>👥 Capacitar personal continuamente</li>
+                <li>💰 Optimizar costos mensualmente</li>
+                <li>📈 Planificar crecimiento anualmente</li>
+            </ul>
+        </div>
+
+        <div class="tips">
+            <h4>💡 Para Recepcionistas</h4>
+            <ul>
+                <li>📞 Confirmar citas siempre</li>
+                <li>👋 Tratar amablemente a todos los clientes</li>
+                <li>📋 Mantener organizada la agenda</li>
+                <li>💰 Verificar pagos con cuidado</li>
+            </ul>
+        </div>
+
+        <div class="tips">
+            <h4>💡 Para Barberos y Especialistas</h4>
+            <ul>
+                <li>🧼 Mantener limpieza siempre</li>
+                <li>📝 Anotar preferencias de cada cliente</li>
+                <li>⭐ Pedir feedback después de cada servicio</li>
+                <li>📚 Actualizarse en nuevas técnicas</li>
+            </ul>
+        </div>
+
+        <div class="tips">
+            <h4>💡 Para Managers</h4>
+            <ul>
+                <li>📊 Analizar datos constantemente</li>
+                <li>👥 Motivar equipo regularmente</li>
+                <li>🎯 Fijar metas realistas</li>
+                <li>🔄 Optimizar procesos continuamente</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <h3>🎉 Conclusión</h3>
+        <p>Este sistema está diseñado para facilitar la gestión completa de tu barbería y spa, permitiéndote:</p>
+        <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+            <li>✅ Optimizar tiempo con procesos automatizados</li>
+            <li>✅ Mejorar experiencia del cliente</li>
+            <li>✅ Controlar finanzas con precisión</li>
+            <li>✅ Gestionar personal eficientemente</li>
+            <li>✅ Tomar decisiones basadas en datos</li>
+        </ul>
+        <p style="margin-top: 20px;">
+            <strong>Para cualquier duda o soporte adicional, no dudes en contactarnos a través del botón <span class="highlight">"Soporte"</span> en el footer del sistema.</strong>
+        </p>
+        <p style="margin-top: 20px; font-weight: bold; color: #10b981;">
+            ¡Gracias por confiar en Barbería y Spa POS! 🚀
+        </p>
+        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+            Versión 2.0.0 - © 2024
+        </p>
+    </div>
+</body>
+</html>

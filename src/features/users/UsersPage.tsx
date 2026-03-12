@@ -268,16 +268,19 @@ const debugSetSearchFilter = (value: string) => {
       header: 'Usuario',
       sortable: true,
       render: (row: UserRow) => (
-        <div className="flex items-center gap-2">
-          <UserIcon className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <div>
-            <span className="font-medium text-[var(--unit-text-muted)]">{row.name}</span>
-            {row.phone && (
-              <p className="text-sm text-[var(--unit-text-muted)]">{row.phone}</p>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-[var(--unit-text-muted)]">
+              {row.name}
+            </span>
+            {row.isLocked && (
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
             )}
           </div>
-          {row.isLocked && (
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          {row.phone && (
+            <span className="font-medium text-[var(--unit-text-muted)]">
+              {row.phone}
+            </span>
           )}
         </div>
       ),
@@ -286,7 +289,11 @@ const debugSetSearchFilter = (value: string) => {
       key: 'email',
       header: 'Email',
       sortable: true,
-      render: (row: UserRow) => row.email,
+      render: (row: UserRow) => (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+          {row.email}
+        </span>
+      ),
     },
     {
       key: 'role',
@@ -296,12 +303,18 @@ const debugSetSearchFilter = (value: string) => {
         <span className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           row.role === 'ADMIN'
-            ? 'bg-purple-100 text-purple-800'
+            ? 'bg-red-100 text-red-800'
             : row.role === 'RECEPTIONIST'
             ? 'bg-blue-100 text-blue-800'
             : row.role === 'SPA_SPECIALIST'
             ? 'bg-green-100 text-green-800'
-            : 'bg-amber-100 text-amber-800'
+            : row.role === 'BARBER'
+            ? 'bg-amber-100 text-amber-800'
+            : row.role === 'BEAUTICIAN'
+            ? 'bg-pink-100 text-pink-800'
+            : row.role === 'MANAGER'
+            ? 'bg-indigo-100 text-indigo-800'
+            : 'bg-gray-100 text-gray-800'
         )}>
           {roleLabels[row.role]}
         </span>
@@ -317,10 +330,10 @@ const debugSetSearchFilter = (value: string) => {
           row.unit === 'SPA'
             ? 'bg-purple-100 text-purple-800'
             : row.unit === 'BARBERIA'
-            ? 'bg-amber-100 text-amber-800'
+            ? 'bg-red-100 text-red-800'
             : 'bg-gray-100 text-gray-800'
         )}>
-          {row.unit === 'BARBERIA' ? 'Barbería' : row.unit === 'SPA' ? 'SPA' : '—'}
+          {row.unit === 'BARBERIA' ? 'Barbería' : row.unit === 'SPA' ? 'SPA' : 'Sin unidad'}
         </span>
       ),
     },
@@ -328,34 +341,26 @@ const debugSetSearchFilter = (value: string) => {
       key: 'status',
       header: 'Estado',
       sortable: true,
-      render: (row: UserRow) => {
-        if (!row.isActive) {
-          return (
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-800">
-              Inactivo
-            </span>
-          );
-        }
-        if (row.isLocked) {
-          return (
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
-              Bloqueado
-            </span>
-          );
-        }
-        if (row.mustChangePassword) {
-          return (
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-              Cambiar contraseña
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
-            Activo
-          </span>
-        );
-      },
+      render: (row: UserRow) => (
+        <span className={cn(
+          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+          !row.isActive
+            ? 'bg-red-100 text-red-800'
+            : row.isLocked
+            ? 'bg-amber-100 text-amber-800'
+            : row.mustChangePassword
+            ? 'bg-cyan-100 text-cyan-800'
+            : 'bg-green-100 text-green-800'
+        )}>
+          {!row.isActive
+            ? 'Inactivo'
+            : row.isLocked
+            ? 'Bloqueado'
+            : row.mustChangePassword
+            ? 'Cambiar contraseña'
+            : 'Activo'}
+        </span>
+      ),
     },
   ];
 

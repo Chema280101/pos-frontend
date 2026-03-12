@@ -326,13 +326,25 @@ export function BackupsPage(): JSX.Element {
                     {files.map((f, index) => (
                       <tr key={f.name} className="border-b border-[var(--unit-border)]/20 hover:bg-[var(--unit-surface)]/50 transition-colors">
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)]"></div>
-                            <span className="font-mono text-xs text-[var(--unit-text)]">{f.name}</span>
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 font-mono">
+                            {f.name}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+                            {formatSize(f.size)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+                              {new Date(f.createdAt).toLocaleDateString('es')}
+                            </span>
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+                              {new Date(f.createdAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-[var(--unit-text)]">{formatSize(f.size)}</td>
-                        <td className="px-4 py-3 text-sm text-[var(--unit-text-muted)]">{new Date(f.createdAt).toLocaleString('es')}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button

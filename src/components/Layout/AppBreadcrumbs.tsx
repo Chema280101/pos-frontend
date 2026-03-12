@@ -1,8 +1,8 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Breadcrumbs } from './Breadcrumbs';
-import { Home, Package, Users, Calendar, DollarSign, FileText, Settings, BarChart3, User, Shield, Database, ChevronRight, Building2, Scissors, Sparkles } from 'lucide-react';
+import { Breadcrumbs, BreadcrumbItem } from './Breadcrumbs';
+import { Home, Package, Users, Calendar, DollarSign, FileText, Settings, BarChart3, User, Shield, Database, ChevronRight, Building2, Scissors, Sparkles, Activity, AlertTriangle } from 'lucide-react';
 
 const SEGMENT_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -14,6 +14,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   inventory: 'Inventario',
   products: 'Productos',
   suppliers: 'Proveedores',
+  movements: 'Historial de Movimientos',
   use: 'Uso interno',
   entry: 'Entrada',
   services: 'Servicios',
@@ -21,13 +22,16 @@ const SEGMENT_LABELS: Record<string, string> = {
   commissions: 'Comisiones',
   admin: 'Administración',
   reports: 'Reportes',
-  sales: 'Ventas',
+  alerts: 'Alertas de Vencimiento',
   appointments_report: 'Citas',
   cash: 'Caja',
   scheduled: 'Programados',
   users: 'Usuarios',
   audit: 'Auditoría',
   backups: 'Backups',
+  expenses: 'Gastos',
+  income: 'Ingresos',
+  detailed: 'Particulares',
 };
 
 const SEGMENT_ICONS: Record<string, any> = {
@@ -40,6 +44,8 @@ const SEGMENT_ICONS: Record<string, any> = {
   inventory: Package,
   products: Package,
   suppliers: Building2,
+  movements: Activity,
+  alerts: AlertTriangle,
   use: Package,
   entry: Package,
   services: Scissors,
@@ -71,8 +77,8 @@ export function AppBreadcrumbs(): JSX.Element {
   const segments = pathname.split('/').filter(Boolean);
   
   // Agregar "Home" como primer elemento
-  const items = [
-    { label: 'Home', href: '/', icon: Home }
+  const items: BreadcrumbItem[] = [
+    { label: 'Inicio', href: '/', icon: Home }
   ];
   
   // Agregar los segmentos de la ruta
@@ -82,7 +88,14 @@ export function AppBreadcrumbs(): JSX.Element {
     let label = getLabel(segment);
     let icon = SEGMENT_ICONS[segment] || FileText;
     
-    if (segment === 'edit' && segments[i - 1]) {
+    // Special case for inventory page
+    if (segment === 'products' && segments[i - 1] === 'inventory') {
+      label = 'Productos';
+      icon = Package;
+    } else if (segment === 'suppliers' && segments[i - 1] === 'inventory') {
+      label = 'Proveedores';
+      icon = Building2;
+    } else if (segment === 'edit' && segments[i - 1]) {
       label = 'Editar';
       icon = Settings;
     } else if (/^[0-9a-f-]{36}$/i.test(segment) || (segment.length > 20 && !SEGMENT_LABELS[segment])) {

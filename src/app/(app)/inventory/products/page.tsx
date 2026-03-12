@@ -1,21 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { InventoryPage } from '@/features/inventory/InventoryPage';
 
-export default function ProductsRedirectPage(): JSX.Element {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/inventory');
-  }, [router]);
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Redirigiendo a inventario...</p>
-      </div>
-    </div>
-  );
+export default function ProductsPage(): JSX.Element {
+  return <InventoryPage />;
 }

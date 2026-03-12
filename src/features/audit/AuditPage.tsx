@@ -123,17 +123,14 @@ export function AuditPage(): JSX.Element {
       sortable: true,
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
+        const date = new Date(auditRow.createdAt);
         return (
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span className="font-medium text-[var(--unit-text)]">
-              {new Date(auditRow.createdAt).toLocaleString('es', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+              {date.toLocaleDateString('es-PE')}
+            </span>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+              {date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         );
@@ -146,10 +143,9 @@ export function AuditPage(): JSX.Element {
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         return (
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span>{auditRow.userName}</span>
-          </div>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+            {auditRow.userName}
+          </span>
         );
       },
     },
@@ -182,18 +178,19 @@ export function AuditPage(): JSX.Element {
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         return (
-          <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-              auditRow.entity === 'User' ? 'bg-purple-100 text-purple-800' :
-              auditRow.entity === 'Sale' ? 'bg-emerald-100 text-emerald-800' :
-              auditRow.entity === 'CashRegister' ? 'bg-amber-100 text-amber-800' :
-              'bg-gray-100 text-gray-800'
-            )}>
-              {auditRow.entity}
-            </span>
-          </div>
+          <span className={cn(
+            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+            auditRow.entity === 'User' ? 'bg-purple-100 text-purple-800' :
+            auditRow.entity === 'Sale' ? 'bg-emerald-100 text-emerald-800' :
+            auditRow.entity === 'CashRegister' ? 'bg-amber-100 text-amber-800' :
+            auditRow.entity === 'Product' ? 'bg-blue-100 text-blue-800' :
+            auditRow.entity === 'Service' ? 'bg-green-100 text-green-800' :
+            auditRow.entity === 'Commission' ? 'bg-orange-100 text-orange-800' :
+            auditRow.entity === 'Expense' ? 'bg-red-100 text-red-800' :
+            'bg-gray-100 text-gray-800'
+          )}>
+            {auditRow.entity}
+          </span>
         );
       },
     },
@@ -204,15 +201,12 @@ export function AuditPage(): JSX.Element {
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         return (
-          <div className="flex items-center gap-2">
-            <Fingerprint className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span 
-              className="font-mono text-xs bg-[var(--unit-surface)] px-2 py-1 rounded border border-[var(--unit-border)]/30"
-              title={auditRow.entityId}
-            >
-              {auditRow.entityId.slice(0, 8)}...
-            </span>
-          </div>
+          <span 
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 font-mono"
+            title={auditRow.entityId}
+          >
+            {auditRow.entityId.slice(0, 8)}...
+          </span>
         );
       },
     },
@@ -222,16 +216,14 @@ export function AuditPage(): JSX.Element {
       sortable: true,
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
+        const ipDisplay = auditRow.ipAddress ? auditRow.ipAddress.split('.').slice(0, 2).join('.') + '.*' : 'Sin IP';
         return (
-          <div className="flex items-center gap-2">
-            <Monitor className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span 
-              className="text-xs text-[var(--unit-text-muted)]"
-              title={`${auditRow.ipAddress || 'N/A'} - ${auditRow.device || 'N/A'}`}
-            >
-              {auditRow.ipAddress ? auditRow.ipAddress.split('.').slice(0, 2).join('.') + '.*' : 'N/A'}
-            </span>
-          </div>
+          <span 
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-cyan-100 text-cyan-800"
+            title={`${auditRow.ipAddress || 'N/A'} - ${auditRow.device || 'N/A'}`}
+          >
+            {ipDisplay}
+          </span>
         );
       },
     },

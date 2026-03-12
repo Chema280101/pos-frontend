@@ -33,8 +33,8 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 export function POSPage(): JSX.Element {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const customerIdFromUrl = searchParams.get('customerId');
-  const appointmentIdFromUrl = searchParams.get('appointmentId');
+  const customerIdFromUrl = searchParams?.get('customerId');
+  const appointmentIdFromUrl = searchParams?.get('appointmentId');
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const setUnit = useUnitStore((s) => s.setUnit);
   const user = useAuthStore((s) => s.user);
@@ -503,10 +503,21 @@ const popularServices = useMemo(() => {
 
   const closeSaleMutation = useMutation({
     mutationFn: async ({ saleId, method, amount, detail }: { saleId: string; method: string; amount: number; detail?: Record<string, number> }) => {
+      // Convertir claves del frontend al formato del backend, solo incluir métodos con montos > 0
+      const paymentDetail = detail ? {
+        ...(detail.cash > 0 && { CASH: detail.cash }),
+        ...(detail.card > 0 && { CARD: detail.card }),
+        ...(detail.transfer > 0 && { TRANSFER: detail.transfer }),
+        ...(detail.wallet > 0 && { DIGITAL_WALLET: detail.wallet }),
+      } : undefined;
+      
+      // Si no hay métodos con monto > 0, enviar undefined
+      const finalPaymentDetail = Object.keys(paymentDetail || {}).length > 0 ? paymentDetail : undefined;
+      
       const { data } = await api.post(`/api/pos/${saleId}/close`, {
         paymentMethod: method,
-        amountPaid: amount,
-        paymentDetail: detail,
+        amountPaid: Number(amount),
+        paymentDetail: finalPaymentDetail,
       });
       return data;
     },
@@ -574,7 +585,7 @@ const popularServices = useMemo(() => {
             <span className="text-sm font-medium text-[var(--unit-text)]">Punto de Venta</span>
           </div>
           <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">POS</h1>
-          <p className="text-[var(--unit-text-muted)]">Sistema de ventas profesional para {unit === 'SPA' ? 'SPA' : 'Barbería'}</p>
+          <p className="text-[var(--unit-text-muted)]">Sistema de ventas profesional para {unit === 'SPA' ? 'SPA' : 'Barman Barbería'}</p>
         </div>
 
         {/* Enhanced Back Link */}
@@ -760,7 +771,7 @@ const popularServices = useMemo(() => {
           {/* Item Selection */}
           <div className="lg:col-span-2 space-y-4">
             {/* Item Search */}
-            <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-20">
+            <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
               
               <div className="relative">
@@ -773,7 +784,7 @@ const popularServices = useMemo(() => {
                     <p className="text-sm text-[var(--unit-text-muted)]">Servicios, productos y paquetes</p>
                   </div>
                 </div>
-              <div className="relative z-50" ref={itemSearchRef}>
+              <div className="relative z-20" ref={itemSearchRef}>
                 <Search className="absolute left-4 top-3.5 h-5 w-5 text-[var(--unit-text-muted)]" />
                 <input
                   type="text"
@@ -787,7 +798,7 @@ const popularServices = useMemo(() => {
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] pl-12 pr-4 py-3 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                 />
                 {showItemSearch && debouncedItemSearch.length >= 2 && (
-                  <div className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-white shadow-xl" style={{ maxHeight: '400px' }}>
+                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-white shadow-xl" style={{ maxHeight: '400px' }}>
                     <div className="max-h-80 overflow-y-auto">
                       {/* Services */}
                       {searchServices.length > 0 && (
@@ -1098,13 +1109,29 @@ const popularServices = useMemo(() => {
 
               {/* Enhanced Ticket footer */}
               <div className="border-t border-dashed border-[var(--unit-border)] bg-[var(--unit-surface)] px-6 py-4 space-y-3">
+                {/* Business Unit */}
+                <div className="text-center">
+                  <span className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">
+                    {unit === 'BARBERIA' ? 'Barman Barbería' : 'SPA'}
+                  </span>
+                </div>
+                
+                {/* Customer Name */}
+                {selectedCustomer && (
+                  <div className="text-center">
+                    <span className="text-xs font-medium text-[var(--unit-text)]">
+                      Cliente: {selectedCustomer.name}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between text-xs text-[var(--unit-text-muted)]">
                   <span>Subtotal</span>
                   <span className="tabular-nums">S/ {subtotalCart.toFixed(2)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-xs text-red-500">
-                    <span>Descuento</span>
+                    <span>Descuentos</span>
                     <span className="tabular-nums">-S/ {discountAmount.toFixed(2)}</span>
                   </div>
                 )}
@@ -1190,6 +1217,9 @@ const popularServices = useMemo(() => {
                     businessName: businessConfig?.businessName || '',
                     businessAddress: businessConfig?.businessAddress || '',
                     businessPhone: businessConfig?.businessPhone || '',
+                    businessLogo: lastClosedSale.unit === 'BARBERIA' 
+                      ? (businessConfig?.barberiaLogo || '/logo-barberia.png')
+                      : (businessConfig?.spaLogo || '/logo-spa.png'),
                   };
                   const html = printReceipt(data);
                   if (html) setReceiptHtmlToPrint(html);
@@ -1213,7 +1243,7 @@ const popularServices = useMemo(() => {
 
       {/* Receipt Print Modal */}
       {receiptHtmlToPrint && (
-        <div className="fixed inset-0 z-20 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4">
+        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4">
           <div className="w-full max-w-md rounded-t-[calc(var(--unit-border-radius)*1.5)] sm:rounded-[var(--unit-border-radius)] border border-[var(--unit-border)] bg-[var(--unit-surface)] p-5 sm:p-6 shadow-[var(--unit-shadow-lg)]">
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--unit-text)]/20 sm:hidden" />
             <p className="mb-3 text-xs text-[var(--unit-text-muted)]">Vista previa del comprobante</p>

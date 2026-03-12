@@ -5,7 +5,7 @@ import { ChevronRight, Home } from 'lucide-react';
 
 export interface BreadcrumbItem {
   label: string;
-  href?: string;
+  href?: string | undefined;
   icon?: any;
 }
 

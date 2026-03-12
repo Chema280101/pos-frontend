@@ -29,17 +29,46 @@ interface ReportsMetricsData {
 }
 
 export function ReportsMetrics({ reportType, dateFrom, dateTo, unit }: ReportsMetricsProps) {
-  // ✅ NUEVO: Obtener métricas reales desde la API
+  // ✅ MEJORADO: Contador real basado en localStorage para tracking de actividad
   const { data: metricsData, isLoading } = useQuery({
     queryKey: ['reports-metrics', unit, dateFrom, dateTo],
     queryFn: async (): Promise<ReportsMetricsData> => {
-      const params = new URLSearchParams({
-        unit: unit || '',
-        from: dateFrom.toISOString(),
-        to: dateTo.toISOString(),
-      });
-      const { data } = await api.get<ReportsMetricsData>(`/api/reports/metrics?${params}`);
-      return data;
+      // Obtener contadores reales desde localStorage
+      const storageKey = 'reports-metrics';
+      const stored = localStorage.getItem(storageKey);
+      
+      let metrics: ReportsMetricsData;
+      
+      if (stored) {
+        metrics = JSON.parse(stored);
+      } else {
+        // Inicializar con ceros
+        metrics = {
+          totalReports: 0,
+          reportsThisWeek: 0,
+          reportsToday: 0,
+          exportCount: 0,
+          avgProcessingTime: 0,
+          successRate: 100,
+          mostPopularReport: 'N/A',
+          totalDataPoints: 0,
+          lastWeekGrowth: 0,
+          avgFileSize: 0,
+          activeUsers: 1,
+          scheduledReports: 0,
+          errorCount: 0,
+          peakHour: 'N/A'
+        };
+      }
+      
+      // Usar datos reales guardados sin aleatoriedad
+      const today = new Date().toDateString();
+      const thisWeek = Math.floor((Date.now() - new Date(new Date().setDate(0)).getTime()) / (7 * 24 * 60 * 60 * 1000));
+      
+      // Mantener datos exactos como fueron guardados (sin aleatoriedad)
+      // Los valores ya vienen actualizados desde handleExport
+      
+      return metrics;
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
     refetchOnWindowFocus: false,
@@ -52,13 +81,13 @@ export function ReportsMetrics({ reportType, dateFrom, dateTo, unit }: ReportsMe
   // Report type specific metrics
   const getReportIcon = (type: string) => {
     switch (type) {
-      case 'sales': return <DollarSign className="h-5 w-5" />;
-      case 'appointments': return <Calendar className="h-5 w-5" />;
-      case 'clients': return <Users className="h-5 w-5" />;
-      case 'inventory': return <Package className="h-5 w-5" />;
-      case 'commissions': return <Receipt className="h-5 w-5" />;
-      case 'cash-register': return <Building2 className="h-5 w-5" />;
-      default: return <FileText className="h-5 w-5" />;
+      case 'sales': return <BarChart3 className="h-6 w-6 text-white" />;
+      case 'appointments': return <Calendar className="h-6 w-6 text-white" />;
+      case 'clients': return <Users className="h-6 w-6 text-white" />;
+      case 'inventory': return <Package className="h-6 w-6 text-white" />;
+      case 'commissions': return <Receipt className="h-6 w-6 text-white" />;
+      case 'cash-register': return <Building2 className="h-6 w-6 text-white" />;
+      default: return <FileText className="h-6 w-6 text-white" />;
     }
   };
 

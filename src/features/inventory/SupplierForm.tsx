@@ -57,8 +57,9 @@ export function SupplierForm() {
   const isEdit = !!params.id && params.id !== 'new';
 
   // Get supplier from list cache as fallback
-  const suppliersCache = queryClient.getQueryData<any[]>(['suppliers', false]);
-  const cachedSupplier = suppliersCache?.find(s => s.id === params.id);
+  const suppliersCache = queryClient.getQueryData(['suppliers']) as any;
+  const suppliersList = suppliersCache?.data || suppliersCache;
+  const cachedSupplier = Array.isArray(suppliersList) ? suppliersList.find((s: any) => s.id === params.id) : undefined;
 
   const { data: supplier, error } = useQuery({
     queryKey: ['supplier', params.id],
@@ -110,7 +111,7 @@ export function SupplierForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      router.replace('/suppliers');
+      router.replace('/inventory/suppliers');
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       setError('root', { message: err.response?.data?.error ?? 'Error al guardar proveedor' });
@@ -125,7 +126,7 @@ export function SupplierForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       queryClient.invalidateQueries({ queryKey: ['supplier', params.id] });
-      router.replace('/suppliers');
+      router.replace('/inventory/suppliers');
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       setError('root', { message: err.response?.data?.error ?? 'Error al actualizar proveedor' });
@@ -159,7 +160,7 @@ export function SupplierForm() {
             <h2 className="text-xl font-semibold text-[var(--unit-text)] mb-2">Proveedor no encontrado</h2>
             <p className="text-[var(--unit-text-muted)] mb-6">El proveedor que intentas editar no existe o ha sido eliminado.</p>
             <button
-              onClick={() => router.push('/suppliers')}
+              onClick={() => router.push('/inventory/suppliers')}
               className="inline-flex items-center gap-2 rounded-lg bg-[var(--unit-accent)] px-4 py-2 text-white font-medium hover:bg-[var(--unit-primary)] transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />

@@ -1,0 +1,267 @@
+/* ============================================================================
+   SISTEMA DE CODIFICACIÓN POR COLORES PARA TABLAS
+   ============================================================================ */
+
+/* Base Badge Styles */
+.badge-base {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+}
+
+/* IDENTIFICADORES Y REFERENCIAS */
+.badge-id,
+.badge-reference,
+.badge-sale-number {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  background-color: rgb(224 231 255);
+  color: rgb(55 48 163);
+}
+
+/* PERSONAS Y CONTACTOS */
+.badge-person-name,
+.badge-customer-name,
+.badge-user-name {
+  @apply badge-base bg-pink-100 text-pink-800;
+}
+
+.badge-employee-name {
+  @apply badge-base bg-emerald-100 text-emerald-800;
+}
+
+.badge-phone,
+.badge-contact-phone {
+  @apply badge-base bg-sky-100 text-sky-800;
+}
+
+.badge-email,
+.badge-contact-email {
+  @apply badge-base bg-purple-100 text-purple-800;
+}
+
+/* DATOS MONETARIOS */
+.badge-amount,
+.badge-total,
+.badge-price,
+.badge-monetary {
+  @apply badge-base bg-emerald-100 text-emerald-800;
+}
+
+.badge-commission,
+.badge-percentage {
+  @apply badge-base bg-orange-100 text-orange-800;
+}
+
+/* TIEMPO Y FECHAS */
+.badge-date,
+.badge-fecha {
+  @apply badge-base bg-indigo-100 text-indigo-800;
+}
+
+.badge-time,
+.badge-hora {
+  @apply badge-base bg-slate-100 text-slate-800;
+}
+
+.badge-duration,
+.badge-duracion {
+  @apply badge-base bg-blue-100 text-blue-800;
+}
+
+/* UNIDADES Y UBICACIONES */
+.badge-unit-spa,
+.badge-spa {
+  @apply badge-base bg-teal-100 text-teal-800;
+}
+
+.badge-unit-barberia,
+.badge-barberia {
+  @apply badge-base bg-orange-100 text-orange-800;
+}
+
+/* SERVICIOS Y PRODUCTOS */
+.badge-service-name,
+.badge-servicio {
+  @apply badge-base bg-purple-100 text-purple-800;
+}
+
+.badge-product-name,
+.badge-producto {
+  @apply badge-base bg-blue-100 text-blue-800;
+}
+
+.badge-category,
+.badge-categoria {
+  @apply badge-base bg-gray-100 text-gray-800;
+}
+
+/* ESTADOS Y ACCIONES */
+.badge-status-active,
+.badge-status-completed,
+.badge-status-paid {
+  @apply badge-base bg-green-100 text-green-800;
+}
+
+.badge-status-inactive,
+.badge-status-cancelled,
+.badge-status-failed {
+  @apply badge-base bg-red-100 text-red-800;
+}
+
+.badge-status-pending,
+.badge-status-scheduled {
+  @apply badge-base bg-amber-100 text-amber-800;
+}
+
+.badge-status-neutral,
+.badge-status-default {
+  @apply badge-base bg-gray-100 text-gray-800;
+}
+
+/* MÉTODOS DE PAGO */
+.badge-payment-cash,
+.badge-payment-efectivo {
+  @apply badge-base bg-green-100 text-green-800;
+}
+
+.badge-payment-card,
+.badge-payment-tarjeta {
+  @apply badge-base bg-blue-100 text-blue-800;
+}
+
+.badge-payment-digital,
+.badge-payment-yape {
+  @apply badge-base bg-purple-100 text-purple-800;
+}
+
+.badge-payment-transfer,
+.badge-payment-transferencia {
+  @apply badge-base bg-orange-100 text-orange-800;
+}
+
+/* DATOS TÉCNICOS */
+.badge-technical-id,
+.badge-id-code,
+.badge-identifier {
+  @apply badge-base bg-gray-100 text-gray-800 font-mono;
+}
+
+.badge-ip-address,
+.badge-ip {
+  @apply badge-base bg-cyan-100 text-cyan-800;
+}
+
+/* ACCIONES DE AUDITORÍA */
+.badge-action-login,
+.badge-action-logout {
+  @apply badge-base bg-blue-100 text-blue-800;
+}
+
+.badge-action-create {
+  @apply badge-base bg-green-100 text-green-800;
+}
+
+.badge-action-delete,
+.badge-action-cancel {
+  @apply badge-base bg-red-100 text-red-800;
+}
+
+.badge-action-update {
+  @apply badge-base bg-amber-100 text-amber-800;
+}
+
+/* ROLES DE USUARIO */
+.badge-role-admin {
+  @apply badge-base bg-red-100 text-red-800;
+}
+
+.badge-role-receptionist {
+  @apply badge-base bg-blue-100 text-blue-800;
+}
+
+.badge-role-spa-specialist {
+  @apply badge-base bg-green-100 text-green-800;
+}
+
+.badge-role-barber {
+  @apply badge-base bg-amber-100 text-amber-800;
+}
+
+.badge-role-beautician {
+  @apply badge-base bg-pink-100 text-pink-800;
+}
+
+.badge-role-manager {
+  @apply badge-base bg-indigo-100 text-indigo-800;
+}
+
+/* ENTIDADES DE AUDITORÍA */
+.badge-entity-user {
+  @apply badge-base bg-purple-100 text-purple-800;
+}
+
+.badge-entity-sale {
+  @apply badge-base bg-emerald-100 text-emerald-800;
+}
+
+.badge-entity-cash-register {
+  @apply badge-base bg-amber-100 text-amber-800;
+}
+
+.badge-entity-product {
+  @apply badge-base bg-blue-100 text-blue-800;
+}
+
+.badge-entity-service {
+  @apply badge-base bg-green-100 text-green-800;
+}
+
+.badge-entity-commission {
+  @apply badge-base bg-orange-100 text-orange-800;
+}
+
+.badge-entity-expense {
+  @apply badge-base bg-red-100 text-red-800;
+}
+
+/* UTILIDADES PARA DATOS COMPUESTOS */
+.badge-stack {
+  @apply flex flex-col gap-1;
+}
+
+.badge-group {
+  @apply flex items-center gap-2;
+}
+
+/* ESPECIALES */
+.badge-bold {
+  @apply font-bold;
+}
+
+.badge-mono {
+  @apply font-mono;
+}
+
+/* ============================================================================
+   EJEMPLOS DE USO:
+   
+   <span className="badge-date">Fecha</span>
+   <span className="badge-person-name">Nombre</span>
+   <span className="badge-amount">S/ 100.00</span>
+   
+   Para datos compuestos:
+   <div className="badge-stack">
+     <span className="badge-date">Fecha</span>
+     <span className="badge-time">Hora</span>
+   </div>
+   ============================================================================ */

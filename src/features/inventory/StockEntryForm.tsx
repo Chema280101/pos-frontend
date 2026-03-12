@@ -38,7 +38,7 @@ export function StockEntryForm(): JSX.Element {
     queryKey: ['suppliers'],
     queryFn: async (): Promise<Supplier[]> => {
       const { data } = await api.get<{ data: Supplier[] }>('/api/inventory/suppliers');
-      return data.data; // Extract the array from paginated response
+      return data.data || data; // Handle paginated response
     },
   });
 

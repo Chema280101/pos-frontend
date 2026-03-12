@@ -77,10 +77,9 @@ export function MyCommissions(): JSX.Element {
       header: 'Venta',
       sortable: true,
       render: (row: Commission) => (
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text)]">{row.sale?.saleNumber ?? '-'}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+          {row.sale?.saleNumber ?? 'Sin venta'}
+        </span>
       ),
     },
     {
@@ -88,10 +87,9 @@ export function MyCommissions(): JSX.Element {
       header: 'Monto',
       sortable: true,
       render: (row: Commission) => (
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text)]">S/ {row.amount.toFixed(2)}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+          S/ {row.amount.toFixed(2)}
+        </span>
       ),
     },
     {
@@ -99,10 +97,9 @@ export function MyCommissions(): JSX.Element {
       header: '% Comisión',
       sortable: true,
       render: (row: Commission) => (
-        <div className="flex items-center gap-1">
-          <TrendingUp className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text)]">{row.pctApplied}%</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
+          {row.pctApplied}%
+        </span>
       ),
     },
     {
@@ -126,12 +123,9 @@ export function MyCommissions(): JSX.Element {
       header: 'Fecha de Pago',
       sortable: true,
       render: (row: Commission) => (
-        <div className="flex items-center gap-1">
-          <Clock className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text)]">
-            {row.paidAt ? format(new Date(row.paidAt), "d MMM yyyy", { locale: es }) : '-'}
-          </span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+          {row.paidAt ? format(new Date(row.paidAt), "d MMM yyyy", { locale: es }) : 'Sin pago'}
+        </span>
       ),
     },
     {
@@ -139,9 +133,9 @@ export function MyCommissions(): JSX.Element {
       header: 'Total Venta',
       sortable: true,
       render: (row: Commission) => (
-        <div className="text-[var(--unit-text-muted)]">
-          {row.sale ? `S/ ${row.sale.total.toFixed(2)}` : '-'}
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+          {row.sale ? `S/ ${row.sale.total.toFixed(2)}` : 'Sin venta'}
+        </span>
       ),
     },
   ];

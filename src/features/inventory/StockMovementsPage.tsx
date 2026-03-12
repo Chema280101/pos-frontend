@@ -85,13 +85,13 @@ export function StockMovementsPage(): JSX.Element {
       header: 'Fecha',
       sortable: true,
       render: (row: StockMovement) => (
-        <div>
-          <div className="font-medium text-gray-900">
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
             {new Date(row.createdAt).toLocaleDateString('es-PE')}
-          </div>
-          <div className="text-sm text-gray-500">
+          </span>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
             {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-          </div>
+          </span>
         </div>
       ),
     },
@@ -100,12 +100,13 @@ export function StockMovementsPage(): JSX.Element {
       header: 'Producto',
       sortable: true,
       render: (row: StockMovement) => (
-        <div className="flex items-center gap-2">
-          <Package className="h-4 w-4 text-gray-400" />
-          <div>
-            <div className="font-medium text-gray-900">{row.product.name}</div>
-            <div className="text-sm text-gray-500">ID: {row.product.id.slice(-8)}</div>
-          </div>
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+            {row.product.name}
+          </span>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 font-mono">
+            ID: {row.product.id.slice(-8)}
+          </span>
         </div>
       ),
     },
@@ -129,16 +130,17 @@ export function StockMovementsPage(): JSX.Element {
       header: 'Cantidad',
       sortable: true,
       render: (row: StockMovement) => (
-        <div className="flex items-center gap-2">
+        <span className={cn(
+          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
+          row.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        )}>
           {row.quantity > 0 ? (
-            <ArrowDownRight className="h-4 w-4 text-green-600" />
+            <ArrowDownRight className="h-3 w-3" />
           ) : (
-            <ArrowUpRight className="h-4 w-4 text-red-600" />
+            <ArrowUpRight className="h-3 w-3" />
           )}
-          <span className={cn('font-medium', row.quantity > 0 ? 'text-green-600' : 'text-red-600')}>
-            {row.quantity > 0 ? '+' : ''}{row.quantity}
-          </span>
-        </div>
+          {row.quantity > 0 ? '+' : ''}{row.quantity}
+        </span>
       ),
     },
     {
@@ -146,9 +148,13 @@ export function StockMovementsPage(): JSX.Element {
       header: 'Stock',
       sortable: false,
       render: (row: StockMovement) => (
-        <div className="text-sm">
-          <div className="text-gray-500">Antes: {row.stockBefore}</div>
-          <div className="font-medium text-gray-900">Después: {row.stockAfter}</div>
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+            Antes: {row.stockBefore}
+          </span>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+            Después: {row.stockAfter}
+          </span>
         </div>
       ),
     },
@@ -157,9 +163,9 @@ export function StockMovementsPage(): JSX.Element {
       header: 'Motivo',
       sortable: false,
       render: (row: StockMovement) => (
-        <div className="text-sm text-gray-900">
-          {row.reason || '-'}
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+          {row.reason || 'Sin motivo'}
+        </span>
       ),
     },
     {
@@ -167,9 +173,9 @@ export function StockMovementsPage(): JSX.Element {
       header: 'Usuario',
       sortable: true,
       render: (row: StockMovement) => (
-        <div className="text-sm text-gray-900">
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
           {row.createdBy?.name || 'Sistema'}
-        </div>
+        </span>
       ),
     },
   ];
@@ -217,7 +223,7 @@ export function StockMovementsPage(): JSX.Element {
           <div className="flex flex-wrap items-center justify-center gap-4">
             {canEdit && (
               <>
-                <Link href="/inventory/movements/internal-use" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold shadow-lg border-2 border-orange-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+                <Link href="/inventory/use" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold shadow-lg border-2 border-orange-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                   <Home className="h-5 w-5" />
                   Registrar Uso Interno
                 </Link>
@@ -225,9 +231,9 @@ export function StockMovementsPage(): JSX.Element {
                   <ArrowDownRight className="h-5 w-5" />
                   Entrada de Stock
                 </Link>
-                <Link href="/inventory" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+                <Link href="/inventory/products" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                   <Package className="h-5 w-5" />
-                  Inventario
+                  Productos
                 </Link>
                 <button className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                   <FileText className="h-5 w-5" />

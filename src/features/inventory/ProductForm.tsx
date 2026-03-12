@@ -493,7 +493,7 @@ export function ProductForm(): JSX.Element {
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => router.push('/inventory')} 
+                  onClick={() => router.push('/inventory/products')} 
                   className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
                 >
                   <span className="flex items-center gap-2">

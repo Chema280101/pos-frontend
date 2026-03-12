@@ -5,6 +5,8 @@ export interface BusinessConfig {
   businessName: string;
   businessAddress: string;
   businessPhone: string;
+  barberiaLogo?: string;
+  spaLogo?: string;
 }
 
 export function useBusinessConfig() {

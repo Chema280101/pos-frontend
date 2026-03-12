@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, CreditCard, Wallet, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, CreditCard, Wallet, Smartphone, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ interface Income {
   paymentMethod: string;
   status: string;
   createdAt: string;
+  paymentDetail?: Record<string, number> | null;
   customer: {
     id: string;
     name: string;
@@ -130,11 +131,11 @@ export function IncomePage(): JSX.Element {
   const getPaymentMethodColor = useCallback((method: string) => {
     switch (method.toLowerCase()) {
       case 'efectivo':
-        return 'bg-green-100 text-green-800';
-      case 'tarjeta':
         return 'bg-blue-100 text-blue-800';
-      case 'yape':
+      case 'tarjeta':
         return 'bg-purple-100 text-purple-800';
+      case 'yape':
+        return 'bg-cyan-100 text-cyan-800';
       case 'transferencia':
         return 'bg-orange-100 text-orange-800';
       default:
@@ -145,9 +146,9 @@ export function IncomePage(): JSX.Element {
   const getStatusColor = useCallback((status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'bg-emerald-100 text-emerald-800';
+        return 'bg-green-100 text-green-800';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-100 text-amber-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -187,10 +188,9 @@ export function IncomePage(): JSX.Element {
       key: 'customer',
       header: 'Cliente',
       render: (row: Income) => (
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">{row.customer?.name || 'Sin cliente'}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+          {row.customer?.name || 'Sin cliente'}
+        </span>
       ),
     },
     {
@@ -198,7 +198,7 @@ export function IncomePage(): JSX.Element {
       header: 'Total',
       sortable: true,
       render: (row: Income) => (
-        <span className="font-bold text-green-600">
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
           S/ {row.total.toFixed(2)}
         </span>
       ),
@@ -207,15 +207,12 @@ export function IncomePage(): JSX.Element {
       key: 'paymentMethod',
       header: 'Método de Pago',
       render: (row: Income) => (
-        <div className="flex items-center gap-2">
-          {getPaymentMethodIcon(row.paymentMethod)}
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            getPaymentMethodColor(row.paymentMethod)
-          )}>
-            {row.paymentMethod}
-          </span>
-        </div>
+        <span className={cn(
+          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+          getPaymentMethodColor(row.paymentMethod)
+        )}>
+          {row.paymentMethod}
+        </span>
       ),
     },
     {
@@ -235,16 +232,13 @@ export function IncomePage(): JSX.Element {
       header: 'Fecha',
       sortable: true,
       render: (row: Income) => (
-        <div className="flex items-center gap-2 text-[var(--unit-text-muted)]">
-          <Calendar className="h-4 w-4" />
-          <div>
-            <div className="text-sm">
-              {new Date(row.createdAt).toLocaleDateString('es-PE')}
-            </div>
-            <div className="text-xs">
-              {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          </div>
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+            {new Date(row.createdAt).toLocaleDateString('es-PE')}
+          </span>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+            {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       ),
     },
@@ -389,8 +383,9 @@ export function IncomePage(): JSX.Element {
                     <option value="">Todos los métodos</option>
                     <option value="efectivo">Efectivo</option>
                     <option value="tarjeta">Tarjeta</option>
-                    <option value="yape">Yape</option>
+                    <option value="billetera">Billetera Digital</option>
                     <option value="transferencia">Transferencia</option>
+                    <option value="mixto">Mixto</option>
                   </select>
                 </div>
 
@@ -678,6 +673,58 @@ export function IncomePage(): JSX.Element {
                       </div>
                     </div>
                   </div>
+
+                  {/* Payment Detail for Mixed Payments */}
+                  {selectedIncome.paymentMethod === 'Mixto' && selectedIncome.paymentDetail && (
+                    <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                      <div className="relative">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                            <Layers className="h-4 w-4 text-[var(--unit-accent)]" />
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Desglose de Pago</h4>
+                        </div>
+
+                        <div className="space-y-3">
+                          {Object.entries(selectedIncome.paymentDetail)
+                            .filter(([_, amount]) => amount > 0)
+                            .map(([method, amount]) => (
+                              <div key={method} className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                                <div className="flex items-center gap-2">
+                                  {getPaymentMethodIcon(method)}
+                                  <span className="text-sm font-medium text-[var(--unit-text)]">
+                                    {method === 'CASH' ? 'Efectivo' : 
+                                     method === 'CARD' ? 'Tarjeta' : 
+                                     method === 'TRANSFER' ? 'Transferencia' : 
+                                     method === 'DIGITAL_WALLET' ? 'Billetera Digital' : method}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                                  S/ {amount.toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          
+                          {/* Total Summary */}
+                          <div className="mt-4 pt-4 border-t-2 border-[var(--unit-border)]/20">
+                            <div className="flex justify-between items-center py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border border-[var(--unit-accent)]/30">
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
+                                <span className="text-sm font-bold text-[var(--unit-text)]">Total Pagado</span>
+                              </div>
+                              <span className="font-bold text-[var(--unit-accent)] bg-white px-3 py-1 rounded-lg border border-[var(--unit-accent)]/30">
+                                S/ {Object.values(selectedIncome.paymentDetail)
+                                  .filter((amount) => amount > 0)
+                                  .reduce((sum, amount) => sum + amount, 0)
+                                  .toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}

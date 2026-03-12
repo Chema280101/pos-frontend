@@ -258,7 +258,7 @@ export function InventoryPage(): JSX.Element {
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           row.unit === 'SPA'
             ? 'bg-purple-100 text-purple-800'
-            : 'bg-stone-200 text-stone-800'
+            : 'bg-red-100 text-red-800'
         )}>
           {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
@@ -287,8 +287,12 @@ export function InventoryPage(): JSX.Element {
       sortable: true,
       render: (row: Product) => (
         <span className={cn(
-          'font-medium',
-          row.stock < row.minStock ? 'text-amber-600' : 'text-[var(--unit-text-muted)]'
+          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+          row.stock === 0 
+            ? 'bg-red-100 text-red-800'
+            : row.stock < row.minStock 
+            ? 'bg-amber-100 text-amber-800' 
+            : 'bg-green-100 text-green-800'
         )}>
           {row.stock} {row.measureUnit}
         </span>
@@ -299,8 +303,8 @@ export function InventoryPage(): JSX.Element {
       header: 'Mínimo',
       sortable: true,
       render: (row: Product) => (
-        <span>
-          {row.minStock} <span className="text-[var(--unit-text-muted)]">{row.measureUnit}</span>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
+          {row.minStock} {row.measureUnit}
         </span>
       ),
     },
@@ -309,7 +313,15 @@ export function InventoryPage(): JSX.Element {
       header: 'Precio Venta',
       sortable: true,
       render: (row: Product) =>
-        row.salePrice ? `S/ ${row.salePrice.toFixed(2)}` : <span className="text-[var(--unit-text-muted)]">—</span>,
+        row.salePrice ? (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
+            S/ {row.salePrice.toFixed(2)}
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
+            —
+          </span>
+        ),
     },
     {
       key: 'isActive',
@@ -461,7 +473,7 @@ export function InventoryPage(): JSX.Element {
                 Sistema de Inventario
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Inventario</h1>
+            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Productos</h1>
             <p className="text-[var(--unit-text-muted)]">
               Gestiona productos y servicios con control total
             </p>

@@ -247,7 +247,7 @@ export function ServicesPage(): JSX.Element {
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           row.unit === 'SPA'
             ? 'bg-purple-100 text-purple-800'
-            : 'bg-stone-200 text-stone-800'
+            : 'bg-red-100 text-red-800'
         )}>
           {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
@@ -258,10 +258,9 @@ export function ServicesPage(): JSX.Element {
       header: 'Precio',
       sortable: true,
       render: (row: Service) => (
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text-muted)]">S/ {row.price.toFixed(2)}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
+          S/ {row.price.toFixed(2)}
+        </span>
       ),
     },
     {
@@ -269,10 +268,9 @@ export function ServicesPage(): JSX.Element {
       header: 'Duración',
       sortable: true,
       render: (row: Service) => (
-        <div className="flex items-center gap-1">
-          <Clock className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">{row.durationMin} min</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+          {row.durationMin} min
+        </span>
       ),
     },
     {
@@ -280,7 +278,9 @@ export function ServicesPage(): JSX.Element {
       header: 'Vendidos',
       sortable: true,
       render: (row: Service) => (
-        <span className="font-medium text-[var(--unit-text-muted)]">{row.timesVended}</span>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
+          {row.timesVended}
+        </span>
       ),
     },
     {
@@ -290,7 +290,7 @@ export function ServicesPage(): JSX.Element {
         <span className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           row.isComboEligible
-            ? 'bg-green-100 text-green-800'
+            ? 'bg-teal-100 text-teal-800'
             : 'bg-gray-100 text-gray-800'
         )}>
           {row.isComboEligible ? 'Sí' : 'No'}

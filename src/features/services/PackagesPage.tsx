@@ -132,10 +132,9 @@ export function PackagesPage(): JSX.Element {
       header: 'Precio Fijo',
       sortable: true,
       render: (row: Package) => (
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text-muted)]">S/ {row.fixedPrice.toFixed(2)}</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+          S/ {row.fixedPrice.toFixed(2)}
+        </span>
       ),
     },
     {
@@ -143,10 +142,9 @@ export function PackagesPage(): JSX.Element {
       header: 'Duración',
       sortable: true,
       render: (row: Package) => (
-        <div className="flex items-center gap-1">
-          <Clock className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">{row.durationMin} min</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+          {row.durationMin} min
+        </span>
       ),
     },
     {
@@ -168,10 +166,9 @@ export function PackagesPage(): JSX.Element {
       header: 'Servicios',
       sortable: true,
       render: (row: Package) => (
-        <div className="flex items-center gap-1">
-          <Tag className="h-3 w-3 text-[var(--unit-text-muted)]" />
-          <span className="text-[var(--unit-text-muted)]">{getServiceCount(row)} servicios</span>
-        </div>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
+          {getServiceCount(row)} servicios
+        </span>
       ),
     },
     {
@@ -179,11 +176,10 @@ export function PackagesPage(): JSX.Element {
       header: 'Detalle de Servicios',
       render: (row: Package) => (
         <div className="max-w-xs">
-          <div className="text-sm text-[var(--unit-text-muted)]">
-            {row.services.map((s, index) => (
-              <span key={s.serviceId}>
+          <div className="flex flex-wrap gap-1">
+            {row.services.map((s) => (
+              <span key={s.serviceId} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
                 {s.service.name}
-                {index < row.services.length - 1 && ', '}
               </span>
             ))}
           </div>

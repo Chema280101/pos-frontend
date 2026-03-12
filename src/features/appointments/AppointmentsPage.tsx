@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { format, startOfDay, endOfDay, isWithinInterval, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
-import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Eye, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2 } from 'lucide-react';
+import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Eye, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
 import { useAuthStore } from '@/store/authStore';
@@ -31,10 +31,21 @@ export function AppointmentsPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const unit = activeUnit ?? 'SPA';
 
+  // Función para forzar recarga de citas
+  const refreshAppointments = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+  }, [queryClient]);
+
   const [viewStart, setViewStart] = useState<Date>(() => startOfDay(subDays(new Date(), 30))); // Start 30 days ago
-  const [viewEnd, setViewEnd] = useState<Date>(() => endOfDay(new Date())); // End today
+  const [viewEnd, setViewEnd] = useState<Date>(() => endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // End 30 days from now
   const [calendarView, setCalendarView] = useState<'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'>('timeGridDay');
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+
+  // Función para manejar cambio de fecha del calendario
+  const handleCalendarDateChange = useCallback((date: Date) => {
+    setCalendarDate(date);
+    console.log('📅 Calendar date changed to:', date);
+  }, []);
   const [drawerAppointmentId, setDrawerAppointmentId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(true);
@@ -43,8 +54,8 @@ export function AppointmentsPage(): JSX.Element {
   const [search, setSearch] = useState('');
   
   // Date range filter states
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
-  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
+  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 30))); // 30 días atrás
+  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // 30 días en el futuro
   const [unitFilter, setUnitFilter] = useState<string>('');
   
   // Additional filter states
@@ -182,6 +193,12 @@ export function AppointmentsPage(): JSX.Element {
     return transformed;
   }, [appointments]);
 
+  // Debug: Ver empleados disponibles
+  console.log('👥 Employees available:', {
+    total: employees?.length || 0,
+    employees: employees?.map((emp: any) => ({ id: emp.id, name: emp.name, unit: emp.unit }))
+  });
+
   const normalizedAppointments = useMemo(() => {
     return appointments.map((apt: any) => {
       console.log('📅 Normalizing appointment:', {
@@ -228,81 +245,11 @@ export function AppointmentsPage(): JSX.Element {
     queryClient.invalidateQueries({ queryKey: ['appointments'] });
   }, [queryClient]);
 
-  // Filter calendar appointments to show only today and future dates
-  const calendarFilteredAppointments = useMemo(() => {
-    const today = startOfDay(new Date());
-    return normalizedAppointments.filter((a: any) => {
-      const aptDate = startOfDay(new Date(a.start));
-      return aptDate >= today;
-    });
-  }, [normalizedAppointments]);
-
-  const dayAppointments = useMemo(() => {
-    const today = startOfDay(new Date());
-    const todayApts = normalizedAppointments
-      .filter((apt: any) => isWithinInterval(new Date(apt.start), { start: today, end: endOfDay(today) }))
-      .sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
-    
-    console.log('📅 Today appointments:', todayApts.map((apt: any) => ({
-      id: apt.id,
-      customer: apt.extendedProps.customer?.name,
-      service: apt.extendedProps.service?.name,
-      employee: apt.extendedProps.employee?.name,
-      employeeId: (apt as any).employeeId,
-      hasEmployee: !!apt.extendedProps.employee,
-      notes: apt.extendedProps.notes
-    })));
-    
-    return todayApts;
-  }, [normalizedAppointments]);
-
-  const Row = useCallback(({ index, style }: ListChildComponentProps) => {
-    const apt = dayAppointments[index];
-    if (!apt) return null;
-    const status = getStatusConfig(apt.extendedProps.status);
-    return (
-      <div style={style} className="border-b border-[var(--unit-border)] p-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.bg} ${status.text}`}>
-                {status.label}
-              </span>
-              <span className="text-xs text-[var(--unit-text-muted)]">
-                {format(apt.start, 'HH:mm')} - {format(apt.end, 'HH:mm')}
-              </span>
-            </div>
-            <div className="font-medium text-[var(--unit-text)]">
-              {apt.extendedProps.customer?.name || 'Sin cliente'}
-            </div>
-            <div className="text-sm text-[var(--unit-text)]">
-              {apt.extendedProps.service?.name}
-            </div>
-            <div className="text-sm text-[var(--unit-text)]">
-              con {apt.extendedProps.employee?.name}
-            </div>
-            {apt.extendedProps.notes && (
-              <div className="text-xs text-[var(--unit-text)] mt-1">
-                Nota: {apt.extendedProps.notes}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => {
-              setDrawerAppointmentId(apt.id);
-              setDrawerOpen(true);
-            }}
-            className="p-1 text-[var(--unit-text)] hover:bg-[var(--unit-accent)] rounded"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }, [dayAppointments]);
-
+  
+  
   // Handlers for OptimizedScheduleView
   const handleNewAppointment = useCallback((employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => {
+    console.log('🎯 Creating new appointment:', { employeeId, time, unit });
     const params = new URLSearchParams({
       employeeId,
       unit,
@@ -390,17 +337,14 @@ export function AppointmentsPage(): JSX.Element {
         const displayHours = hours % 12 || 12;
         const displayMinutes = minutes.toString().padStart(2, '0');
 
-  return (
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
-            <div>
-              <div className="font-medium text-[var(--unit-text-muted)]">
-                {day} {month}. {year}
-              </div>
-              <div className="text-sm text-[var(--unit-text-muted)]">
-                {displayHours}:{displayMinutes} {ampm}
-              </div>
-            </div>
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+              {day} {month}. {year}
+            </span>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+              {displayHours}:{displayMinutes} {ampm}
+            </span>
           </div>
         );
       },
@@ -409,10 +353,14 @@ export function AppointmentsPage(): JSX.Element {
       key: 'customer',
       header: 'Cliente',
       render: (row: any) => (
-        <div>
-          <div className="font-medium text-[var(--unit-text-muted)]">{row.extendedProps.customer?.name || 'Cliente'}</div>
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+            {row.extendedProps.customer?.name || 'Sin cliente'}
+          </span>
           {row.extendedProps.customer?.phone && (
-            <div className="text-sm text-[var(--unit-text-muted)]">{row.extendedProps.customer.phone}</div>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-sky-100 text-sky-800">
+              {row.extendedProps.customer.phone}
+            </span>
           )}
         </div>
       ),
@@ -424,17 +372,19 @@ export function AppointmentsPage(): JSX.Element {
         const serviceName = row.extendedProps.service?.name;
         const serviceId = row.extendedProps.appointmentId;
         return (
-          <div>
+          <div className="flex flex-col gap-1">
             {serviceName ? (
-              <div className="font-medium text-[var(--unit-text-muted)]">{serviceName}</div>
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+                {serviceName}
+              </span>
             ) : (
-              <div className="text-[var(--unit-text-muted)]">
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
                 Servicio no encontrado
-                <br />
-                ID: {serviceId?.slice(0, 8)}...
-              </div>
+              </span>
             )}
-            <div className="text-sm text-[var(--unit-text-muted)]">{row.extendedProps.service?.durationMin || 0} min</div>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+              {row.extendedProps.service?.durationMin || 0} min
+            </span>
           </div>
         );
       },
@@ -446,16 +396,18 @@ export function AppointmentsPage(): JSX.Element {
         const employeeName = row.employee?.name;
         const employeeId = (row as any).employeeId;
         return (
-          <div>
-            <div className="font-medium text-[var(--unit-text)]">
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
               {employeeName || 'Empleado no asignado'}
-            </div>
+            </span>
             {employeeId && !employeeName && (
-              <div className="text-sm text-[var(--unit-text-muted)]">
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 font-mono">
                 ID: {employeeId.slice(0, 8)}...
-              </div>
+              </span>
             )}
-            <div className="text-sm text-[var(--unit-text-muted)]">{row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}</div>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+              {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+            </span>
           </div>
         );
       },
@@ -468,7 +420,7 @@ export function AppointmentsPage(): JSX.Element {
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           row.unit === 'SPA'
             ? 'bg-purple-100 text-purple-800'
-            : 'bg-stone-200 text-stone-800'
+            : 'bg-red-100 text-red-800'
         )}>
           {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
@@ -489,7 +441,11 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'sale',
       header: 'Venta',
-      render: (row: Appointment) => row.sale?.saleNumber ?? '—',
+      render: (row: Appointment) => (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+          {row.sale?.saleNumber ? `#${row.sale.saleNumber}` : 'Sin venta'}
+        </span>
+      ),
     },
   ];
 
@@ -527,7 +483,7 @@ export function AppointmentsPage(): JSX.Element {
         setDrawerAppointmentId(row.id);
         setDrawerOpen(true);
       },
-      className: 'text-blue-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
+      className: 'text-blue-600 hover:bg-blue-50',
     },
     {
       label: 'Eliminar',
@@ -536,7 +492,7 @@ export function AppointmentsPage(): JSX.Element {
         setSelectedAppointment(row);
         setShowDeleteDialog(true);
       },
-      className: 'text-red-600 hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)] hover:rounded-xl',
+      className: 'text-red-600 hover:bg-red-50',
     },
   ];
 
@@ -611,13 +567,14 @@ export function AppointmentsPage(): JSX.Element {
         {showCalendar && (
           <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
             <OptimizedScheduleView
-              date={new Date()}
+              date={calendarDate}
               employees={employees}
               appointments={scheduleAppointments as any}
               selectedUnit={selectedUnit}
               onNewAppointment={handleNewAppointment}
               onViewAppointment={handleViewAppointment}
               onReschedule={handleReschedule}
+              onDateChange={handleCalendarDateChange}
             />
           </div>
         )}
@@ -956,6 +913,13 @@ export function AppointmentsPage(): JSX.Element {
                   className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
                 >
                   Cancelar
+                </button>
+                <button
+                  onClick={refreshAppointments}
+                  className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-green-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                  Actualizar Citas
                 </button>
                 <button
                   onClick={() => {

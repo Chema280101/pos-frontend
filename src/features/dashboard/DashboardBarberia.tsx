@@ -142,7 +142,7 @@ export function DashboardBarberia(): JSX.Element {
                 value={kpis?.lowStockCount ?? 0}
                 subtitle={kpis?.lowStockCount > 0 ? kpis?.lowStockProducts?.[0]?.name ?? 'Revisar inventario' : 'Todo OK'}
                 description="Productos con bajo stock"
-                href="/inventory"
+                href="/inventory/products"
                 critical={(kpis?.lowStockCount ?? 0) > 0}
                 color="red"
                 icon={<Package className="h-6 w-6 text-white" />}

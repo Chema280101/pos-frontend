@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }): 
             mobileOpen={sidebarOpen}
             onMobileClose={() => setSidebarOpen(false)}
           />
-          <main className="min-w-0 flex-1 overflow-auto">
+          <main className="min-w-0 flex-1 overflow-auto lg:ml-56 lg:pt-0">
             <AppBreadcrumbs />
             {children}
           </main>

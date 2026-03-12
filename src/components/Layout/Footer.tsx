@@ -1,6 +1,6 @@
 'use client';
 
-import { Scissors, DollarSign, Code, Heart, Calendar, Shield, Sparkles } from 'lucide-react';
+import { Scissors, DollarSign, Code, Heart, Calendar, Shield, Sparkles, HelpCircle, MessageCircle } from 'lucide-react';
 
 export function Footer(): JSX.Element {
   const currentYear = new Date().getFullYear();
@@ -50,14 +50,24 @@ export function Footer(): JSX.Element {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-[var(--unit-border)]/30">
             {/* Links */}
             <div className="flex items-center gap-4 text-sm">
-              <button className="flex items-center gap-1 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors group">
-                <DollarSign className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <a 
+                href="/docs/Guia-Usuario-Barberia-Spa-POS.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors group"
+              >
+                <HelpCircle className="h-4 w-4 group-hover:scale-110 transition-transform" />
                 <span>Ayuda</span>
-              </button>
-              <button className="flex items-center gap-1 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors group">
-                <Shield className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              </a>
+              <a 
+                href="https://wa.me/51951171534?text=Hola%2C%20necesito%20soporte%20con%20el%20sistema%20Barber%C3%ADa%20y%20Spa%20POS"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors group"
+              >
+                <MessageCircle className="h-4 w-4 group-hover:scale-110 transition-transform" />
                 <span>Soporte</span>
-              </button>
+              </a>
             </div>
 
             {/* Made with Love */}

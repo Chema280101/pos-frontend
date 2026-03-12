@@ -58,7 +58,7 @@ export function PaymentModal({ saleTotal, isProcessing, onClose, onConfirm }: Pa
   const mixedInputClass = 'w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 px-4 py-3 text-sm text-[var(--unit-text)] tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50';
 
   return (
-    <div className="fixed inset-0 z-10 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4">
       <div className="w-full max-w-md rounded-t-[calc(var(--unit-border-radius)*1.5)] sm:rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto relative overflow-hidden">
         {/* Glassmorphism overlay pattern - Consistente con Modal.tsx */}
         <div className="absolute inset-0 opacity-5">

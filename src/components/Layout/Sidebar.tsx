@@ -294,8 +294,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
       <aside
         className={cn(
           'w-56 border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6',
-          'fixed inset-y-0 left-0 z-50 transform transition-transform lg:relative lg:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed inset-y-0 left-0 z-50 transform transition-transform lg:fixed lg:top-0 lg:left-0 lg:inset-y-0 lg:z-40',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {navContent}

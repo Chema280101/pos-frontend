@@ -25,6 +25,8 @@ export interface ReceiptSaleData {
   businessName?: string;
   businessAddress?: string;
   businessPhone?: string;
+  /** Logo específico para la unidad de negocio */
+  businessLogo?: string;
 }
 
 function formatDate(s: string | undefined | null): string {
@@ -37,8 +39,14 @@ function formatDate(s: string | undefined | null): string {
 }
 
 function buildReceiptHtml(data: ReceiptSaleData): string {
-  const title =
-    data.businessName?.trim() || (data.unit === 'BARBERIA' ? 'Barbería' : 'Spa');
+  const title = (() => {
+    const businessName = data.businessName?.trim();
+    // Si el nombre del negocio es el genérico "Barbería y Spa", usar el específico de la unidad
+    if (businessName === 'Barbería y Spa' || !businessName) {
+      return data.unit === 'BARBERIA' ? 'Barman Barbería' : 'SPA';
+    }
+    return businessName;
+  })();
   const paymentLabel = data.paymentMethod ? PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod : '—';
 
   const lines = data.items
@@ -67,6 +75,21 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
   <meta charset="utf-8">
   <title>Comprobante ${escapeHtml(data.saleNumber)}</title>
   <style>
+    @media print {
+      @page {
+        margin: 0;
+        size: auto;
+      }
+      body {
+        margin: 0;
+        padding: 4px;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+  <style>
     * { box-sizing: border-box; }
     body { 
       font-family: 'Courier New', monospace; 
@@ -83,6 +106,25 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
       margin-bottom: 16px;
       padding-bottom: 8px;
       border-bottom: 2px solid #000;
+    }
+    .logo {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 8px;
+      display: block;
+    }
+    .logo-placeholder {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f0f0;
+      border: 2px solid #000;
+      font-size: 8px;
+      font-weight: bold;
+      text-transform: uppercase;
     }
     h1 { 
       font-size: 14px; 
@@ -113,6 +155,11 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
       margin: 6px 0;
       border: 1px solid #000;
     }
+    .customer-phone {
+      font-size: 8px;
+      color: #666;
+      margin-top: 2px;
+    }
     table { 
       width: 100%; 
       border-collapse: collapse; 
@@ -128,6 +175,17 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
       font-size: 8px; 
       font-weight: bold;
       text-transform: uppercase;
+    }
+    th:first-child {
+      text-align: left;
+    }
+    th:nth-child(2) {
+      text-align: center;
+      width: 20px;
+    }
+    th:nth-child(3),
+    th:nth-child(4) {
+      text-align: right;
     }
     td { 
       padding: 2px; 
@@ -165,6 +223,11 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
       padding-top: 4px; 
       border-top: 2px solid #000;
       border-bottom: 2px solid #000;
+    }
+    .change-row {
+      font-weight: bold;
+      color: #006400;
+      margin-top: 4px;
     }
     .payment { 
       margin-top: 8px; 
@@ -222,6 +285,7 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
 </head>
 <body>
   <div class="header">
+    ${data.businessLogo ? `<img src="${escapeHtml(data.businessLogo)}" alt="Logo" class="logo" />` : `<div class="logo-placeholder">${data.unit === 'BARBERIA' ? 'BARBERÍA' : 'SPA'}</div>`}
     <h1>${escapeHtml(title)}</h1>
     <div class="subtitle">COMPROBANTE DE VENTA</div>
   </div>
@@ -231,7 +295,8 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
   <div class="meta">
     <div class="sale-number">${escapeHtml(data.saleNumber)}</div>
     <div>${formatDate(data.closedAt ?? undefined)}</div>
-    ${data.customer ? `<div class="customer-info">${escapeHtml(data.customer.name)} · ${escapeHtml(data.customer.phone)}</div>` : '<div class="customer-info">Cliente: —</div>'}
+    <div class="customer-info">Cliente: ${data.customer ? escapeHtml(data.customer.name) : '—'}</div>
+    ${data.customer && data.customer.phone ? `<div class="customer-phone">Teléfono: ${escapeHtml(data.customer.phone)}</div>` : ''}
   </div>
   
   <table>
@@ -241,19 +306,26 @@ function buildReceiptHtml(data: ReceiptSaleData): string {
   
   <div class="totals">
     <div>Subtotal: S/ ${data.subtotal.toFixed(2)}</div>
-    ${data.discountAmount > 0 ? `<div class="discount-row">Descuento: -S/ ${data.discountAmount.toFixed(2)}</div>` : ''}
+    ${data.discountAmount > 0 ? `<div class="discount-row">Descuentos: -S/ ${data.discountAmount.toFixed(2)}</div>` : ''}
     <div class="total-row">Total: S/ ${data.total.toFixed(2)}</div>
     <div class="payment">
       <div><span class="payment-label">Método de pago:</span> ${escapeHtml(paymentLabel)} · S/ ${data.amountPaid.toFixed(2)}</div>
       ${mixedLines ? `<div class="mixed-detail">${mixedLines}</div>` : ''}
     </div>
+    ${data.amountPaid > data.total ? `<div class="change-row">Vuelto: S/ ${(data.amountPaid - data.total).toFixed(2)}</div>` : ''}
   </div>
   
-  <div class="thanks">¡Gracias por su compra!</div>
-  <div class="footer">Generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</div>
+  <div class="thanks no-print">¡Gracias por su compra!</div>
+  <div class="footer no-print">Generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</div>
   
   <script>
-    window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };
+    window.onload = function() { 
+      // Auto-print sin mostrar diálogo de configuración
+      window.print(); 
+      window.onafterprint = function() { 
+        window.close(); 
+      }; 
+    };
   </script>
 </body>
 </html>`;
