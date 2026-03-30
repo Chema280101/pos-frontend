@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, differenceInDays, isPast } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,6 +22,18 @@ const EXPIRY_CRITICAL_DAYS = 7;
 
 export function ExpiryAlerts(): JSX.Element {
   const [search, setSearch] = useState<string>('');
+  
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const [showFilters, setShowFilters] = useState(true);
   const [alertType, setAlertType] = useState<string>('all');
 
@@ -46,14 +58,14 @@ export function ExpiryAlerts(): JSX.Element {
       })
       .filter((p) => p.daysLeft <= EXPIRY_WARNING_DAYS || p.expired)
       .filter((p) => {
-        if (search) return p.name.toLowerCase().includes(search.toLowerCase());
+        if (debouncedSearch) return p.name.toLowerCase().includes(debouncedSearch.toLowerCase());
         if (alertType === 'expired') return p.expired;
         if (alertType === 'critical') return p.daysLeft <= EXPIRY_CRITICAL_DAYS && !p.expired;
         if (alertType === 'warning') return p.daysLeft > EXPIRY_CRITICAL_DAYS && p.daysLeft <= EXPIRY_WARNING_DAYS && !p.expired;
         return true;
       })
       .sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [products, search, alertType]);
+  }, [products, debouncedSearch, alertType]);
 
   if (isLoading) {
     return (

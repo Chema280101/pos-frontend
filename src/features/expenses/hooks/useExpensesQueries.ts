@@ -120,10 +120,9 @@ export function useCreateExpenseMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
-      console.log('✅ Gasto creado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al crear gasto:', error);
+      // Error al crear gasto
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -131,22 +130,22 @@ export function useCreateExpenseMutation() {
         
         // Error de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Error de caja cerrada
         else if (errorMessage.includes('cerrada') || errorMessage.includes('abierta')) {
-          console.warn('⚠️ Error de caja:', errorMessage);
+          // Error de caja
           // Mostrar toast específico de caja
           queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -165,10 +164,9 @@ export function useEditExpenseMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
-      console.log('✅ Gasto editado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al editar gasto:', error);
+      // Error al editar gasto
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -176,21 +174,21 @@ export function useEditExpenseMutation() {
         
         // Error de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Error de permisos
         else if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para editar gastos');
+          // Error de permisos
           // Mostrar toast de permisos
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -209,10 +207,9 @@ export function useDeleteExpenseMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
-      console.log('✅ Gasto eliminado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al eliminar gasto:', error);
+      // Error al eliminar gasto
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -220,26 +217,26 @@ export function useDeleteExpenseMutation() {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para eliminar gastos');
+          // Error de permisos
           // Mostrar toast de permisos
         }
         // Error de antigüedad
         else if (errorMessage.includes('antiguo') || errorMessage.includes('old')) {
-          console.warn('⚠️ Error de antigüedad:', 'No se puede eliminar un gasto muy antiguo');
+          // Error de antigüedad
           // Mostrar toast específico
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -297,11 +294,9 @@ export function useExportExpensesMutation() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
-      console.log(`✅ Exportación ${variables.format} completada`);
     },
     onError: (error: any) => {
-      console.error(`❌ Error al exportar gastos:`, error);
+      // Error al exportar gastos
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -309,21 +304,21 @@ export function useExportExpensesMutation() {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para exportar');
+          // Error de permisos
           // Mostrar toast de permisos
         }
         // Error de formato
         else if (errorMessage.includes('formato') || errorMessage.includes('format')) {
-          console.warn('⚠️ Error de formato:', errorMessage);
+          // Error de formato
           // Mostrar toast específico
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }

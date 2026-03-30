@@ -4,15 +4,16 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Button, Select } from '@/components/ui';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
+import { useToast } from '@/hooks/useToast';
 import { Plus, X, Package, Save, AlertCircle, Loader2, Edit, Home, ShoppingBag, DollarSign, BarChart3, Info, Scissors } from 'lucide-react';
 import type { Product, ProductCategory } from '@/types/product';
 
 const schema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
   description: z.string().max(2000).optional().nullable(),
   unit: z.enum(['SPA', 'BARBERIA']),
   type: z.enum(['INTERNAL_USE', 'FOR_SALE', 'BOTH']),
@@ -30,9 +31,10 @@ type FormData = z.infer<typeof schema>;
 export function ProductForm(): JSX.Element {
   const router = useRouter();
   const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : undefined;
   const isEdit = !!id && id !== 'new';
   const queryClient = useQueryClient();
+  const { success, error } = useToast();
 
   // Get user's business unit from auth store or unit store
   const user = useAuthStore((s) => s.user);
@@ -42,6 +44,25 @@ export function ProductForm(): JSX.Element {
   // Category creation state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // ESC key handler for modals
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (showCategoryModal) {
+          setShowCategoryModal(false);
+          setNewCategoryName('');
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showCategoryModal, newCategoryName]);
+  
+  const { success: successToast } = useToast();
   
   // Success confirmation state
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -64,7 +85,7 @@ export function ProductForm(): JSX.Element {
     },
   });
 
-  const { register, handleSubmit, setError, reset, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setError, reset, watch, setValue, formState: { errors, isSubmitting, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
@@ -117,10 +138,8 @@ export function ProductForm(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      setSuccessMessage('¡Producto creado exitosamente!');
-      setShowSuccessMessage(true);
+      successToast('Producto creado exitosamente');
       setTimeout(() => {
-        setShowSuccessMessage(false);
         router.replace('/inventory');
       }, 2000);
     },
@@ -163,7 +182,7 @@ export function ProductForm(): JSX.Element {
       if (context?.previousCategories) {
         queryClient.setQueryData(['inventory-categories'], context.previousCategories);
       }
-      alert(err.response?.data?.error ?? 'Error al crear categoría');
+      error(err.response?.data?.error ?? 'Error al crear categoría');
     },
     onSettled: () => {
       // Always refetch after error or success
@@ -187,10 +206,8 @@ export function ProductForm(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      setSuccessMessage('¡Producto actualizado exitosamente!');
-      setShowSuccessMessage(true);
+      successToast('Producto actualizado exitosamente');
       setTimeout(() => {
-        setShowSuccessMessage(false);
         router.replace('/inventory');
       }, 2000);
     },
@@ -273,7 +290,7 @@ export function ProductForm(): JSX.Element {
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre del producto *</label>
                 <input 
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                  placeholder="Ingresa el nombre del producto"
+                  placeholder="Ej: Champú Keratina 500ml"
                   {...register('name')} 
                 />
                 {errors.name && (
@@ -306,10 +323,15 @@ export function ProductForm(): JSX.Element {
                     </div>
                   </div>
                 ) : (
-                  <select className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" {...register('unit')}>
-                    <option value="SPA">SPA</option>
-                    <option value="BARBERIA">Barbería</option>
-                  </select>
+                  <Select
+                label="Unidad *"
+                options={[
+                  { value: 'SPA', label: 'SPA' },
+                  { value: 'BARBERIA', label: 'Barbería' }
+                ]}
+                value={watch('unit')}
+                onChange={(e: any) => setValue('unit', e.target.value)}
+              />
                 )}
                 {!isEdit && (
                   <p className="mt-2 text-xs text-[var(--unit-text-muted)] flex items-center gap-1">
@@ -322,11 +344,16 @@ export function ProductForm(): JSX.Element {
               {/* Enhanced Type Field */}
               <div>
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Tipo de producto *</label>
-                <select className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" {...register('type')}>
-                  <option value="INTERNAL_USE">Solo uso interno</option>
-                  <option value="FOR_SALE">Solo venta</option>
-                  <option value="BOTH">Uso interno y venta</option>
-                </select>
+                <Select
+                label="Tipo de producto *"
+                options={[
+                  { value: 'INTERNAL_USE', label: 'Solo uso interno' },
+                  { value: 'FOR_SALE', label: 'Solo venta' },
+                  { value: 'BOTH', label: 'Uso interno y venta' }
+                ]}
+                value={watch('type')}
+                onChange={(e: any) => setValue('type', e.target.value)}
+              />
                 {productType && (
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-700 font-medium flex items-center gap-2">
@@ -345,12 +372,18 @@ export function ProductForm(): JSX.Element {
               <div>
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Categoría</label>
                 <div className="flex gap-2">
-                  <select className="flex-1 rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" {...register('categoryId')}>
-                    <option value="">— Seleccionar categoría —</option>
-                    {categoriesForUnit.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <Select
+                  label="Categoría"
+                  options={[
+                    { value: '', label: '— Seleccionar categoría —', disabled: true },
+                    ...categoriesForUnit.map((c) => ({
+                      value: c.id,
+                      label: c.name
+                    }))
+                  ]}
+                  value={watch('categoryId') || ''}
+                  onChange={(e: any) => setValue('categoryId', e.target.value === '' ? null : e.target.value)}
+                />
                   <button
                     type="button"
                     onClick={() => setShowCategoryModal(true)}
@@ -395,7 +428,7 @@ export function ProductForm(): JSX.Element {
                         step="0.10" 
                         min="0" 
                         className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                        placeholder="0.00"
+                        placeholder="Ej: 45.00"
                         {...register('salePrice', { valueAsNumber: true })} 
                       />
                     </div>
@@ -408,7 +441,7 @@ export function ProductForm(): JSX.Element {
                         step="0.10" 
                         min="0" 
                         className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                        placeholder="0.00"
+                        placeholder="Ej: 25.00"
                         {...register('costPrice', { valueAsNumber: true })} 
                       />
                     </div>
@@ -451,7 +484,7 @@ export function ProductForm(): JSX.Element {
                       type="number" 
                       min="0" 
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                      placeholder="5"
+                      placeholder="Ej: 5"
                       {...register('minStock', { valueAsNumber: true })} 
                     />
                     <p className="mt-1 text-xs text-[var(--unit-text-muted)]">Alerta cuando el stock sea inferior</p>
@@ -474,23 +507,16 @@ export function ProductForm(): JSX.Element {
             {/* Enhanced Action Buttons */}
             <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
               <div className="flex gap-4">
-                <button 
+                <Button 
                   type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  className="flex-1"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Guardando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />
-                      {isEdit ? 'Actualizar producto' : 'Crear producto'}
-                    </span>
-                  )}
-                </button>
+                  <Save className="h-4 w-4" />
+                  {isEdit ? 'Actualizar producto' : 'Crear producto'}
+                </Button>
                 <button 
                   type="button" 
                   onClick={() => router.push('/inventory/products')} 
@@ -508,27 +534,35 @@ export function ProductForm(): JSX.Element {
 
         {/* Enhanced Category Creation Modal */}
         {showCategoryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCategoryModal(false);
+              setNewCategoryName('');
+            }
+          }}>
             <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-accent)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 max-w-md w-full">
-              {/* Modal Header */}
-              <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <Plus className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[var(--unit-text)]">Nueva Categoría</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">Crea una categoría para {userUnit === 'SPA' ? 'SPA' : 'Barbería'}</p>
-                    </div>
+              {/* Modal Header - Estándar consistente */}
+              <div className="relative mb-6 flex items-start justify-between gap-4">
+                {/* Background gradient for header - Consistente con Modal.tsx */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+                
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                    <Plus className="h-4 w-4 text-white" />
                   </div>
-                  <button
-                    onClick={() => setShowCategoryModal(false)}
-                    className="flex h-6 w-6 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
-                  >
-                    <X className="h-3 w-3 text-[var(--unit-text)]" />
-                  </button>
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--unit-text)]">Nueva Categoría</h3>
+                    <p className="text-sm text-[var(--unit-text-muted)]">Crea una categoría para {userUnit === 'SPA' ? 'SPA' : 'Barbería'}</p>
+                  </div>
                 </div>
+                
+                <button
+                  onClick={() => setShowCategoryModal(false)}
+                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
               
               <div className="space-y-4">

@@ -12,8 +12,8 @@ import type { LoginResponse } from '@/types/auth';
 import { Button, Input } from '@/components/ui';
 
 const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(1, 'La contraseña es requerida'),
+  email: z.string().email({ message: "Email inválido" }).min(1, { message: "Este campo es requerido" }),
+  password: z.string().min(1, { message: "Este campo es requerido" }),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -84,11 +84,11 @@ export default function LoginPage(): JSX.Element {
           isNetworkError
             ? 'Sin conexión con el backend. ¿Está corriendo en http://localhost:4000?'
             : status === 401
-              ? 'Credenciales incorrectas (401).'
+              ? 'Credenciales incorrectas.'
               : status
                 ? `Error del servidor: ${status}.`
-                : `${ax.message ?? ax.code ?? 'Error desconocido'}.`;
-        console.error('[Login error]', summary, { status, data: responseData, message: ax.message, code: ax.code });
+                : 'Error de conexión.';
+        // Error silencioso para mantener console limpio
       }
 
       let msg: string | undefined;
@@ -283,6 +283,7 @@ export default function LoginPage(): JSX.Element {
                   size="lg"
                   className="h-12 w-full text-base font-semibold shadow-lg shadow-[var(--unit-accent)]/25 transition-all hover:shadow-xl hover:shadow-[var(--unit-accent)]/35"
                   disabled={isSubmitting}
+                  isLoading={isSubmitting}
                 >
                   {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
                 </Button>

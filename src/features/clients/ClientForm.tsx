@@ -5,8 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { Select, UnsavedChangesModal } from '@/components/ui';
 import type { Client } from '../../types/client';
 import { useUnitStore } from '../../store/unitStore';
+import { Button } from '@/components/ui';
+import { useToast } from '@/hooks/useToast';
 import { 
   AlertCircle, 
   Scissors, 
@@ -23,8 +26,8 @@ import {
 } from 'lucide-react';
 
 const schema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
-  phone: z.string().min(1, 'Teléfono requerido').regex(/^[+]?[\d\s-]{9,}$/, 'Teléfono inválido'),
+  name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
+  phone: z.string().min(1, { message: "Este campo es requerido" }).regex(/^[+]?[\d\s-]{9,}$/, { message: "Teléfono inválido" }),
   gender: z.enum(['M', 'F', 'Otro']).optional().nullable(),
   howFoundUs: z.string().max(200).optional().nullable(),
   preferenceNotes: z.string().max(2000).optional().nullable(),
@@ -34,12 +37,17 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export function ClientForm(): JSX.Element {
+interface ClientFormProps {
+  onClose?: () => void;
+}
+
+export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   const router = useRouter();
   const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
   const isEdit = id && id !== 'new';
   const queryClient = useQueryClient();
+  const { success, error } = useToast();
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const unit = (activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA');
 
@@ -107,7 +115,7 @@ export function ClientForm(): JSX.Element {
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', phone: '', gender: null, howFoundUs: '', preferenceNotes: '', freeNotes: '', usualProducts: '' },
@@ -116,9 +124,11 @@ export function ClientForm(): JSX.Element {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [checkedState, setCheckedState] = useState<Record<string, boolean>>({});
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingClose, setPendingClose] = useState<(() => void) | null>(null);
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
-    // Extract the name from the value (format: type:id:name)
+    // Extract name from value (format: type:id:name)
     const name = value.split(':')[2];
     
     setCheckedState(prev => ({
@@ -131,6 +141,36 @@ export function ClientForm(): JSX.Element {
     } else {
       setSelectedItems(prev => prev.filter(item => item !== name));
     }
+  };
+
+  const handleDrawerClose = () => {
+    if (isDirty) {
+      setPendingClose(() => {
+        reset();
+        if (onClose) {
+          onClose();
+        }
+      });
+      setShowUnsavedModal(true);
+    } else {
+      reset();
+      if (onClose) {
+        onClose();
+      }
+    }
+  };
+
+  const handleConfirmDiscard = () => {
+    setShowUnsavedModal(false);
+    if (pendingClose) {
+      pendingClose();
+      setPendingClose(null);
+    }
+  };
+
+  const handleCancelDiscard = () => {
+    setShowUnsavedModal(false);
+    setPendingClose(null);
   };
 
   useEffect(() => {
@@ -209,19 +249,19 @@ export function ClientForm(): JSX.Element {
 
   const createMutation = useMutation({
     mutationFn: async (body: FormData) => {
-      console.log('createMutation called with:', body);
       const { data } = await api.post<Client>('/api/clients', body);
-      console.log('createMutation response:', data);
       return data;
     },
     onSuccess: (data) => {
-      console.log('createMutation success:', data);
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      success('Cliente creado exitosamente');
+      reset();
       router.replace(`/clients/${data.id}`);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      console.log('createMutation error:', err);
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
+      const errorMessage = err.response?.data?.error ?? 'Error al guardar cliente';
+      setError('root', { message: errorMessage });
+      error(errorMessage);
     },
   });
 
@@ -233,18 +273,18 @@ export function ClientForm(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['client', id] });
+      success('Cliente actualizado exitosamente');
+      reset();
       router.replace(`/clients/${id}`);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
+      const errorMessage = err.response?.data?.error ?? 'Error al guardar cliente';
+      setError('root', { message: errorMessage });
+      error(errorMessage);
     },
   });
 
   const onSubmit = (data: FormData): void => {
-    console.log('Form submitted with data:', data);
-    console.log('Form errors:', errors);
-    console.log('Selected items from state:', selectedItems);
-    
     const payload = {
       ...data,
       gender: data.gender || null,
@@ -254,14 +294,9 @@ export function ClientForm(): JSX.Element {
       usualProducts: selectedItems.length > 0 ? selectedItems.join(', ') : null,
     };
     
-    console.log('Final payload:', payload);
-    console.log('Is edit:', isEdit);
-    
     if (isEdit) {
-      console.log('Calling updateMutation');
       updateMutation.mutate(payload);
     } else {
-      console.log('Calling createMutation');
       createMutation.mutate(payload);
     }
   };
@@ -332,10 +367,10 @@ export function ClientForm(): JSX.Element {
             <div className="p-6 space-y-6">
               {/* Enhanced Name Field */}
               <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre *</label>
+                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre completo *</label>
                 <input 
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                  placeholder="Ingresa el nombre completo"
+                  placeholder="Ej: María González Rodríguez"
                   {...register('name')} 
                 />
                 {errors.name && (
@@ -351,7 +386,7 @@ export function ClientForm(): JSX.Element {
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Teléfono *</label>
                 <input
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  placeholder="Ej: +51 987 654 321"
+                  placeholder="Ej: +58 412 123 4567"
                   {...register('phone', {
                     onBlur: (e) => setPhoneToCheck((e.target.value || '').trim() || null),
                   })}
@@ -373,12 +408,17 @@ export function ClientForm(): JSX.Element {
               {/* Enhanced Gender Field */}
               <div>
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Género</label>
-                <select className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" {...register('gender')}>
-                  <option value="">— Seleccionar —</option>
-                  <option value="M">Masculino</option>
-                  <option value="F">Femenino</option>
-                  <option value="Otro">Otro</option>
-                </select>
+                <Select
+                  label="Género"
+                  options={[
+                    { value: '', label: '— Seleccionar —', disabled: true },
+                    { value: 'M', label: 'Masculino' },
+                    { value: 'F', label: 'Femenino' },
+                    { value: 'Otro', label: 'Otro' }
+                  ]}
+                  value={watch('gender') || ''}
+                  onChange={(e: any) => setValue('gender', e.target.value === '' ? null : e.target.value)}
+                />
               </div>
 
               {/* Enhanced How Found Us Field */}
@@ -386,7 +426,7 @@ export function ClientForm(): JSX.Element {
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Cómo nos conoció</label>
                 <input 
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                  placeholder="Ej: Recomendación, redes sociales, etc."
+                  placeholder="Ej: Instagram, recomendación de amiga, Google, etc."
                   {...register('howFoundUs')} 
                 />
               </div>
@@ -397,7 +437,7 @@ export function ClientForm(): JSX.Element {
                 <textarea 
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
                   rows={3} 
-                  placeholder="Preferencias específicas del cliente..."
+                  placeholder="Ej: Prefiere corte corto, alérgica a tintes, le gusta el café, etc."
                   {...register('preferenceNotes')} 
                 />
               </div>
@@ -408,7 +448,7 @@ export function ClientForm(): JSX.Element {
                 <textarea 
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
                   rows={3} 
-                  placeholder="Información adicional relevante..."
+                  placeholder="Ej: Siempre viene los sábados, cliente frecuente, prefiere horarios matutinos, etc."
                   {...register('freeNotes')} 
                 />
               </div>
@@ -526,26 +566,19 @@ export function ClientForm(): JSX.Element {
             {/* Enhanced Action Buttons */}
             <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
               <div className="flex gap-4">
-                <button 
+                <Button 
                   type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  className="flex-1"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Guardando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />
-                      Guardar cliente
-                    </span>
-                  )}
-                </button>
+                  <Save className="h-4 w-4" />
+                  Guardar cliente
+                </Button>
                 <button 
                   type="button" 
-                  onClick={() => router.back()} 
+                  onClick={handleDrawerClose} 
                   className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
                 >
                   <span className="flex items-center gap-2">
@@ -557,6 +590,14 @@ export function ClientForm(): JSX.Element {
             </div>
           </div>
         </form>
+        
+        {/* Unsaved Changes Modal */}
+        <UnsavedChangesModal
+          open={showUnsavedModal}
+          onClose={handleCancelDiscard}
+          onConfirm={handleConfirmDiscard}
+          onCancel={handleCancelDiscard}
+        />
       </div>
     </div>
   );

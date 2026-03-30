@@ -148,12 +148,20 @@ export function isCriticalAction(action: AuditAction): boolean {
   return getActionSeverity(action) === 'critical' || getActionSeverity(action) === 'high';
 }
 
+// Importar traducciones centralizadas
+import { getEntityLabel as getEntityLabelCentral } from '@/lib/translations';
+
+// Función para traducir nombres de entidades del sistema (usando sistema centralizado)
+export function getEntityLabel(entity: string): string {
+  return getEntityLabelCentral(entity);
+}
+
 export function formatAuditRow(row: AuditLog | AuditExportData): string[] {
   return [
     new Date(row.createdAt).toLocaleString('es'),
     row.userName,
     getActionLabel(row.action as AuditAction),
-    row.entity,
+    getEntityLabel(row.entity),
     row.entityId,
     `${row.ipAddress || 'N/A'} / ${row.device || 'N/A'}`,
   ];

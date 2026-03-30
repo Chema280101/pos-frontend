@@ -1,39 +1,38 @@
-import { useState } from 'react';
+'use client';
+
 import Link from 'next/link';
 import { Phone, CreditCard, ChevronRight, Lock, Unlock, Eye, Calendar } from 'lucide-react';
 import { Badge, Skeleton } from '@/components/ui';
 import type { Client } from '@/types/client';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { EmptyStateUsers } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
+import { Plus, UserPlus } from 'lucide-react';
 
 interface ClientsTableProps {
-  clients: Client[];
-  isLoading: boolean;
-  onOpenDrawer: (client: Client) => void;
+  clients: any[];
+  onClientSelect?: (client: any) => void;
+  onOpenDrawer?: (client: any) => void;
 }
 
-export function ClientsTable({ clients, isLoading, onOpenDrawer }: ClientsTableProps) {
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="divide-y divide-gray-200">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="p-4">
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2 mb-2" />
-              <Skeleton className="h-4 w-1/4" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+export function ClientsTable({ clients, onClientSelect, onOpenDrawer }: ClientsTableProps): JSX.Element {
   if (clients.length === 0) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <p className="text-gray-500">No se encontraron clientes</p>
-      </div>
+      <EmptyStateUsers
+        title="No se encontraron clientes"
+        description="No hay clientes registrados en el sistema. Comienza agregando el primer cliente para comenzar a gestionar tu negocio."
+        action={
+          <div className="flex gap-3 justify-center">
+            <Link href="/clients/new">
+              <Button variant="primary" className="inline-flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Crear primer cliente
+              </Button>
+            </Link>
+          </div>
+        }
+      />
     );
   }
 
@@ -118,7 +117,7 @@ export function ClientsTable({ clients, isLoading, onOpenDrawer }: ClientsTableP
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => onOpenDrawer(client)}
+                      onClick={() => onOpenDrawer?.(client)}
                       className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                     >
                       <Eye className="h-4 w-4" />

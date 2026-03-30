@@ -43,11 +43,9 @@ class IncomeCache {
     const entry = this.cache.get(cacheKey);
     
     if (entry && Date.now() - entry.timestamp < entry.ttl) {
-      console.log('🔥 Income Cache HIT:', cacheKey);
       return entry.data;
     }
     
-    console.log('❄️ Income Cache MISS:', cacheKey);
     return null;
   }
 
@@ -59,7 +57,6 @@ class IncomeCache {
       timestamp: Date.now(),
       ttl: ttl || this.DEFAULT_TTL
     });
-    console.log('💾 Income Cache SET:', cacheKey);
   }
 
   // Invalidar cache por tipo
@@ -71,13 +68,11 @@ class IncomeCache {
         }
       }
     }
-    console.log('🗑️ Income Cache INVALIDATED:', type, unit || 'all');
   }
 
   // Limpiar todo el cache
   clear(): void {
     this.cache.clear();
-    console.log('🧹 Income Cache CLEARED');
   }
 
   // Obtener estadísticas

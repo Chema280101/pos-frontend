@@ -10,11 +10,12 @@ import { usePrefetchQueries } from '@/hooks/usePrefetchQueries';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useAppointmentReminders } from '@/hooks/useAppointmentReminders';
-import { ConfirmModal, Drawer } from '@/components/ui';
+import { ConfirmModal, Drawer, ThemeToggle } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from '@/components/Notifications/NotificationBell';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { getRoleLabel, getUnitLabel } from '@/lib/translations';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -242,6 +243,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          <ThemeToggle />
           <span
             title={online ? 'Conectado' : 'Sin conexión'}
             aria-label={online ? 'Conectado' : 'Sin conexión'}
@@ -290,7 +292,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
               <span className="hidden text-left text-sm text-[var(--unit-text)] sm:block">
                 <span className="font-bold text-[var(--unit-text)]">{user?.name}</span>
                 <span className="ml-1 block text-xs text-[var(--unit-text-muted)]">
-                  {user?.role} {user?.unit ? ` · ${user.unit}` : ''}
+                  {user?.role ? getRoleLabel(user.role) : user?.role} {user?.unit ? `· ${getUnitLabel(user.unit)}` : ''}
                 </span>
               </span>
               <ChevronDown className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
@@ -377,11 +379,11 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
           </div>
           <div>
             <p className="text-xs font-medium text-[var(--unit-text)]/70">Rol</p>
-            <p className="mt-0.5">{user?.role ?? '—'}</p>
+            <p className="mt-0.5">{user?.role ? getRoleLabel(user.role) : '—'}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-[var(--unit-text)]/70">Unidad</p>
-            <p className="mt-0.5">{user?.unit ?? 'Todas las unidades'}</p>
+            <p className="mt-0.5">{user?.unit ? getUnitLabel(user.unit) : 'Todas las unidades'}</p>
           </div>
           <Link
             href="/change-password"

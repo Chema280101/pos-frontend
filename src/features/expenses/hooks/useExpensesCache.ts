@@ -43,11 +43,9 @@ class ExpensesCache {
     const entry = this.cache.get(cacheKey);
     
     if (entry && Date.now() - entry.timestamp < entry.ttl) {
-      console.log('🔥 Expenses Cache HIT:', cacheKey);
       return entry.data;
     }
     
-    console.log('❄️ Expenses Cache MISS:', cacheKey);
     return null;
   }
 
@@ -59,7 +57,6 @@ class ExpensesCache {
       timestamp: Date.now(),
       ttl: ttl || this.DEFAULT_TTL
     });
-    console.log('💾 Expenses Cache SET:', cacheKey);
   }
 
   // Invalidar cache por tipo
@@ -71,13 +68,11 @@ class ExpensesCache {
         }
       }
     }
-    console.log('🗑️ Expenses Cache INVALIDATED:', type, unit || 'all');
   }
 
   // Limpiar todo el cache
   clear(): void {
     this.cache.clear();
-    console.log('🧹 Expenses Cache CLEARED');
   }
 
   // Obtener estadísticas

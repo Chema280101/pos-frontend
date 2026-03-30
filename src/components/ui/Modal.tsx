@@ -19,7 +19,7 @@ const sizeClasses = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
-  full: 'max-w-[90vw] max-h-[90vh]',
+  full: 'max-w-[90vw] sm:max-w-[90vw] md:max-w-[90vw] lg:max-w-[90vw] min-w-[280px] max-h-[90vh]',
 };
 
 export function Modal({

@@ -86,6 +86,21 @@ export function ReportsPage(): JSX.Element {
     includeBorders: true
   });
 
+  // Reset export modal when closed
+  useEffect(() => {
+    if (!showExportModal) {
+      setExportType('excel');
+      setExportConfig({
+        unit: 'ALL' as 'ALL' | 'SPA' | 'BARBERIA',
+        dateFrom: startOfDay(subDays(new Date(), 30)),
+        dateTo: endOfDay(new Date()),
+        includeLogo: true,
+        includeTotals: true,
+        includeBorders: true
+      });
+    }
+  }, [showExportModal]);
+
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
     if (notification) {
@@ -112,7 +127,7 @@ export function ReportsPage(): JSX.Element {
       
       // Create blob and download
       const blob = new Blob([csvContent], { 
-        type: 'text/csv' 
+        type: 'text/csv;charset=utf-8;' 
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -130,7 +145,6 @@ export function ReportsPage(): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ['reports-metrics'] });
     },
     onError: (error: any) => {
-      console.error('Error exporting Excel:', error);
       setNotification({type: 'error', message: 'Error al exportar reporte Excel'});
     }
   });
@@ -189,7 +203,7 @@ export function ReportsPage(): JSX.Element {
       currentY += 8;
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const dateStr = new Date().toLocaleDateString('es-ES');
+      const dateStr = format(new Date(), 'dd/MM/yyyy');
       const periodStr = `${format(exportConfig.dateFrom, 'dd/MM/yyyy')} al ${format(exportConfig.dateTo, 'dd/MM/yyyy')}`;
       doc.text(`Fecha: ${dateStr}`, pageWidth - 60, currentY);
       currentY += 6;
@@ -275,7 +289,6 @@ export function ReportsPage(): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ['reports-metrics'] });
     },
     onError: (error: any) => {
-      console.error('Error exporting PDF:', error);
       setNotification({type: 'error', message: 'Error al exportar reporte PDF'});
     }
   });
@@ -613,15 +626,28 @@ export function ReportsPage(): JSX.Element {
               }}></div>
             </div>
 
-            {/* Header */}
-            <div className="relative flex items-center gap-4 mb-6">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${exportType === 'excel' ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'} shadow-lg`}>
-                <Download className="h-6 w-6 text-white" />
+            {/* Header - Estándar consistente */}
+            <div className="relative mb-6 flex items-start justify-between gap-4">
+              {/* Background gradient for header - Consistente con Modal.tsx */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+              
+              <div className="relative z-10 flex items-center gap-3">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${exportType === 'excel' ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'} shadow-lg`}>
+                  <Download className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}</h3>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Configura tu reporte personalizado</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-[var(--unit-text)]">Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}</h3>
-                <p className="text-sm text-[var(--unit-text-muted)]">Configura tu reporte personalizado</p>
-              </div>
+              
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Content */}
@@ -738,7 +764,7 @@ export function ReportsPage(): JSX.Element {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-[var(--unit-text-muted)]">Período</span>
                     <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {exportConfig.dateFrom.toLocaleDateString('es-ES')} - {exportConfig.dateTo.toLocaleDateString('es-ES')}
+                      {format(exportConfig.dateFrom, 'dd/MM/yyyy')} - {format(exportConfig.dateTo, 'dd/MM/yyyy')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">

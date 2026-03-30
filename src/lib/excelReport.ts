@@ -153,7 +153,53 @@ export async function downloadExcelReport(
     
     row.forEach((cellValue, colIndex) => {
       const excelCell = dataRow.getCell(colIndex + 1);
-      excelCell.value = cellValue;
+      
+      // 🎯 DETECCIÓN Y CONVERSIÓN DE TIPOS DE DATOS
+      let processedValue: string | number | Date = cellValue;
+      let numFmt: string | undefined;
+      
+      // Detectar fechas en varios formatos
+      if (typeof cellValue === 'string') {
+        const datePatterns = [
+          /^\d{1,2}\/\d{1,2}\/\d{4}$/, // DD/MM/YYYY
+          /^\d{1,2}-\d{1,2}-\d{4}$/, // DD-MM-YYYY
+          /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
+          /^\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}$/, // DD/MM/YYYY HH:MM
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, // ISO datetime
+        ];
+        
+        const isDate = datePatterns.some(pattern => pattern.test(cellValue));
+        if (isDate) {
+          const date = new Date(cellValue);
+          if (!isNaN(date.getTime())) {
+            processedValue = date;
+            numFmt = 'dd/mm/yyyy'; // Formato de fecha español
+          }
+        }
+        // Detectar montos con símbolos de moneda
+        else if (/^[S/$]?\s*[\d,]+\.?\d*$/.test(cellValue) || /^[\d,]+\.?\d*\s*S\/?$/.test(cellValue)) {
+          const cleanNumber = cellValue.replace(/[S/$\s,]/g, '');
+          const number = parseFloat(cleanNumber);
+          if (!isNaN(number)) {
+            processedValue = number;
+            numFmt = '"S/" #,##0.00'; // Formato de moneda peruana
+          }
+        }
+        // Detectar números puros
+        else if (/^[\d,]+\.?\d*$/.test(cellValue)) {
+          const number = parseFloat(cellValue.replace(/,/g, ''));
+          if (!isNaN(number)) {
+            processedValue = number;
+            numFmt = '#,##0.00'; // Formato numérico
+          }
+        }
+      }
+      // Si ya es número, aplicar formato
+      else if (typeof cellValue === 'number') {
+        numFmt = '#,##0.00';
+      }
+      
+      excelCell.value = processedValue;
       
       // 🎯 COLORES POR COLUMNA
       let bgColor = 'FFFFFFFF'; // Blanco por defecto
@@ -165,7 +211,7 @@ export async function downloadExcelReport(
           bgColor = 'FFF9FAFB';
           fontColor = colors.dark;
           break;
-        case 1: // Motivo - Blanco
+        case 1: // Motivo/Descripción - Blanco
           bgColor = 'FFFFFFFF';
           fontColor = colors.dark;
           break;
@@ -173,8 +219,8 @@ export async function downloadExcelReport(
           bgColor = 'FFFEF3C7';
           fontColor = colors.warning;
           alignment = { vertical: 'middle', horizontal: 'right' };
-          if (typeof cellValue === 'number') {
-            excelCell.numFmt = '"S/" #,##0.00';
+          if (numFmt) {
+            numFmt = '"S/" #,##0.00';
           }
           break;
         case 3: // Unidad - Azul claro
@@ -190,12 +236,26 @@ export async function downloadExcelReport(
         case 5: // Usuario - Verde claro
           bgColor = 'FFD1FAE5';
           fontColor = colors.success;
+          alignment = { vertical: 'middle', horizontal: 'left' };
           break;
-        case 6: // Fecha - Gris muy claro
-          bgColor = 'FFF3F4F6';
-          fontColor = colors.dark;
+        case 6: // Fecha - Naranja claro
+          bgColor = 'FFFED7AA';
+          fontColor = colors.accent;
           alignment = { vertical: 'middle', horizontal: 'center' };
+          if (!numFmt && typeof processedValue === 'string' && processedValue.includes('/')) {
+            // Si es fecha pero no se detectó como Date, mantener como texto con formato
+            alignment = { vertical: 'middle', horizontal: 'center' };
+          }
           break;
+        default: // Columnas adicionales - Blanco
+          bgColor = 'FFFFFFFF';
+          fontColor = colors.dark;
+          break;
+      }
+      
+      // Aplicar formato de número si se detectó
+      if (numFmt) {
+        excelCell.numFmt = numFmt;
       }
       
       excelCell.font = { 

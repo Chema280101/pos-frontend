@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
 import { cn } from '@/lib/utils';
+import { RoleGuard } from '@/guards/RoleGuard';
 // ✅ OPTIMIZACIÓN: Lazy loading para componentes pesados
 const DashboardSPA = lazy(() => import('./DashboardSPA').then(mod => ({ default: mod.DashboardSPA })));
 const DashboardBarberia = lazy(() => import('./DashboardBarberia').then(mod => ({ default: mod.DashboardBarberia })));
@@ -13,6 +15,44 @@ const DashboardConsolidado = lazy(() => import('./DashboardConsolidado').then(mo
 type DashboardView = 'SPA' | 'BARBERIA' | 'CONSOLIDADO';
 
 export function DashboardPage(): JSX.Element {
+  const user = useAuthStore((s) => s.user);
+  
+  // Redirigir barberos y especialistas a sus dashboards específicos
+  if (user?.role === 'BARBER') {
+    return <DashboardRedirector targetRole="barber" />;
+  }
+  
+  if (user?.role === 'SPA_SPECIALIST') {
+    return <DashboardRedirector targetRole="specialist" />;
+  }
+  
+  // Solo ADMIN puede acceder al dashboard financiero
+  return (
+    <RoleGuard minRole="ADMIN">
+      <DashboardContent />
+    </RoleGuard>
+  );
+}
+
+function DashboardRedirector({ targetRole }: { targetRole: string }): JSX.Element {
+  const router = useRouter();
+  
+  useEffect(() => {
+    const targetPath = targetRole === 'barber' ? '/dashboard/barber' : '/dashboard/specialist';
+    router.replace(targetPath);
+  }, [router, targetRole]);
+  
+  return (
+    <div className="min-h-screen bg-[var(--unit-surface)] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--unit-accent)] mx-auto mb-4"></div>
+        <p className="text-[var(--unit-text)]">Redirigiendo a tu dashboard...</p>
+      </div>
+    </div>
+  );
+}
+
+function DashboardContent(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const isAdmin = user?.role === 'ADMIN';

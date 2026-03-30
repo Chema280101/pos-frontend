@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Banknote, CreditCard, ArrowRightLeft, Smartphone, Layers, X, DollarSign, TrendingUp } from 'lucide-react';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'DIGITAL_WALLET' | 'MIXED';
@@ -31,6 +31,22 @@ export function PaymentModal({ saleTotal, isProcessing, onClose, onConfirm }: Pa
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [amountPaid, setAmountPaid] = useState(String(saleTotal));
   const [mixedDetail, setMixedDetail] = useState<MixedDetail>({ cash: 0, card: 0, transfer: 0, wallet: 0 });
+
+  // Reset form when modal opens (saleTotal changes)
+  useEffect(() => {
+    setPaymentMethod('CASH');
+    setAmountPaid(String(saleTotal));
+    setMixedDetail({ cash: 0, card: 0, transfer: 0, wallet: 0 });
+  }, [saleTotal]);
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!saleTotal) { // Modal is closed when saleTotal is 0 or undefined
+      setPaymentMethod('CASH');
+      setAmountPaid('0');
+      setMixedDetail({ cash: 0, card: 0, transfer: 0, wallet: 0 });
+    }
+  }, [saleTotal]);
 
   // Calculate change for cash payments
   const calculateChange = () => {

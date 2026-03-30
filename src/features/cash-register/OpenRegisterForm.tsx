@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import { useUnitStore } from '@/store/unitStore';
+import { useToast } from '@/hooks/useToast';
 import type { BusinessUnit } from '@/lib/theme';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 
 export function OpenRegisterForm({ onSuccess }: Props): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
+  const { success, error } = useToast();
 
   const [unit, setUnit] = useState<BusinessUnit | ''>(activeUnit ?? '');
   const [openingAmount, setOpeningAmount] = useState('');
@@ -20,12 +22,12 @@ export function OpenRegisterForm({ onSuccess }: Props): JSX.Element {
     const amount = Number(openingAmount);
 
     if (!unit) {
-      alert('Selecciona una unidad');
+      error('Selecciona una unidad');
       return;
     }
 
     if (isNaN(amount) || amount < 0) {
-      alert('El monto inicial debe ser mayor o igual a 0');
+      error('El monto inicial debe ser mayor o igual a 0');
       return;
     }
 
@@ -46,10 +48,10 @@ export function OpenRegisterForm({ onSuccess }: Props): JSX.Element {
         throw new Error(err.error || 'Error al abrir caja');
       }
 
-      alert('Caja abierta correctamente');
+      success('Caja abierta correctamente');
       onSuccess?.();
     } catch (err: any) {
-      alert(err.message);
+      error(err.message);
     } finally {
       setLoading(false);
     }

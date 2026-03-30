@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable, Button } from '@/components/ui';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
-import { Activity, Package, TrendingDown, TrendingUp, ArrowDownRight, ArrowUpRight, Calendar, Search, Filter, X, ChevronDown, ChevronUp, AlertCircle, Home, Plus, FileText, BarChart3, Sparkles } from 'lucide-react';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { Activity, Package, TrendingDown, TrendingUp, ArrowDownRight, ArrowUpRight, Calendar, Search, Filter, X, ChevronDown, ChevronUp, AlertCircle, Home, Plus, FileText, BarChart3, Sparkles, Download } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { downloadExcelReport } from '@/lib/excelReport';
+import { downloadPdfReport } from '@/lib/pdfReport';
+import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 
 interface StockMovement {
   id: string;
@@ -34,6 +37,18 @@ export function StockMovementsPage(): JSX.Element {
   const [dateTo, setDateTo] = useState(() => endOfDay(new Date()));
   const [productId, setProductId] = useState('');
   const [search, setSearch] = useState('');
+  
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const [showFilters, setShowFilters] = useState(true);
   const [movementType, setMovementType] = useState('');
   
@@ -41,14 +56,86 @@ export function StockMovementsPage(): JSX.Element {
   const canEdit = user?.role === 'ADMIN';
   const currentPage = 1;
   const pageSize = 20;
+  const { data: businessConfig } = useBusinessConfig();
+
+  // Función de exportación Excel
+  const handleExportExcel = async () => {
+    try {
+      const exportParams = new URLSearchParams();
+      if (dateFrom) exportParams.set('dateFrom', dateFrom.toISOString());
+      if (dateTo) exportParams.set('dateTo', dateTo.toISOString());
+      if (productId) exportParams.set('productId', productId);
+      if (debouncedSearch) exportParams.set('search', debouncedSearch);
+      if (movementType) exportParams.set('type', movementType);
+      exportParams.set('exportLimit', '5000');
+
+      const { data: rows } = await api.get(`/api/inventory/movements/export?${exportParams}`);
+      if (!rows?.length) return;
+
+      await downloadExcelReport(
+        `movimientos-inventario-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        'Movimientos de Inventario',
+        ['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock Antes', 'Stock Después', 'Motivo', 'Usuario'],
+        rows.map((movement: any) => [
+          format(new Date(movement.createdAt), 'dd/MM/yyyy HH:mm'),
+          movement.product.name,
+          getMovementType(movement.type).label,
+          movement.quantity,
+          movement.stockBefore,
+          movement.stockAfter,
+          movement.reason || 'Sin motivo',
+          movement.createdBy?.name || 'Sistema'
+        ])
+      );
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+    }
+  };
+
+  // Función de exportación PDF
+  const handleExportPDF = async () => {
+    try {
+      const exportParams = new URLSearchParams();
+      if (dateFrom) exportParams.set('dateFrom', dateFrom.toISOString());
+      if (dateTo) exportParams.set('dateTo', dateTo.toISOString());
+      if (productId) exportParams.set('productId', productId);
+      if (debouncedSearch) exportParams.set('search', debouncedSearch);
+      if (movementType) exportParams.set('type', movementType);
+      exportParams.set('exportLimit', '5000');
+
+      const { data: rows } = await api.get(`/api/inventory/movements/export?${exportParams}`);
+      if (!rows?.length) return;
+
+      await downloadPdfReport(
+        `movimientos-inventario-${new Date().toISOString().slice(0, 10)}.pdf`,
+        'Movimientos de Inventario',
+        'Movimientos de Inventario',
+        ['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock Antes', 'Stock Después', 'Motivo', 'Usuario'],
+        rows.map((movement: any) => [
+          format(new Date(movement.createdAt), 'dd/MM/yyyy HH:mm'),
+          movement.product.name,
+          getMovementType(movement.type).label,
+          movement.quantity,
+          movement.stockBefore,
+          movement.stockAfter,
+          movement.reason || 'Sin motivo',
+          movement.createdBy?.name || 'Sistema'
+        ]),
+        businessConfig || undefined
+      );
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    }
+  };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['stock-movements', dateFrom, dateTo, productId, currentPage],
+    queryKey: ['stock-movements', dateFrom, dateTo, productId, currentPage, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
       if (productId) params.set('productId', productId);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
       
@@ -87,10 +174,10 @@ export function StockMovementsPage(): JSX.Element {
       render: (row: StockMovement) => (
         <div className="flex flex-col gap-1">
           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-            {new Date(row.createdAt).toLocaleDateString('es-PE')}
+            {format(new Date(row.createdAt), 'dd/MM/yyyy')}
           </span>
           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
-            {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+            {format(new Date(row.createdAt), 'HH:mm')}
           </span>
         </div>
       ),
@@ -187,7 +274,7 @@ export function StockMovementsPage(): JSX.Element {
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-[var(--unit-text)] font-medium">Error al cargar movimientos</p>
           <p className="text-[var(--unit-text-muted)] text-sm mt-2">
-            {error instanceof Error ? error.message : 'Error desconocido'}
+            Por favor intenta recargar la página
           </p>
         </div>
       </div>
@@ -235,9 +322,19 @@ export function StockMovementsPage(): JSX.Element {
                   <Package className="h-5 w-5" />
                   Productos
                 </Link>
-                <button className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <FileText className="h-5 w-5" />
-                  Exportar
+                <button
+                  onClick={handleExportExcel}
+                  className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Download className="h-5 w-5" />
+                  Exportar Excel
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Download className="h-5 w-5" />
+                  Exportar PDF
                 </button>
               </>
             )}

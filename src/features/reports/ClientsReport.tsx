@@ -124,7 +124,7 @@ export function ClientsReport({ unit, dateFrom, dateTo, compact = false }: Clien
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Client) => {
-        console.log('View client', row.id);
+        // TODO: Implement view client functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -132,7 +132,7 @@ export function ClientsReport({ unit, dateFrom, dateTo, compact = false }: Clien
       label: 'Editar',
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Client) => {
-        console.log('Edit client', row.id);
+        // TODO: Implement edit client functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -169,7 +169,7 @@ export function ClientsReport({ unit, dateFrom, dateTo, compact = false }: Clien
         searchPlaceholder="Buscar por nombre, teléfono, email..."
         filters={filters}
         actions={!compact ? actions : []}
-        emptyMessage="No hay clientes en el período seleccionado."
+        emptyMessage="No hay clientes en el período seleccionado. Considera ampliar el rango de fechas."
         pageSize={compact ? 5 : 20}
         maxHeight={compact ? "300px" : "500px"}
         pageSizeOptions={compact ? [5] : [10, 20, 50, 100]}

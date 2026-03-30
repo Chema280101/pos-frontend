@@ -127,7 +127,7 @@ export function AppointmentsReport({ unit, dateFrom, dateTo, compact = false }: 
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Appointment) => {
-        console.log('View appointment', row.id);
+        // TODO: Implement view appointment functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -135,7 +135,7 @@ export function AppointmentsReport({ unit, dateFrom, dateTo, compact = false }: 
       label: 'Editar',
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Appointment) => {
-        console.log('Edit appointment', row.id);
+        // TODO: Implement edit appointment functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -179,7 +179,7 @@ export function AppointmentsReport({ unit, dateFrom, dateTo, compact = false }: 
         searchPlaceholder="Buscar por cliente, servicio, empleado..."
         filters={filters}
         actions={!compact ? actions : []}
-        emptyMessage="No hay citas en el período seleccionado."
+        emptyMessage="No hay citas en el período seleccionado. Intenta ajustar las fechas o los filtros de servicio."
         pageSize={compact ? 5 : 20}
         maxHeight={compact ? "300px" : "500px"}
         pageSizeOptions={compact ? [5] : [10, 20, 50, 100]}

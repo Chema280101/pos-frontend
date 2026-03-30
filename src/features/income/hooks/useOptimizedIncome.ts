@@ -155,11 +155,9 @@ export const useOptimizedEditIncome = () => {
       
       queryClient.invalidateQueries({ queryKey: ['income'] });
       queryClient.invalidateQueries({ queryKey: ['income-summary'] });
-      
-      console.log('✅ Ingreso editado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al editar ingreso:', error);
+      // Error al editar ingreso
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -167,18 +165,18 @@ export const useOptimizedEditIncome = () => {
         
         // Error de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
         }
         // Error de estado
         else if (errorMessage.includes('estado') || errorMessage.includes('status')) {
-          console.warn('⚠️ Error de estado:', errorMessage);
+          // Error de estado
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });
@@ -203,11 +201,9 @@ export const useOptimizedDeleteIncome = () => {
       
       queryClient.invalidateQueries({ queryKey: ['income'] });
       queryClient.invalidateQueries({ queryKey: ['income-summary'] });
-      
-      console.log('✅ Ingreso eliminado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al eliminar ingreso:', error);
+      // Error al eliminar ingreso
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -215,22 +211,22 @@ export const useOptimizedDeleteIncome = () => {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para eliminar ingresos');
+          // Error de permisos
         }
         // Error de estado
         else if (errorMessage.includes('completado') || errorMessage.includes('completed')) {
-          console.warn('⚠️ Error de estado:', 'No se puede eliminar un ingreso completado');
+          // Error de estado
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });
@@ -303,11 +299,9 @@ export const useOptimizedExportIncome = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
-      console.log(`✅ Exportación ${variables.format} completada`);
     },
     onError: (error: any) => {
-      console.error(`❌ Error al exportar ingresos:`, error);
+      // Error al exportar ingresos
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -315,18 +309,18 @@ export const useOptimizedExportIncome = () => {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para exportar');
+          // Error de permisos
         }
         // Error de formato
         else if (errorMessage.includes('formato') || errorMessage.includes('format')) {
-          console.warn('⚠️ Error de formato:', errorMessage);
+          // Error de formato
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });

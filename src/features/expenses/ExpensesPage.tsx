@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, ChevronDown, ChevronUp } from 'lucide-react';
@@ -48,6 +48,18 @@ export function ExpensesPage(): JSX.Element {
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' || user?.role === 'MANAGER';
   const router = useRouter();
@@ -57,7 +69,7 @@ export function ExpensesPage(): JSX.Element {
   try {
     queryClient = useQueryClient();
   } catch (error) {
-    console.warn('QueryClient no disponible en este contexto');
+    // QueryClient no disponible en este contexto
   }
 
   // ✅ MEJORADO: Query con paginación real
@@ -65,7 +77,7 @@ export function ExpensesPage(): JSX.Element {
   const pageSize = 20;
 
   const { data: expensesData, isLoading } = useQuery({
-    queryKey: ['expenses', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryFilter, search],
+    queryKey: ['expenses', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryFilter, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (unitFilter) params.set('unit', unitFilter);
@@ -80,7 +92,7 @@ export function ExpensesPage(): JSX.Element {
       if (categoryFilter) params.set('category', categoryFilter);
       
       // Add search filter
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       
       const { data } = await api.get(`/api/expenses?${params}`);
       return data;
@@ -210,10 +222,10 @@ export function ExpensesPage(): JSX.Element {
       render: (row: Expense) => (
         <div className="flex flex-col gap-1">
           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-            {new Date(row.createdAt).toLocaleDateString('es-PE')}
+            {format(new Date(row.createdAt), 'dd/MM/yyyy')}
           </span>
           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
-            {new Date(row.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+            {format(new Date(row.createdAt), 'HH:mm')}
           </span>
         </div>
       ),
@@ -229,12 +241,12 @@ export function ExpensesPage(): JSX.Element {
   }> = [
     {
       label: 'Ver',
-      icon: <Eye className="h-4 w-4 text-blue-600" />,
+      icon: <Eye className="h-4 w-4" />,
       onClick: (row: Expense) => {
         setSelectedExpense(row);
         setViewModal(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
+      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
@@ -242,7 +254,7 @@ export function ExpensesPage(): JSX.Element {
       onClick: (row: Expense) => {
         router.push(`/expenses/${row.id}/edit`);
       },
-      className: 'text-amber-600 hover:bg-amber-50',
+      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: Expense) => !canEdit,
     },
     {
@@ -252,7 +264,7 @@ export function ExpensesPage(): JSX.Element {
         setSelectedExpense(row);
         setShowDeleteDialog(true);
       },
-      className: 'text-red-600 hover:bg-red-50',
+      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
       disabled: (row: Expense) => !canEdit,
     },
   ];
@@ -408,6 +420,7 @@ export function ExpensesPage(): JSX.Element {
             actions={actions as any}
             loading={isLoading}
             keyExtractor={(item: any) => item.id}
+            emptyMessage="No hay gastos con los filtros aplicados. Prueba ajustando los filtros o términos de búsqueda."
           />
         </div>
 
@@ -480,7 +493,7 @@ export function ExpensesPage(): JSX.Element {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {new Date(selectedExpense.createdAt).toLocaleDateString()}
+                        {format(new Date(selectedExpense.createdAt), 'dd/MM/yyyy')}
                       </span>
                     </div>
                   </div>

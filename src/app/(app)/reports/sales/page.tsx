@@ -1,7 +1,12 @@
 'use client';
 
 import { ReportsPage } from '@/features/reports/ReportsPage';
+import { RoleGuard } from '@/guards/RoleGuard';
 
 export default function Page(): JSX.Element {
-  return <ReportsPage />;
+  return (
+    <RoleGuard minRole="ADMIN">
+      <ReportsPage />
+    </RoleGuard>
+  );
 }

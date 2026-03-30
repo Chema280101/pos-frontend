@@ -191,7 +191,7 @@ export function CashRegisterReport({ unit, dateFrom, dateTo, compact = false }: 
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: CashRegister) => {
-        console.log('View cash register', row.id);
+        // TODO: Implement view cash register functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -199,7 +199,7 @@ export function CashRegisterReport({ unit, dateFrom, dateTo, compact = false }: 
       label: 'Editar',
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: CashRegister) => {
-        console.log('Edit cash register', row.id);
+        // TODO: Implement edit cash register functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -245,7 +245,7 @@ export function CashRegisterReport({ unit, dateFrom, dateTo, compact = false }: 
         searchPlaceholder="Buscar por empleado, unidad..."
         filters={filters}
         actions={!compact ? actions : []}
-        emptyMessage="No hay cajas en el período seleccionado."
+        emptyMessage="No hay cajas en el período seleccionado. Intenta ajustar las fechas o verifica las aperturas de caja."
         pageSize={compact ? 5 : 20}
         maxHeight={compact ? "300px" : "500px"}
         pageSizeOptions={compact ? [5] : [10, 20, 50, 100]}

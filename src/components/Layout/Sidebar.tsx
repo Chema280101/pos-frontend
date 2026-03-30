@@ -51,7 +51,7 @@ interface SubmenuState {
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, roles: ['ADMIN'] },
+  { href: '/dashboard', label: 'Panel Principal', icon: <LayoutDashboard className="h-5 w-5" />, roles: ['ADMIN'] },
   { href: '/clients', label: 'Clientes', icon: <Users className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST'] },
   { href: '/appointments', label: 'Agenda', icon: <Calendar className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
   { href: '/pos', label: 'POS', icon: <ShoppingCart className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST'] },
@@ -120,17 +120,41 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
   );
 
   const toggleSubmenu = (label: string) => {
-    setOpenSubmenus((prev: SubmenuState) => ({
-      ...prev,
-      [label]: !prev[label]
-    }));
+    setOpenSubmenus((prev: SubmenuState) => {
+      const isCurrentlyOpen = prev[label];
+      // Si el submenu actual está abierto, cerrarlo
+      if (isCurrentlyOpen) {
+        return {
+          ...prev,
+          [label]: false
+        };
+      }
+      // Si está cerrado, cerrar todos los demás y abrir este
+      const newState: SubmenuState = {};
+      // Cerrar todos los submenús existentes
+      Object.keys(prev).forEach(key => {
+        newState[key] = false;
+      });
+      // Abrir el submenu actual
+      newState[label] = true;
+      return newState;
+    });
   };
 
   const isItemActive = (href: string) => {
     if (href === '/reports') {
       return pathname === '/reports' || pathname === '/reports/overview';
     }
-    return pathname === href || (href !== '/dashboard' && pathname?.startsWith(href));
+    // Lógica mejorada: coincidencia exacta o para rutas anidadas específicas
+    if (pathname === href) {
+      return true;
+    }
+    // Para rutas anidadas, verificar que el pathname comience con href + '/'
+    // y que no haya otra coincidencia más específica
+    if (href !== '/dashboard' && pathname?.startsWith(href + '/')) {
+      return true;
+    }
+    return false;
   };
 
   const isSubmenuActive = (children: NavItem[]) => {
@@ -146,7 +170,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
   const navContent = (
     <div className="flex h-full flex-col">
       {/* Mobile Header */}
-      <div className="flex items-center justify-between border-b-2 border-[var(--unit-border)]/30 pb-4 lg:hidden">
+      <div className="flex items-center justify-between border-b-2 border-[var(--unit-border)]/30 pb-4 md:hidden">
         <span className="font-heading text-sm font-bold text-[var(--unit-text)]">Menú</span>
         {onMobileClose && (
           <button
@@ -159,7 +183,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
           </button>
         )}
       </div>
-      <nav className="mt-4 flex-1 space-y-1 lg:mt-0" aria-label="Principal">
+      <nav className="mt-4 flex-1 space-y-1 md:mt-0" aria-label="Principal">
         {visible.map((item) => {
           if (item.children) {
             // Render submenu
@@ -284,7 +308,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
       {onMobileClose && (
         <div
           className={cn(
-            'fixed inset-0 z-40 bg-black/50 transition-opacity lg:hidden',
+            'fixed inset-0 z-40 bg-black/50 transition-opacity md:hidden',
             mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           )}
           onClick={onMobileClose}
@@ -294,8 +318,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
       <aside
         className={cn(
           'w-56 border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6',
-          'fixed inset-y-0 left-0 z-50 transform transition-transform lg:fixed lg:top-0 lg:left-0 lg:inset-y-0 lg:z-40',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'fixed inset-y-0 left-0 z-50 transform transition-transform md:fixed md:top-0 md:left-0 md:inset-y-0 md:z-40',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         {navContent}

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, ArrowUpDown, Users, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { Select } from '@/components/ui';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 interface ClientsFiltersProps {
@@ -44,6 +45,24 @@ export function ClientsFilters({
   unitFilter,
   setUnitFilter,
 }: ClientsFiltersProps) {
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  
+  // Actualizar el search parent con debounced value
+  useEffect(() => {
+    if (debouncedSearch !== search) {
+      setSearch(debouncedSearch);
+    }
+  }, [debouncedSearch, setSearch]);
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
       {/* Filter Header */}
@@ -87,49 +106,54 @@ export function ClientsFilters({
           </div>
 
           {/* Status Filter */}
-          <select
+          <Select
+            label="Estado"
+            options={[
+              { value: 'all', label: 'Todos los estados' },
+              { value: 'active', label: 'Activos' },
+              { value: 'blocked', label: 'Bloqueados' }
+            ]}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'blocked')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          >
-            <option value="all">Todos los estados</option>
-            <option value="active">Activos</option>
-            <option value="blocked">Bloqueados</option>
-          </select>
+          />
 
           {/* Credit Filter */}
-          <select
+          <Select
+            label="Crédito"
+            options={[
+              { value: 'all', label: 'Todo el crédito' },
+              { value: 'hasCredit', label: 'Con crédito' },
+              { value: 'noCredit', label: 'Sin crédito' }
+            ]}
             value={creditFilter}
             onChange={(e) => setCreditFilter(e.target.value as 'all' | 'hasCredit' | 'noCredit')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          >
-            <option value="all">Todo el crédito</option>
-            <option value="hasCredit">Con crédito</option>
-            <option value="noCredit">Sin crédito</option>
-          </select>
+          />
 
           {/* Unit Filter */}
-          <select
+          <Select
+            label="Unidad"
+            options={[
+              { value: '', label: 'Todas las unidades' },
+              { value: 'SPA', label: 'SPA' },
+              { value: 'BARBERIA', label: 'Barbería' }
+            ]}
             value={unitFilter}
             onChange={(e) => setUnitFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          >
-            <option value="">Todas las unidades</option>
-            <option value="SPA">SPA</option>
-            <option value="BARBERIA">Barbería</option>
-          </select>
+          />
 
           {/* Sort By */}
           <div className="flex items-center gap-2">
-            <select
+            <Select
+              label="Ordenar por"
+              options={[
+                { value: 'name', label: 'Nombre' },
+                { value: 'credit', label: 'Crédito' },
+                { value: 'recent', label: 'Reciente' }
+              ]}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'name' | 'credit' | 'recent')}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            >
-              <option value="name">Nombre</option>
-              <option value="credit">Crédito</option>
-              <option value="recent">Reciente</option>
-            </select>
+              className="flex-1"
+            />
             <button
               type="button"
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -144,8 +168,8 @@ export function ClientsFilters({
             <DateRangeFilter
               dateFrom={dateFrom}
               dateTo={dateTo}
-              onDateFromChange={setDateFrom}
-              onDateToChange={setDateTo}
+              onDateFromChange={(date) => date && setDateFrom(date)}
+              onDateToChange={(date) => date && setDateTo(date)}
               className="w-full"
             />
           </div>

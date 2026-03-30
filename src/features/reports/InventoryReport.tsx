@@ -221,7 +221,7 @@ export function InventoryReport({ unit, dateFrom, dateTo, compact = false }: Inv
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Product) => {
-        console.log('View product', row.id);
+        // TODO: Implement view product functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -229,7 +229,7 @@ export function InventoryReport({ unit, dateFrom, dateTo, compact = false }: Inv
       label: 'Editar',
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Product) => {
-        console.log('Edit product', row.id);
+        // TODO: Implement edit product functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -323,7 +323,7 @@ export function InventoryReport({ unit, dateFrom, dateTo, compact = false }: Inv
         searchPlaceholder="Buscar por nombre, SKU, categoría..."
         filters={filters}
         actions={!compact ? actions : []}
-        emptyMessage="No hay productos en el período seleccionado."
+        emptyMessage="No hay productos en el período seleccionado. Intenta ajustar las fechas o los filtros de categoría."
         pageSize={compact ? 5 : 20}
         maxHeight={compact ? "300px" : "500px"}
         pageSizeOptions={compact ? [5] : [10, 20, 50, 100]}

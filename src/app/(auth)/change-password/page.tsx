@@ -13,18 +13,18 @@ import { Lock, Key, Shield, CheckCircle, AlertCircle, Loader2, Eye, EyeOff } fro
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, 'Contraseña actual requerida'),
+    currentPassword: z.string().min(1, { message: "Este campo es requerido" }),
     newPassword: z
       .string()
-      .min(8, 'Mínimo 8 caracteres')
-      .regex(/[A-Z]/, 'Al menos una mayúscula')
-      .regex(/[a-z]/, 'Al menos una minúscula')
-      .regex(/[0-9]/, 'Al menos un número')
-      .regex(/[^A-Za-z0-9]/, 'Al menos un símbolo'),
-    confirmPassword: z.string().min(1, 'Confirma la nueva contraseña'),
+      .min(8, { message: "Mínimo 8 caracteres" })
+      .regex(/[A-Z]/, { message: "Al menos una mayúscula" })
+      .regex(/[a-z]/, { message: "Al menos una minúscula" })
+      .regex(/[0-9]/, { message: "Al menos un número" })
+      .regex(/[^A-Za-z0-9]/, { message: "Al menos un símbolo" }),
+    confirmPassword: z.string().min(1, { message: "Este campo es requerido" }),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Las contraseñas no coinciden',
+    message: "Las contraseñas no coinciden",
     path: ['confirmPassword'],
   });
 

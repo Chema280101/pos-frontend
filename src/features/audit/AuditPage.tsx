@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import type { AuditLog, AuditResponse, AuditFilters, AuditAction } from '@/types/audit';
-import { getActionLabel, formatAuditRow } from '@/types/audit';
+import { getActionLabel, getEntityLabel, formatAuditRow } from '@/types/audit';
 
 export function AuditPage(): JSX.Element {
   const [dateFrom, setDateFrom] = useState(() => startOfDay(subDays(new Date(), 7)));
@@ -61,7 +61,6 @@ export function AuditPage(): JSX.Element {
         const { data: res } = await api.get<AuditResponse>(`/api/audit?${params}`);
         return res;
       } catch (err) {
-        console.error('Error fetching audit data:', err);
         throw err;
       }
     },
@@ -177,6 +176,7 @@ export function AuditPage(): JSX.Element {
       sortable: true,
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
+        const entityLabel = getEntityLabel(auditRow.entity);
         return (
           <span className={cn(
             'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
@@ -189,7 +189,7 @@ export function AuditPage(): JSX.Element {
             auditRow.entity === 'Expense' ? 'bg-red-100 text-red-800' :
             'bg-gray-100 text-gray-800'
           )}>
-            {auditRow.entity}
+            {entityLabel}
           </span>
         );
       },
@@ -269,7 +269,7 @@ export function AuditPage(): JSX.Element {
     
     const entities = [...new Set(combinedData.map(row => row.entity))]
       .filter(Boolean)
-      .map(entity => ({ value: entity, label: entity }))
+      .map(entity => ({ value: entity, label: getEntityLabel(entity) }))
       .sort((a, b) => a.label.localeCompare(b.label));
     
     const actions = [...new Set(combinedData.map(row => row.action))]
@@ -299,7 +299,7 @@ export function AuditPage(): JSX.Element {
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <p className="text-[var(--unit-text)] font-medium">Error al cargar datos de auditoría</p>
               <p className="text-[var(--unit-text-muted)] text-sm mt-2">
-                {error instanceof Error ? error.message : 'Error desconocido'}
+                Por favor intenta recargar la página
               </p>
             </div>
           </div>
@@ -499,7 +499,7 @@ export function AuditPage(): JSX.Element {
                         )}
                         {entity && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Entidad: {entity}
+                            Entidad: {getEntityLabel(entity)}
                           </span>
                         )}
                         {searchFilter && (

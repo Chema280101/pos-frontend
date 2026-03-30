@@ -1,3 +1,8 @@
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useUnitStore } from '@/store/unitStore';
+import { EmptyStateData } from '@/components/ui/EmptyState';
 import { Building2, Users, Package as PackageIcon, TrendingUp, Phone, Mail, MapPin, CheckCircle, AlertCircle, Activity, UserCheck } from 'lucide-react';
 
 interface Supplier {
@@ -160,7 +165,7 @@ export function SupplierMetrics({ suppliers }: SupplierMetricsProps) {
               {topSupplier ? topSupplier.name : 'N/A'}
             </p>
             <p className="text-sm text-gray-700 font-medium">
-              {topSupplier ? `${topSupplier._count.stockEntries} entregas` : 'Sin datos'}
+              {topSupplier ? `${topSupplier._count.stockEntries} entregas` : 'No hay datos'}
             </p>
           </div>
         </div>

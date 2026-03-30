@@ -271,8 +271,35 @@ export function DataTable<T>({
           </div>
         </div>
 
-        <div style={{ maxHeight, overflowY: 'auto' }} className="bg-white/50">
-          <table className="w-full border-collapse">
+        <div style={{ maxHeight, overflowY: 'auto', overflowX: 'auto' }} className="bg-white/50">
+          {loading ? (
+            // Skeleton loader mientras carga
+            <div className="p-6 space-y-4">
+              {[...Array(pageSize)].map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <div className="flex gap-4 items-center">
+                    {columns.map((col, colIndex) => (
+                      <div 
+                        key={col.key} 
+                        className={`flex-1 ${colIndex === 0 ? 'w-1/3' : 'w-1/4'}`}
+                      >
+                        <div className="h-4 bg-[var(--unit-surface)] rounded animate-pulse mb-2"></div>
+                        <div className="h-3 bg-[var(--unit-surface)]/70 rounded animate-pulse w-3/4"></div>
+                      </div>
+                    ))}
+                    {actions.length > 0 && (
+                      <div className="w-20 flex gap-2 justify-center">
+                        {actions.map((_, actionIndex) => (
+                          <div key={actionIndex} className="h-8 w-8 bg-[var(--unit-surface)] rounded-lg animate-pulse"></div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
             <thead className="sticky top-0 z-10 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)]">
               <tr>
                 {columns.map((col, index) => (
@@ -284,6 +311,7 @@ export function DataTable<T>({
                       col.sortable && 'cursor-pointer hover:bg-[var(--unit-accent)]/10 transition-colors',
                       col.className
                     )}
+                    style={{ minWidth: index === 0 ? '200px' : index === columns.length - 1 ? '120px' : '150px' }}
                   >
                     <div className={`flex items-center ${index === 0 ? 'justify-start' : 'justify-center'} gap-2`}>
                       {col.header}
@@ -294,7 +322,7 @@ export function DataTable<T>({
                   </th>
                 ))}
                 {actions.length > 0 && (
-                  <th className="px-6 py-4 text-center text-sm font-bold text-[var(--unit-text)] border-b border-[var(--unit-border)]/30">
+                  <th className="px-6 py-4 text-center text-sm font-bold text-[var(--unit-text)] border-b border-[var(--unit-border)]/30" style={{ minWidth: '200px' }}>
                     Acciones
                   </th>
                 )}
@@ -311,14 +339,14 @@ export function DataTable<T>({
                   )}
                 >
                   {columns.map((col, index) => (
-                    <td key={col.key} className={`px-6 py-4 text-sm text-[var(--unit-text)] ${index === 0 ? 'text-left' : 'text-center'} group-hover:text-[var(--unit-accent)] transition-colors`}>
+                    <td key={col.key} className={`px-6 py-4 text-sm text-[var(--unit-text)] ${index === 0 ? 'text-left' : 'text-center'} group-hover:text-[var(--unit-accent)] transition-colors`} style={{ minWidth: index === 0 ? '200px' : index === columns.length - 1 ? '120px' : '150px' }}>
                       {col.render
                         ? col.render(row)
                         : String((row as Record<string, unknown>)[col.key] ?? '')}
                     </td>
                   ))}
                   {actions.length > 0 && (
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center" style={{ minWidth: '200px' }}>
                       <div className="flex items-center justify-center gap-2">
                         {actions.map((action, i) => {
                           const disabled = action.disabled?.(row);
@@ -334,8 +362,14 @@ export function DataTable<T>({
                                 disabled && 'opacity-50 cursor-not-allowed'
                               )}
                               title={action.label}
+                              aria-label={`${action.label} para ${(row as any).name || (row as any).id || 'este elemento'}`}
                             >
-                              {action.icon}
+                              <span className={cn(
+                                'transition-all duration-200',
+                                disabled && 'grayscale opacity-60'
+                              )}>
+                                {action.icon}
+                              </span>
                             </button>
                           );
                         })}
@@ -346,7 +380,8 @@ export function DataTable<T>({
               ))}
             </tbody>
           </table>
-          {filteredData.length === 0 && (
+          )}
+          {filteredData.length === 0 && !loading && (
             <div className="px-6 py-12 text-center">
               <div className="flex flex-col items-center justify-center">
                 <Search className="h-12 w-12 text-[var(--unit-text-muted)]/30 mb-4" />

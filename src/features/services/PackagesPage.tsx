@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, Scissors } from 'lucide-react';
+import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, XCircle, Scissors } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -12,12 +12,21 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { Package } from '@/types/service';
 import { PackagesMetrics } from './PackagesMetrics';
+import { useToast } from '@/hooks/useToast';
 
 export function PackagesPage(): JSX.Element {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+
+  // Reset modal states when closed
+  useEffect(() => {
+    if (!viewModal) {
+      setSelectedPackage(null);
+    }
+  }, [viewModal]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { success, error } = useToast();
   
   // Date range filter states (like services)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -66,8 +75,7 @@ export function PackagesPage(): JSX.Element {
       setSelectedPackage(null);
     },
     onError: (error: any) => {
-      console.error('Error deleting package:', error);
-      alert(error.response?.data?.error || 'Error al eliminar el paquete');
+      error(error.message || 'Error al eliminar el paquete');
     },
   });
 
@@ -196,7 +204,7 @@ export function PackagesPage(): JSX.Element {
         setSelectedPackage(row);
         setViewModal(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
+      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
@@ -204,7 +212,7 @@ export function PackagesPage(): JSX.Element {
       onClick: (row: Package) => {
         router.push(`/packages/${row.id}/edit`);
       },
-      className: 'text-amber-600 hover:bg-amber-50',
+      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: Package) => !canEdit,
     },
     {
@@ -214,7 +222,7 @@ export function PackagesPage(): JSX.Element {
         setSelectedPackage(row);
         setShowDeleteDialog(true);
       },
-      className: 'text-red-600 hover:bg-red-50',
+      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
       disabled: (row: Package) => !canEdit,
     },
   ];
@@ -248,7 +256,7 @@ export function PackagesPage(): JSX.Element {
           <PackagesMetrics packages={packages || []} />
 
           {/* Enhanced Action Buttons - Exacto estilo ServicesPage */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
             {canEdit && (
               <Link href="/packages/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                 <Plus className="h-5 w-5" />
@@ -435,15 +443,31 @@ export function PackagesPage(): JSX.Element {
                 }}></div>
               </div>
 
-              {/* Header */}
-              <div className="relative flex items-center gap-4 mb-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                  <Trash2 className="h-6 w-6 text-white" />
+              {/* Header - Estándar consistente */}
+              <div className="relative mb-6 flex items-start justify-between gap-4">
+                {/* Background gradient for header - Consistente con Modal.tsx */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+                
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                    <Trash2 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-red-900">Eliminar Paquete</h3>
+                    <p className="text-sm text-red-700">Esta acción es permanente</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-red-900">Eliminar Paquete</h3>
-                  <p className="text-sm text-red-700">Esta acción es permanente</p>
-                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedPackage(null);
+                  }}
+                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               {/* Content */}
@@ -536,29 +560,28 @@ export function PackagesPage(): JSX.Element {
               </div>
               
               <div className="relative">
-                {/* Enhanced Header - Exacto estilo Producto */}
-                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                        <PackageIcon className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Paquete</h3>
-                        <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedPackage.id}</p>
-                      </div>
+                {/* Enhanced Header - Estándar consistente */}
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                      <PackageIcon className="h-6 w-6 text-white" />
                     </div>
-                    <button
-                      onClick={() => setViewModal(false)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
-                    >
-                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
-                    </button>
+                    <div>
+                      <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Paquete</h3>
+                      <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedPackage.id}</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setViewModal(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
+                    aria-label="Cerrar"
+                  >
+                    <X className="h-4 w-4 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors" />
+                  </button>
                 </div>
 
                 {/* Enhanced Content Grid - Exacto estilo Producto */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {/* Enhanced General Information - Glassmorphism Card */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
@@ -606,7 +629,17 @@ export function PackagesPage(): JSX.Element {
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
                               : 'bg-gray-100 text-gray-800 border-gray-200'
                           }`}>
-                            {selectedPackage.status === 'ACTIVE' ? '✅ Activo' : '❌ Inactivo'}
+                            {selectedPackage.status === 'ACTIVE' ? (
+                              <>
+                                <CheckCircle className="h-3 w-3" />
+                                Activo
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-3 w-3" />
+                                Inactivo
+                              </>
+                            )}
                           </span>
                         </div>
 

@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { t } from '@/lib/uiTranslations';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -27,12 +29,12 @@ import {
 } from 'lucide-react';
 
 const schema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, { message: t('required') }).max(200),
   contactName: z.string().max(100).optional().nullable(),
   phone: z.string().max(20).optional().nullable(),
-  email: z.string().email('Email inválido').max(100).optional().nullable(),
+  email: z.string().email({ message: t('invalidEmail') }).max(100).optional().nullable(),
   address: z.string().max(500).optional().nullable(),
-    });
+});
 
 type FormData = z.infer<typeof schema>;
 
@@ -51,23 +53,24 @@ interface SupplierDetail {
 }
 
 export function SupplierForm() {
-  const params = useParams();
+  const params = useParams<{ id?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const isEdit = !!params.id && params.id !== 'new';
+  const isEdit = !!params?.id && params?.id !== 'new';
 
   // Get supplier from list cache as fallback
   const suppliersCache = queryClient.getQueryData(['suppliers']) as any;
   const suppliersList = suppliersCache?.data || suppliersCache;
-  const cachedSupplier = Array.isArray(suppliersList) ? suppliersList.find((s: any) => s.id === params.id) : undefined;
+  const cachedSupplier = Array.isArray(suppliersList) ? suppliersList.find((s: any) => s.id === params?.id) : undefined;
 
   const { data: supplier, error } = useQuery({
-    queryKey: ['supplier', params.id],
+    queryKey: ['supplier', params?.id],
     queryFn: async (): Promise<SupplierDetail> => {
-      const response = await api.get<SupplierDetail>(`/api/inventory/suppliers/${params.id}`);
+      if (!params?.id) throw new Error('ID no proporcionado');
+      const response = await api.get<SupplierDetail>(`/api/inventory/suppliers/${params?.id}`);
       return response.data;
     },
-    enabled: isEdit,
+    enabled: isEdit && !!params?.id,
     retry: false,
   });
 
@@ -114,22 +117,23 @@ export function SupplierForm() {
       router.replace('/inventory/suppliers');
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar proveedor' });
+      setError('root', { message: err.response?.data?.error ?? t('errorOccurred') });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await api.patch(`/api/inventory/suppliers/${params.id}`, data);
+      if (!params?.id) throw new Error('ID no proporcionado');
+      const response = await api.patch(`/api/inventory/suppliers/${params?.id}`, data);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      queryClient.invalidateQueries({ queryKey: ['supplier', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['supplier', params?.id] });
       router.replace('/inventory/suppliers');
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      setError('root', { message: err.response?.data?.error ?? 'Error al actualizar proveedor' });
+      setError('root', { message: err.response?.data?.error ?? t('errorOccurred') });
     },
   });
 
@@ -317,7 +321,7 @@ export function SupplierForm() {
 
                 {/* Enhanced Email Field */}
                 <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Email</label>
+                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Email *</label>
                   <input
                     type="email"
                     className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
@@ -362,23 +366,16 @@ export function SupplierForm() {
             {/* Enhanced Action Buttons - Exacto estilo ClientForm */}
             <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
               <div className="flex gap-4">
-                <button 
+                <Button 
                   type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  className="flex-1"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {isEdit ? 'Actualizando...' : 'Guardando...'}
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />
-                      {isEdit ? 'Actualizar proveedor' : 'Guardar proveedor'}
-                    </span>
-                  )}
-                </button>
+                  <Save className="h-4 w-4" />
+                  {isEdit ? 'Actualizar proveedor' : 'Guardar proveedor'}
+                </Button>
                 <button 
                   type="button" 
                   onClick={() => router.back()} 

@@ -16,6 +16,8 @@ import { downloadExcelReport } from '@/lib/excelReport';
 import { downloadPdfReport } from '@/lib/pdfReport';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { useAuthStore } from '@/store/authStore';
+import { useSecureClients, useSecureCreateClient, usePermissions } from '@/hooks/useSecureApi';
+import { SecureComponent, SecureButton } from '@/components/security/SecureComponent';
 
 interface ListResponse {
   data: Client[];
@@ -24,6 +26,18 @@ interface ListResponse {
 
 export default function ClientsPage() {
   const [search, setSearch] = useState('');
+  
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
   const [creditFilter, setCreditFilter] = useState<'all' | 'hasCredit' | 'noCredit'>('all');
@@ -41,66 +55,38 @@ export default function ClientsPage() {
 
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
+  const { canRead, canWrite, canDelete } = usePermissions();
 
   // ✅ NUEVO: Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, creditFilter, dateFrom, dateTo]);
+  }, [debouncedSearch, statusFilter, creditFilter, dateFrom, dateTo]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['clients', search, page, statusFilter, creditFilter, dateFrom, dateTo],
-    queryFn: async (): Promise<ListResponse> => {
-      const params = new URLSearchParams();
-      if (search.trim()) params.set('search', search.trim());
-      params.set('page', String(page));
-      params.set('limit', '20');
-      
-      // ✅ NUEVO: Aplicar filtros al backend
-      if (statusFilter !== 'all') {
-        params.set('isBlocked', statusFilter === 'blocked' ? 'true' : 'false');
-      }
-      
-      // ✅ NUEVO: Agregar filtros de fecha
-      if (dateFrom) {
-        params.set('dateFrom', dateFrom.toISOString());
-      }
-      if (dateTo) {
-        params.set('dateTo', dateTo.toISOString());
-      }
-      
-      const { data: res } = await api.get<ListResponse>(`/api/clients?${params}`);
-      return res;
-    },
-    // ✅ OPTIMIZACIÓN: Cache mejorado para mejor performance
-    staleTime: 5 * 60 * 1000, // 5 minutos en lugar de 30 segundos
-    gcTime: 10 * 60 * 1000, // 10 minutos garbage collection
-    refetchOnWindowFocus: false, // No refetch al cambiar de ventana
-    refetchOnReconnect: true, // Refetch al reconectar
-    placeholderData: (previousData) => previousData, // Keep previous data while loading
-  });
+  // ✅ NUEVO: Usar secure API hook para clientes
+  const { data, isLoading, error } = useSecureClients();
 
   const openDrawer = useCallback((c: Client) => setDrawerClient(c), []);
   const closeDrawer = useCallback(() => setDrawerClient(null), []);
 
   // Computed metrics
   const metrics = useMemo(() => {
-    if (!data?.data) return { total: 0, active: 0, blocked: 0, totalCredit: 0 };
+    if (!data || typeof data !== 'object' || !('data' in data)) return { total: 0, active: 0, blocked: 0, totalCredit: 0 };
     
-    const clients = data.data;
+    const responseData = (data as any).data || [];
+    const clients = Array.isArray(responseData) ? responseData : [];
     return {
       total: clients.length,
-      active: clients.filter(c => !c.isBlocked).length,
-      blocked: clients.filter(c => c.isBlocked).length,
-      totalCredit: clients.reduce((sum, c) => sum + Number(c.creditBalance), 0),
+      active: clients.filter((c: Client) => !c.isBlocked).length,
+      blocked: clients.filter((c: Client) => c.isBlocked).length,
+      totalCredit: clients.reduce((sum: number, c: Client) => sum + Number(c.creditBalance || 0), 0),
     };
-  }, [data?.data]);
+  }, [data]);
 
   // Filtered clients (no sorting needed)
   const filteredAndSortedClients = useMemo(() => {
-    if (!data?.data) return [];
+    if (!data || typeof data !== 'object' || !('data' in data)) return [];
     
-    let clients = data.data;
+    let clients = (data as { data: Client[] }).data || [];
     
     // Apply date filter FIRST
     if (dateFrom || dateTo) {
@@ -131,8 +117,8 @@ export default function ClientsPage() {
       );
     }
     
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const searchLower = debouncedSearch.toLowerCase();
       clients = clients.filter(c =>
         c.name.toLowerCase().includes(searchLower) ||
         c.phone.toLowerCase().includes(searchLower) ||
@@ -142,7 +128,7 @@ export default function ClientsPage() {
     }
     
     return clients;
-  }, [data?.data, statusFilter, creditFilter, search, dateFrom, dateTo]);
+  }, [data, statusFilter, creditFilter, debouncedSearch, dateFrom, dateTo]);
 
   // Paginated clients for display
   const paginatedClients = useMemo(() => {
@@ -207,12 +193,12 @@ export default function ClientsPage() {
               <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
             </div>
           ) : (
-            <ClientsMetrics clients={data?.data || []} />
+            <ClientsMetrics clients={(data as { data: Client[] })?.data || []} />
           )}
 
           {/* Enhanced Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-            {canEdit && (
+            <SecureComponent roles={['ADMIN', 'RECEPTIONIST']}>
               <Link
                 href="/clients/new"
                 className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
@@ -220,7 +206,7 @@ export default function ClientsPage() {
                 <Plus className="h-5 w-5" />
                 Nuevo Cliente
               </Link>
-            )}
+            </SecureComponent>
           </div>
         </div>
 

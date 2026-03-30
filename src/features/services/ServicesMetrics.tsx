@@ -1,4 +1,9 @@
-import { Clock, DollarSign, TrendingUp, Activity, Package, Users, CheckCircle, AlertCircle, Star, Timer, BarChart3, Target, Zap, Award } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useUnitStore } from '@/store/unitStore';
+import { EmptyStateData } from '@/components/ui/EmptyState';
+import { TrendingUp, TrendingDown, Minus, Package, DollarSign, Clock, Star, Activity, CheckCircle, Timer, Award } from 'lucide-react';
 import type { Service } from '@/types/service';
 
 interface ServicesMetricsProps {
@@ -103,7 +108,7 @@ export function ServicesMetrics({ services }: ServicesMetricsProps) {
               {mostPopular ? mostPopular.name.slice(0, 15) : 'N/A'}
             </p>
             <p className="text-sm text-pink-700 font-medium">
-              {mostPopular ? `${mostPopular.timesVended} ventas` : 'Sin datos'}
+              {mostPopular ? `${mostPopular.timesVended} ventas` : 'No hay datos'}
             </p>
           </div>
         </div>

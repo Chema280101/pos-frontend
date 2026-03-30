@@ -3,8 +3,26 @@ import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, User, Calendar, CheckCircle, X, AlertCircle, CreditCard, Plus, Scissors } from 'lucide-react';
-import { api } from '../../lib/api';
+import { api } from '@/lib/api';
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Scissors, 
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ArrowLeft,
+  ChevronLeft,
+  CreditCard,
+  X
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { getStatusColor } from '@/lib/table-colors';
 
 interface Appointment {
   id: string;
@@ -24,7 +42,7 @@ interface Appointment {
 
 export function AppointmentDetail(): JSX.Element {
   const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : undefined;
   const queryClient = useQueryClient();
 
   const { data: apt, isLoading } = useQuery({
@@ -106,12 +124,10 @@ export function AppointmentDetail(): JSX.Element {
               </div>
               
               {/* Status Badge */}
-              <span className={`inline-flex items-center px-3 py-1.5 text-sm font-bold rounded-xl border-2 ${
-                apt.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                apt.status === 'CANCELLED' || apt.status === 'NO_SHOW' ? 'bg-red-100 text-red-800 border-red-200' :
-                apt.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
-                'bg-gray-100 text-gray-800 border-gray-200'
-              }`}>
+              <span className={cn(
+                'inline-flex items-center px-3 py-1.5 text-sm font-bold rounded-xl border-2',
+                getStatusColor(apt.status)
+              )}>
                 {apt.status === 'COMPLETED' ? 'Completada' :
                  apt.status === 'CANCELLED' ? 'Cancelada' :
                  apt.status === 'NO_SHOW' ? 'No asistió' :
@@ -125,7 +141,7 @@ export function AppointmentDetail(): JSX.Element {
                 <Calendar className="h-5 w-5 text-[var(--unit-accent)]" />
                 <div>
                   <p className="text-[var(--unit-text)] font-medium">
-                    {format(new Date(apt.startTime), "EEEE d 'de' MMMM yyyy, HH:mm", { locale: es })} – {format(new Date(apt.endTime), 'HH:mm', { locale: es })}
+                    {format(new Date(apt.startTime), "dd 'de' MMMM yyyy, HH:mm")} – {format(new Date(apt.endTime), 'HH:mm')}
                   </p>
                   <p className="text-sm text-[var(--unit-text-muted)]">Unidad: {apt.unit}</p>
                 </div>
@@ -155,7 +171,7 @@ export function AppointmentDetail(): JSX.Element {
                 Servicios
               </h3>
               <div className="space-y-3">
-                {apt.items.map((item, i) => (
+                {apt.items.map((item: Appointment['items'][0], i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[var(--unit-surface)]/50 border border-[var(--unit-border)]/30">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">

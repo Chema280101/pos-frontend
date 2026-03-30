@@ -32,6 +32,9 @@ const SEGMENT_LABELS: Record<string, string> = {
   expenses: 'Gastos',
   income: 'Ingresos',
   detailed: 'Particulares',
+  sales: 'Ventas',
+  overview: 'General',
+  'internal-use': 'Uso Interno',
 };
 
 const SEGMENT_ICONS: Record<string, any> = {
@@ -60,6 +63,8 @@ const SEGMENT_ICONS: Record<string, any> = {
   users: User,
   audit: Shield,
   backups: Database,
+  overview: BarChart3,
+  'internal-use': Package,
 };
 
 function getLabel(segment: string): string {

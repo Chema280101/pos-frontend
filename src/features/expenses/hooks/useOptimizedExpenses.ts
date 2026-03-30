@@ -159,11 +159,9 @@ export const useOptimizedCreateExpense = () => {
       
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
-      
-      console.log('✅ Gasto creado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al crear gasto:', error);
+      // Error al crear gasto
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -171,19 +169,19 @@ export const useOptimizedCreateExpense = () => {
         
         // Error de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
         }
         // Error de caja cerrada
         else if (errorMessage.includes('cerrada') || errorMessage.includes('abierta')) {
-          console.warn('⚠️ Error de caja:', errorMessage);
+          // Error de caja
           queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });
@@ -208,11 +206,9 @@ export const useOptimizedEditExpense = () => {
       
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
-      
-      console.log('✅ Gasto editado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al editar gasto:', error);
+      // Error al editar gasto
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -220,18 +216,18 @@ export const useOptimizedEditExpense = () => {
         
         // Error de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
         }
         // Error de permisos
         else if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para editar gastos');
+          // Error de permisos
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });
@@ -256,11 +252,9 @@ export const useOptimizedDeleteExpense = () => {
       
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
-      
-      console.log('✅ Gasto eliminado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al eliminar gasto:', error);
+      // Error al eliminar gasto
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -268,22 +262,22 @@ export const useOptimizedDeleteExpense = () => {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para eliminar gastos');
+          // Error de permisos
         }
         // Error de antigüedad
         else if (errorMessage.includes('antiguo') || errorMessage.includes('old')) {
-          console.warn('⚠️ Error de antigüedad:', 'No se puede eliminar un gasto muy antiguo');
+          // Error de antigüedad
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });
@@ -354,11 +348,9 @@ export const useOptimizedExportExpenses = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
-      console.log(`✅ Exportación ${variables.format} completada`);
     },
     onError: (error: any) => {
-      console.error(`❌ Error al exportar gastos:`, error);
+      // Error al exportar gastos
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -366,18 +358,18 @@ export const useOptimizedExportExpenses = () => {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para exportar');
+          // Error de permisos
         }
         // Error de formato
         else if (errorMessage.includes('formato') || errorMessage.includes('format')) {
-          console.warn('⚠️ Error de formato:', errorMessage);
+          // Error de formato
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
       }
     }
   });

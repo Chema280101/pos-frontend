@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Outfit, Playfair_Display } from 'next/font/google';
 import { Providers } from './providers';
+import { DarkModeProvider } from '@/components/ui/DarkModeProvider';
 import './globals.css';
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
@@ -22,8 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen antialiased">
-        <Providers>{children}</Providers>
+      <body className="min-h-screen antialiased transition-colors duration-300">
+        <DarkModeProvider>
+          <Providers>{children}</Providers>
+        </DarkModeProvider>
       </body>
     </html>
   );

@@ -12,7 +12,8 @@ import { downloadPdfReport } from '@/lib/pdfReport';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface AuditRow {
   id: string;
@@ -39,6 +40,18 @@ export function AuditLogPage(): JSX.Element {
   const [action, setAction] = useState('');
   const [entity, setEntity] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
+  
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearchFilter = useDebouncedValue(searchFilter.trim(), 300);
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(true);
   const limit = 30;
@@ -46,7 +59,7 @@ export function AuditLogPage(): JSX.Element {
   // ✅ MEJORADO: Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [dateFrom, dateTo, action, entity, searchFilter]);
+  }, [dateFrom, dateTo, action, entity, debouncedSearchFilter]);
 
   // ✅ MEJORADO: Solo usar isHydrated para loading state
   const isHydrated = useAuthStore((s) => s.isHydrated);
@@ -59,7 +72,7 @@ export function AuditLogPage(): JSX.Element {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--unit-accent)] mx-auto mb-4"></div>
-              <p className="text-[var(--unit-text-muted)]">Cargando...</p>
+              <p className="text-[var(--unit-text-muted)]">Loading...</p>
             </div>
           </div>
         </div>
@@ -72,18 +85,17 @@ export function AuditLogPage(): JSX.Element {
   if (dateTo) params.set('to', dateTo.toISOString());
   if (action) params.set('action', action);
   if (entity) params.set('entity', entity);
-  if (searchFilter) params.set('search', searchFilter);
+  if (debouncedSearchFilter) params.set('search', debouncedSearchFilter);
   params.set('page', String(page));
   params.set('limit', String(limit));
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['audit', dateFrom, dateTo, action, entity, searchFilter, page],
+    queryKey: ['audit', dateFrom, dateTo, action, entity, debouncedSearchFilter, page],
     queryFn: async (): Promise<AuditResponse> => {
       try {
       const { data: res } = await api.get<AuditResponse>(`/api/audit?${params}`);
       return res;
       } catch (err) {
-        console.error('Error fetching audit data:', err);
         throw err;
       }
     },
@@ -155,7 +167,7 @@ export function AuditLogPage(): JSX.Element {
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-[var(--unit-text-muted)]" />
           <span className="font-medium text-[var(--unit-text)]">
-            {new Date(row.createdAt).toLocaleString('es')}
+            {format(new Date(row.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}
           </span>
         </div>
       ),
@@ -350,7 +362,7 @@ export function AuditLogPage(): JSX.Element {
           )}
 
           {/* Enhanced Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
             <button
               type="button"
               onClick={exportExcel}

@@ -185,7 +185,6 @@ export function AdminCommissions(): JSX.Element {
       alert('Comisión anulada exitosamente');
     },
     onError: (error) => {
-      console.error('Error voiding commission:', error);
       alert('Error al anular la comisión');
     },
   });
@@ -212,7 +211,6 @@ export function AdminCommissions(): JSX.Element {
     },
     onError: (error) => {
       setRecalculatingId(null);
-      console.error('Error recalculando comisiones:', error);
       addToast('Error al recalcular comisiones', 'error');
     },
   });
@@ -327,7 +325,6 @@ export function AdminCommissions(): JSX.Element {
           worksheet.addImage(imageId, 'A1:C1');
           
         } catch (error) {
-          console.warn('Could not load logo, using text placeholder:', error);
           // Fallback to text placeholder if image fails
           logoCell.value = exportConfig.unit === 'ALL' ? 'LOGO' : 
                           exportConfig.unit === 'SPA' ? 'SPA LOGO' : 'BARBERÍA LOGO';
@@ -484,14 +481,13 @@ export function AdminCommissions(): JSX.Element {
 
       // Save file using file-saver
       saveAs(new Blob([data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8' 
       }), filename);
 
       addToast('Reporte de comisiones exportado a Excel exitosamente', 'success');
       setShowExportModal(false);
     },
     onError: (error) => {
-      console.error('Error exporting commissions to Excel:', error);
       addToast('Error al exportar comisiones a Excel', 'error');
     },
   });
@@ -719,7 +715,6 @@ export function AdminCommissions(): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
     },
     onError: (error) => {
-      console.error('Error exporting commissions to PDF:', error);
       addToast('Error al exportar comisiones a PDF', 'error');
     },
   });
@@ -1270,7 +1265,7 @@ export function AdminCommissions(): JSX.Element {
                   <textarea
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
-                    placeholder="Referencia, observaciones..."
+                    placeholder="Ej: Pago quincenal, bonificación especial, etc."
                     className="w-full rounded-[var(--unit-border-radius)] border bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)]"
                     style={{ borderColor: 'var(--unit-border)' }}
                     rows={3}

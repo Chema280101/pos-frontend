@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DollarSign, TrendingDown, Plus, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { Select } from '@/components/ui';
 import { type ExpenseFormData, type CashEntryFormData } from '@/types/cash';
 
 interface CashRegisterOperationsProps {
@@ -111,7 +112,7 @@ export function CashRegisterOperations({ registerId, unit }: CashRegisterOperati
                 value={expenseReason}
                 onChange={(e) => setExpenseReason(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descripción del egreso..."
+                placeholder="Ej: Compra de insumos, mantenimiento, pago de servicios, etc."
                 rows={3}
               />
             </div>
@@ -162,19 +163,17 @@ export function CashRegisterOperations({ registerId, unit }: CashRegisterOperati
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo
-              </label>
-              <select
+              <Select
+                label="Tipo"
+                options={[
+                  { value: '', label: 'Seleccionar tipo...', disabled: true },
+                  { value: 'CASH_ENTRY', label: 'Ingreso de efectivo' },
+                  { value: 'TRANSFER_ENTRY', label: 'Transferencia' },
+                  { value: 'OTHER_ENTRY', label: 'Otro' }
+                ]}
                 value={cashType}
                 onChange={(e) => setCashType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Seleccionar tipo...</option>
-                <option value="CASH_ENTRY">Ingreso de efectivo</option>
-                <option value="TRANSFER_ENTRY">Transferencia</option>
-                <option value="OTHER_ENTRY">Otro</option>
-              </select>
+              />
             </div>
             
             <div>
@@ -185,7 +184,7 @@ export function CashRegisterOperations({ registerId, unit }: CashRegisterOperati
                 value={cashReason}
                 onChange={(e) => setCashReason(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descripción del ingreso..."
+                placeholder="Ej: Venta del día, pago de cliente, ingreso extra, etc."
                 rows={3}
               />
             </div>

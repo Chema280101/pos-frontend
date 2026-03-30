@@ -1,12 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { Select, Button } from '@/components/ui';
+import { EmptyStateData } from '@/components/ui/EmptyState';
 import { Plus, Edit, Trash2, FolderPlus, Clock, DollarSign, Tag, Building2, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, TrendingDown, CheckCircle, Package } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { useToast } from '@/hooks/useToast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -17,10 +20,30 @@ export function ServicesPage(): JSX.Element {
   const [unit, setUnit] = useState<string>('');
   const [categoryId, setServiceCategoryId] = useState<string>('');
   const [search, setSearch] = useState<string>('');
-    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const [viewModal, setViewModal] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { success, error } = useToast();
+
+  // Reset modal states when closed
+  useEffect(() => {
+    if (!viewModal) {
+      setSelectedService(null);
+    }
+  }, [viewModal]);
   
   // Date range filter states (like inventory)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -35,7 +58,7 @@ export function ServicesPage(): JSX.Element {
   const router = useRouter();
 
   const { data: servicesData, isLoading } = useQuery({
-    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, search, statusFilter],
+    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, debouncedSearch, statusFilter],
     queryFn: async (): Promise<{ data: Service[], pagination: any }> => {
       const params = new URLSearchParams();
       if (unit) params.set('unit', unit);
@@ -49,7 +72,7 @@ export function ServicesPage(): JSX.Element {
       if (dateTo) params.set('dateTo', dateTo.toISOString());
       
       // Add search filter
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       
       // Add status filter
       if (statusFilter) params.set('isActive', statusFilter === 'active' ? 'true' : 'false');
@@ -79,11 +102,10 @@ export function ServicesPage(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-categories'] });
       queryClient.invalidateQueries({ queryKey: ['services'] });
-      alert('Categoría eliminada correctamente');
+      success('Categoría eliminada correctamente');
     },
     onError: (error: any) => {
-      console.error('Error deleting category:', error);
-      alert(error.response?.data?.error || 'Error al eliminar la categoría');
+      error(error.message || 'Error al eliminar la categoría');
     },
   });
 
@@ -98,8 +120,7 @@ export function ServicesPage(): JSX.Element {
       setSelectedService(null);
     },
     onError: (error: any) => {
-      console.error('Error deleting service:', error);
-      alert(error.response?.data?.error || 'Error al eliminar el servicio');
+      error(error.message || 'Error al eliminar el servicio');
     },
   });
 
@@ -375,7 +396,7 @@ export function ServicesPage(): JSX.Element {
         setSelectedService(row);
         setViewModal(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
+      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
@@ -383,7 +404,7 @@ export function ServicesPage(): JSX.Element {
       onClick: (row: Service) => {
         router.push(`/services/${row.id}/edit`);
       },
-      className: 'text-amber-600 hover:bg-amber-50',
+      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: Service) => !canEdit,
     },
     {
@@ -393,7 +414,7 @@ export function ServicesPage(): JSX.Element {
         setSelectedService(row);
         setShowDeleteDialog(true);
       },
-      className: 'text-red-600 hover:bg-red-50',
+      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
       disabled: (row: Service) => !canEdit,
     },
   ];
@@ -427,7 +448,7 @@ export function ServicesPage(): JSX.Element {
           <ServicesMetrics services={services} />
 
           {/* Enhanced Action Buttons - Exacto estilo InventoryPage */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
             {canEdit && (
               <Link href="/services/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                 <Plus className="h-5 w-5" />
@@ -489,34 +510,33 @@ export function ServicesPage(): JSX.Element {
               {/* Additional Filter Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* ServiceCategory Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Categoría</label>
-                  <select
+                <div>
+                  <Select
+                    label="Categoría"
+                    options={[
+                      { value: '', label: 'Todas las categorías' },
+                      ...(categories?.map((category: ServiceCategory) => ({
+                        value: category.id,
+                        label: `${category.name} (${category.unit})`
+                      })) || [])
+                    ]}
                     value={categoryId}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
                     onChange={(e) => setServiceCategoryId(e.target.value)}
-                  >
-                    <option value="">Todas las categorías</option>
-                    {categories?.map((category: ServiceCategory) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name} ({category.unit})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 {/* Status Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
-                  <select
+                <div>
+                  <Select
+                    label="Estado"
+                    options={[
+                      { value: '', label: 'Todos los estados' },
+                      { value: 'active', label: 'Activos' },
+                      { value: 'inactive', label: 'Inactivos' }
+                    ]}
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="active">Activos</option>
-                    <option value="inactive">Inactivos</option>
-                  </select>
+                  />
                 </div>
 
                 {/* Search Bar */}
@@ -651,15 +671,31 @@ export function ServicesPage(): JSX.Element {
                 }}></div>
               </div>
 
-              {/* Header */}
-              <div className="relative flex items-center gap-4 mb-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                  <Trash2 className="h-6 w-6 text-white" />
+              {/* Header - Estándar consistente */}
+              <div className="relative mb-6 flex items-start justify-between gap-4">
+                {/* Background gradient for header - Consistente con Modal.tsx */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+                
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                    <Trash2 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-red-900">Eliminar Servicio</h3>
+                    <p className="text-sm text-red-700">Esta acción es permanente</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-red-900">Eliminar Servicio</h3>
-                  <p className="text-sm text-red-700">Esta acción es permanente</p>
-                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedService(null);
+                  }}
+                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               {/* Content */}
@@ -709,6 +745,15 @@ export function ServicesPage(): JSX.Element {
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedService(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
                     deleteServiceMutation.mutate(selectedService.id);
                   }}
                   disabled={deleteServiceMutation.isPending}
@@ -725,15 +770,6 @@ export function ServicesPage(): JSX.Element {
                       Eliminar Servicio
                     </span>
                   )}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedService(null);
-                  }}
-                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  Cancelar
                 </button>
               </div>
             </div>
@@ -752,29 +788,28 @@ export function ServicesPage(): JSX.Element {
             </div>
             
             <div className="relative">
-              {/* Enhanced Header - Exacto estilo Detalles de Comisiones Agrupadas */}
-              <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <Eye className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Servicio</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">{selectedService.name}</p>
-                    </div>
+              {/* Enhanced Header - Estándar consistente */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                    <Eye className="h-6 w-6 text-white" />
                   </div>
-                  <button
-                    onClick={() => setViewModal(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
-                  >
-                    <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
-                  </button>
+                  <div>
+                    <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Servicio</h3>
+                    <p className="text-sm text-[var(--unit-text-muted)]">{selectedService.name}</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setViewModal(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-4 w-4 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors" />
+                </button>
               </div>
 
               {/* Enhanced Content Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {/* Enhanced Basic Information - Glassmorphism Card */}
                 <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                   <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
@@ -938,12 +973,19 @@ export function ServicesPage(): JSX.Element {
                     {/* Enhanced Movements List */}
                     <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                       {movements.length === 0 ? (
-                        <div className="text-center py-8">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--unit-surface)] mx-auto mb-3">
-                            <Clock className="h-6 w-6 text-[var(--unit-text-muted)]" />
-                          </div>
-                          <p className="text-sm text-[var(--unit-text-muted)]">No hay movimientos registrados</p>
-                        </div>
+                        <EmptyStateData
+                          title="No hay movimientos registrados"
+                          description="No se encontraron movimientos de stock para este producto. Los movimientos aparecerán aquí cuando se realicen entradas o salidas de inventario."
+                          action={
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.location.href = '/inventory/movements'}
+                            >
+                              Ver todos los movimientos
+                            </Button>
+                          }
+                        />
                       ) : (
                         movements.slice(0, 10).map((movement: any) => (
                           <div key={movement.id} className="group/movement relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
@@ -958,7 +1000,7 @@ export function ServicesPage(): JSX.Element {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2 text-sm text-[var(--unit-text-muted)] mb-2">
-                                    <span>{movement.createdAt ? new Date(movement.createdAt).toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                    <span>{movement.createdAt ? format(new Date(movement.createdAt), 'dd/MM/yyyy HH:mm') : 'N/A'}</span>
                                   </div>
                                   <div className="flex items-center gap-4 text-sm text-[var(--unit-text-muted)]">
                                     <span>Cliente: {movement.appointment?.customer?.name || 'No especificado'}</span>

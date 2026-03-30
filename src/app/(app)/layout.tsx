@@ -10,6 +10,8 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { ToastContainer } from '@/components/ui';
 import { useToastStore } from '@/store/toastStore';
 import { usePrefetchQueries } from '@/hooks/usePrefetchQueries';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { SecurityProvider } from '@/components/security/SecureComponent';
 
 export default function AppLayout({ children }: { children: React.ReactNode }): JSX.Element {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,25 +20,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }): 
 
   // ✅ PERFORMANCE: Prefetch queries para optimizar primera carga
   usePrefetchQueries();
+  
+  // ✅ SEO: Actualizar título dinámicamente
+  usePageTitle();
 
   return (
-    <AuthGuard>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <div className="flex min-h-screen flex-col">
-        <OfflineBanner />
-        <Header onMenuClick={() => setSidebarOpen((o) => !o)} />
-        <div className="flex flex-1">
-          <SidebarMemo
-            mobileOpen={sidebarOpen}
-            onMobileClose={() => setSidebarOpen(false)}
-          />
-          <main className="min-w-0 flex-1 overflow-auto lg:ml-56 lg:pt-0">
-            <AppBreadcrumbs />
-            {children}
-          </main>
+    <SecurityProvider>
+      <AuthGuard>
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <div className="flex min-h-screen flex-col">
+          <OfflineBanner />
+          <Header onMenuClick={() => setSidebarOpen((o) => !o)} />
+          <div className="flex flex-1">
+            <SidebarMemo
+              mobileOpen={sidebarOpen}
+              onMobileClose={() => setSidebarOpen(false)}
+            />
+            <main className="min-w-0 flex-1 overflow-auto md:ml-56 lg:pt-0 bg-[var(--unit-surface)]">
+              <AppBreadcrumbs />
+              <div className="max-w-7xl mx-auto px-6 py-4">
+                {children}
+              </div>
+            </main>
+          </div>
+          <Footer />
         </div>
-        <Footer />
-      </div>
-    </AuthGuard>
+      </AuthGuard>
+    </SecurityProvider>
   );
 }

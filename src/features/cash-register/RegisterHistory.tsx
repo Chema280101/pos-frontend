@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
 import { Badge, Skeleton } from '@/components/ui';
+import { EmptyStateCalendar } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 
 interface CashRegisterRecord {
@@ -51,9 +52,10 @@ export function RegisterHistory(): JSX.Element {
 
   if (!registers || registers.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-[var(--unit-text)]/70">
-        No hay registros de caja anteriores.
-      </p>
+      <EmptyStateCalendar
+        title="No hay registros de caja anteriores"
+        description="No se encontraron aperturas o cierres de caja anteriores. Los registros aparecerán aquí una vez que comiences a operar con el sistema de caja."
+      />
     );
   }
 

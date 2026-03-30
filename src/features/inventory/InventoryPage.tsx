@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2 } from 'lucide-react';
+import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, XCircle, Building2, RefreshCw } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -12,12 +12,14 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { InventoryMetrics } from './InventoryMetrics';
 import type { Product } from '@/types/product';
+import { useToast } from '@/hooks/useToast';
 
 export function InventoryPage(): JSX.Element {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { success, error } = useToast();
   
   // Date range filter states (like appointments)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -30,6 +32,18 @@ export function InventoryPage(): JSX.Element {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'ADMIN'; // RECEPTIONIST can only view, not edit
   const router = useRouter();
@@ -40,7 +54,7 @@ export function InventoryPage(): JSX.Element {
   const pageSize = 20;
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['inventory-products', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryId, typeFilter, search],
+    queryKey: ['inventory-products', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryId, typeFilter, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (unitFilter) params.set('unit', unitFilter);
@@ -58,7 +72,7 @@ export function InventoryPage(): JSX.Element {
       if (typeFilter) params.set('type', typeFilter);
       
       // Add search filter
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       
       const { data } = await api.get(`/api/inventory/products?${params}`);
       return data;
@@ -113,8 +127,7 @@ export function InventoryPage(): JSX.Element {
       setSelectedProduct(null);
     },
     onError: (error: any) => {
-      console.error('Error deleting product:', error);
-      alert(error.response?.data?.error || 'Error al eliminar el producto');
+      error(error.message || 'Error al eliminar el producto');
     },
   });
 
@@ -426,7 +439,7 @@ export function InventoryPage(): JSX.Element {
         setMovementsPage(1); // Reset to first page
         setViewModal(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
+      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
@@ -434,7 +447,7 @@ export function InventoryPage(): JSX.Element {
       onClick: (row: Product) => {
         router.push(`/inventory/products/${row.id}/edit`);
       },
-      className: 'text-amber-600 hover:bg-amber-50',
+      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: Product) => !canEdit,
     },
     {
@@ -449,7 +462,7 @@ export function InventoryPage(): JSX.Element {
           deleteMutation.mutate(row.id);
         }
       },
-      className: 'text-red-600 hover:bg-red-50',
+      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
       disabled: (row: Product) => !canEdit,
     },
   ];
@@ -733,15 +746,32 @@ export function InventoryPage(): JSX.Element {
                 }}></div>
               </div>
 
-              {/* Header */}
-              <div className="relative flex items-center gap-4 mb-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                  <Trash2 className="h-6 w-6 text-white" />
+              {/* Header - Estándar consistente */}
+              <div className="relative mb-6 flex items-start justify-between gap-4">
+                {/* Background gradient for header - Consistente con Modal.tsx */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+                
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                    <Trash2 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-red-900">Desactivar Producto</h3>
+                    <p className="text-sm text-red-700">Esta acción es reversible</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-red-900">Desactivar Producto</h3>
-                  <p className="text-sm text-red-700">Esta acción es reversible</p>
-                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedProduct(null);
+                    setDeleteConfirm(null);
+                  }}
+                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               {/* Content */}
@@ -797,6 +827,15 @@ export function InventoryPage(): JSX.Element {
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedProduct(null);
+                  }}
+                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
                     deleteMutation.mutate(selectedProduct.id);
                   }}
                   disabled={deleteMutation.isPending}
@@ -814,15 +853,6 @@ export function InventoryPage(): JSX.Element {
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedProduct(null);
-                  }}
-                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  Cancelar
-                </button>
               </div>
             </div>
           </div>
@@ -839,25 +869,24 @@ export function InventoryPage(): JSX.Element {
               </div>
               
               <div className="relative">
-                {/* Enhanced Header - Exacto estilo Servicio */}
-                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                        <Eye className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Producto</h3>
-                        <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedProduct.id}</p>
-                      </div>
+                {/* Enhanced Header - Estándar consistente */}
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                      <Eye className="h-6 w-6 text-white" />
                     </div>
-                    <button
-                      onClick={() => setViewModal(false)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all group"
-                    >
-                      <X className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
-                    </button>
+                    <div>
+                      <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Producto</h3>
+                      <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedProduct.id}</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setViewModal(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
+                    aria-label="Cerrar"
+                  >
+                    <X className="h-4 w-4 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors" />
+                  </button>
                 </div>
 
                 {/* Enhanced Content Grid - Exacto estilo Servicio */}
@@ -896,8 +925,22 @@ export function InventoryPage(): JSX.Element {
                             selectedProduct.type === 'FOR_SALE' ? 'bg-green-100 text-green-700 border-green-200' : 
                             'bg-blue-100 text-blue-700 border-blue-200'
                           }`}>
-                            {selectedProduct.type === 'INTERNAL_USE' ? '🏠 Uso interno' : 
-                             selectedProduct.type === 'FOR_SALE' ? '🛍️ Para venta' : '🔄 Ambos'}
+                            {selectedProduct.type === 'INTERNAL_USE' ? (
+                              <>
+                                <Home className="h-3 w-3" />
+                                Uso interno
+                              </>
+                            ) : selectedProduct.type === 'FOR_SALE' ? (
+                              <>
+                                <ShoppingCart className="h-3 w-3" />
+                                Para venta
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-3 w-3" />
+                                Ambos
+                              </>
+                            )}
                           </span>
                         </div>
 
@@ -1057,7 +1100,17 @@ export function InventoryPage(): JSX.Element {
                               ? 'bg-green-100 text-green-700 border-green-200'
                               : 'bg-red-100 text-red-700 border-red-200'
                           }`}>
-                            {selectedProduct.isActive ? '✅ Activo' : '❌ Inactivo'}
+                            {selectedProduct.isActive ? (
+                              <>
+                                <CheckCircle className="h-3 w-3" />
+                                Activo
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-3 w-3" />
+                                Inactivo
+                              </>
+                            )}
                           </span>
                         </div>
                       </div>

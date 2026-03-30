@@ -110,10 +110,9 @@ export function useEditIncomeMutation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['income'] });
-      console.log('✅ Ingreso editado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al editar ingreso:', error);
+      // Error al editar ingreso
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -121,21 +120,21 @@ export function useEditIncomeMutation() {
         
         // Error de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Error de estado
         else if (errorMessage.includes('estado') || errorMessage.includes('status')) {
-          console.warn('⚠️ Error de estado:', errorMessage);
+          // Error de estado
           // Mostrar toast específico de estado
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -154,10 +153,9 @@ export function useDeleteIncomeMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['income'] });
       queryClient.invalidateQueries({ queryKey: ['income-summary'] });
-      console.log('✅ Ingreso eliminado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al eliminar ingreso:', error);
+      // Error al eliminar ingreso
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -165,26 +163,26 @@ export function useDeleteIncomeMutation() {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para eliminar ingresos');
+          // Error de permisos
           // Mostrar toast de permisos
         }
         // Error de estado
         else if (errorMessage.includes('completado') || errorMessage.includes('completed')) {
-          console.warn('⚠️ Error de estado:', 'No se puede eliminar un ingreso completado');
+          // Error de estado
           // Mostrar toast específico
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -244,11 +242,9 @@ export function useExportIncomeMutation() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
-      console.log(`✅ Exportación ${variables.format} completada`);
     },
     onError: (error: any) => {
-      console.error(`❌ Error al exportar ingresos:`, error);
+      // Error al exportar ingresos
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -256,21 +252,21 @@ export function useExportIncomeMutation() {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para exportar');
+          // Error de permisos
           // Mostrar toast de permisos
         }
         // Error de formato
         else if (errorMessage.includes('formato') || errorMessage.includes('format')) {
-          console.warn('⚠️ Error de formato:', errorMessage);
+          // Error de formato
           // Mostrar toast específico
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }

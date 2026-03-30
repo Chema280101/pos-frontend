@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -20,11 +20,12 @@ import {
   AlertCircle,
   Loader2,
   X,
+  CheckCircle,
+  XCircle,
   ChevronDown,
   ChevronUp,
   Eye,
   Calendar,
-  CheckCircle,
   AlertTriangle,
   Package,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { cn } from '@/lib/utils';
 import { SupplierMetrics } from './SupplierMetrics';
+import { format } from 'date-fns';
 
 interface Supplier {
   id: string;
@@ -62,6 +64,18 @@ export function SuppliersPage(): JSX.Element {
   // Additional filters (like appointments)
   const [search, setSearch] = useState<string>('');
   
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  
   // New filters for suppliers
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [contactFilter, setContactFilter] = useState<string>('');
@@ -73,7 +87,7 @@ export function SuppliersPage(): JSX.Element {
 
   // Enhanced query with pagination and filters (exacto estilo InventoryPage)
   const { data: suppliersData, isLoading } = useQuery({
-    queryKey: ['suppliers', unitFilter, search, dateFrom, dateTo, statusFilter, contactFilter],
+    queryKey: ['suppliers', unitFilter, debouncedSearch, dateFrom, dateTo, statusFilter, contactFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       
@@ -85,7 +99,7 @@ export function SuppliersPage(): JSX.Element {
       if (unitFilter) params.set('unit', unitFilter);
       
       // Add search filter
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       
       // Add status filter
       if (statusFilter) params.set('isActive', statusFilter === 'active' ? 'true' : 'false');
@@ -210,7 +224,7 @@ export function SuppliersPage(): JSX.Element {
         setSelectedSupplier(row);
         setViewModal(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
+      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
@@ -218,7 +232,7 @@ export function SuppliersPage(): JSX.Element {
       onClick: (row: Supplier) => {
         router.push(`/inventory/suppliers/${row.id}/edit`);
       },
-      className: 'text-amber-600 hover:bg-amber-50',
+      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: Supplier) => !canEdit,
     },
     {
@@ -229,7 +243,7 @@ export function SuppliersPage(): JSX.Element {
         setShowDeleteDialog(true);
         setDeleteConfirm(row.id);
       },
-      className: 'text-red-600 hover:bg-red-50',
+      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
       disabled: (row: Supplier) => !canEdit,
     },
   ];
@@ -489,19 +503,32 @@ export function SuppliersPage(): JSX.Element {
             </div>
             
             <div className="relative">
-              {/* Enhanced Header - Exacto estilo Servicio */}
-              <div className="relative bg-gradient-to-r from-red-500/10 to-red-600/10 px-6 py-4 border-b border-red-500/30 -mx-8 -mt-8 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                      <AlertTriangle className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-red-900">Confirmar Eliminación</h3>
-                      <p className="text-sm text-red-700">Esta acción no se puede deshacer</p>
-                    </div>
+              {/* Enhanced Header - Estándar consistente */}
+              <div className="relative mb-6 flex items-start justify-between gap-4">
+                {/* Background gradient for header - Consistente con Modal.tsx */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+                
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                    <AlertTriangle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-red-900">Eliminar Proveedor</h3>
+                    <p className="text-sm text-red-700">Esta acción es permanente</p>
                   </div>
                 </div>
+                
+                <button
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedSupplier(null);
+                    setDeleteConfirm(null);
+                  }}
+                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               {/* Enhanced Content */}
@@ -762,7 +789,7 @@ export function SuppliersPage(): JSX.Element {
                           <span className="text-sm font-bold text-amber-800">Fecha Creación</span>
                         </div>
                         <span className="font-bold text-amber-800 bg-white px-3 py-1 rounded-lg border-2 border-amber-300/30 shadow-lg tabular-nums">
-                          {new Date(selectedSupplier.createdAt).toLocaleDateString('es-ES')}
+                          {format(new Date(selectedSupplier.createdAt), 'dd/MM/yyyy')}
                         </span>
                       </div>
 
@@ -777,7 +804,17 @@ export function SuppliersPage(): JSX.Element {
                             ? 'bg-green-100 text-green-700 border-green-200'
                             : 'bg-red-100 text-red-700 border-red-200'
                         }`}>
-                          {selectedSupplier.isActive ? '✅ Activo' : '❌ Inactivo'}
+                          {selectedSupplier.isActive ? (
+                              <>
+                                <CheckCircle className="h-3 w-3" />
+                                Activo
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-3 w-3" />
+                                Inactivo
+                              </>
+                            )}
                         </span>
                       </div>
                     </div>

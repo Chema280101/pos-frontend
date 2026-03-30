@@ -94,7 +94,7 @@ export function StockMovementForm(): JSX.Element {
                   <AlertCircle className="h-4 w-4 text-white" />
                 </div>
                 <p className="font-medium text-red-800">
-                  {mutation.error instanceof Error ? mutation.error.message : 'Error al registrar uso'}
+                  Error al registrar uso
                 </p>
               </div>
             </div>
@@ -134,7 +134,7 @@ export function StockMovementForm(): JSX.Element {
                 min="1"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Ingresa la cantidad a consumir"
+                placeholder="Ej: 5"
                 className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
               />
               {selectedProduct && quantity && Number(quantity) > 0 && (

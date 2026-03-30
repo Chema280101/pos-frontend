@@ -5,10 +5,9 @@ import { Banknote, CreditCard, ArrowRightLeft, Smartphone, Receipt, TrendingDown
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { DataTable, type Column, type Action } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { generateProfessionalPdf } from '@/lib/professionalPdf';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -181,19 +180,14 @@ export function CashRegisterPage(): JSX.Element {
 
   const expenseMutation = useMutation({
     mutationFn: async () => {
-      console.log('🔥 FRONTEND - Creating expense with data:', {
+      const payload = {
         registerId: openRegister?.id,
         amount: Number(expenseAmount),
         reason: expenseReason.trim(),
         category: expenseCategory,
-        url: `/api/cash-register/${openRegister?.id}/expense`
-      });
+      };
       
-      await api.post(`/api/cash-register/${openRegister?.id}/expense`, {
-        amount: Number(expenseAmount),
-        reason: expenseReason.trim(),
-        category: expenseCategory,
-      });
+      await api.post(`/api/cash-register/${openRegister?.id}/expense`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-register-open', unit] });
@@ -357,48 +351,40 @@ export function CashRegisterPage(): JSX.Element {
   };
 
   function generatePDF(register: any) {
-    const doc = new jsPDF();
-
-    // Header
-    doc.setFontSize(18);
-    doc.text('Reporte de Caja', 14, 20);
-    
-    doc.setFontSize(12);
-    doc.text(`Unidad: ${register.unit}`, 14, 30);
-    doc.text(`ID: ${register.id}`, 14, 36);
-    doc.text(`Estado: ${register.status === 'OPEN' ? 'Abierta' : 'Cerrada'}`, 14, 42);
-    
-    // Dates
-    doc.text(`Apertura: ${new Date(register.openedAt).toLocaleString('es-PE', { timeZone: 'America/Lima' })}`, 14, 48);
-    if (register.closedAt) {
-      doc.text(`Cierre: ${new Date(register.closedAt).toLocaleString('es-PE', { timeZone: 'America/Lima' })}`, 14, 54);
-    }
-
-    // Financial summary
-    doc.setFontSize(14);
-    doc.text('Resumen Financiero', 14, 65);
-    
-    autoTable(doc, {
-      startY: 70,
-      head: [['Concepto', 'Monto (S/)']],
-      body: [
-        ['Monto Inicial', safeNumber(register.openingAmount).toFixed(2)],
-        ['Ventas Efectivo', safeNumber(register.cashSales).toFixed(2)],
-        ['Ventas Tarjeta', safeNumber(register.cardSales).toFixed(2)],
-        ['Ventas Transferencia', safeNumber(register.transferSales).toFixed(2)],
-        ['Ventas Billetera Digital', safeNumber(register.walletSales).toFixed(2)],
-        ['Egresos', safeNumber(register.expenses).toFixed(2)],
-        ['Ingresos Extra', safeNumber(register.cashEntries).toFixed(2)],
-        ['Monto Final', safeNumber(register.closingAmount).toFixed(2)],
-        ['Diferencia', safeNumber(register.difference).toFixed(2)],
+    // Usar la función profesional unificada
+    generateProfessionalPdf({
+      filename: `reporte-caja-${register.id}-${format(new Date(), 'yyyy-MM-dd')}`,
+      title: 'REPORTE DE CAJA',
+      subtitle: `Unidad: ${register.unit} | ID: ${register.id} | Estado: ${register.status === 'OPEN' ? 'Abierta' : 'Cerrada'}`,
+      headers: ['Concepto', 'Monto (S/)', 'Fecha/Hora'],
+      rows: [
+        ['Monto Inicial', safeNumber(register.openingAmount).toFixed(2), register.openedAt ? format(new Date(register.openedAt), "dd/MM/yyyy HH:mm", { locale: es }) : 'N/A'],
+        ['Ventas Efectivo', safeNumber(register.cashSales).toFixed(2), ''],
+        ['Ventas Tarjeta', safeNumber(register.cardSales).toFixed(2), ''],
+        ['Ventas Transferencia', safeNumber(register.transferSales).toFixed(2), ''],
+        ['Ventas Billetera Digital', safeNumber(register.walletSales).toFixed(2), ''],
+        ['Egresos', safeNumber(register.expenses).toFixed(2), ''],
+        ['Ingresos Extra', safeNumber(register.cashEntries).toFixed(2), ''],
+        ['Monto Final', safeNumber(register.closingAmount).toFixed(2), register.closedAt ? format(new Date(register.closedAt), "dd/MM/yyyy HH:mm", { locale: es }) : 'N/A'],
+        ['Diferencia', safeNumber(register.difference).toFixed(2), '']
       ],
-      theme: 'grid',
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [59, 130, 246] },
+      periodInfo: register.openedAt ? {
+        from: new Date(register.openedAt),
+        to: register.closedAt ? new Date(register.closedAt) : new Date()
+      } : undefined,
+      totals: {
+        label: 'MONTO FINAL CAJA',
+        amount: safeNumber(register.closingAmount),
+        currency: 'S/'
+      },
+      businessInfo: {
+        name: 'Barbería & Spa POS',
+        address: 'Dirección del negocio',
+        phone: 'Teléfono de contacto',
+        email: 'email@negocio.com'
+      },
+      includeLogo: true
     });
-
-    // Save the PDF
-    doc.save(`caja-${register.id}-${new Date().toISOString().split('T')[0]}.pdf`);
   }
 
   function generateClosePdf(
@@ -409,59 +395,37 @@ export function CashRegisterPage(): JSX.Element {
     closeSignature: string,
     closeNotes: string
   ) {
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.text(`Cierre de Caja - ${unit}`, 14, 20);
-
-    doc.setFontSize(12);
-    doc.text(`ID Caja: ${registerId}`, 14, 30);
-    doc.text(`Fecha: ${new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' })}`, 14, 36);
-    doc.text(`Cerrado por: ${closeSignature}`, 14, 42);
-
-    if (closeNotes) {
-      doc.text(`Notas: ${closeNotes}`, 14, 48);
-    }
-
-    // Tabla de resumen por método
-    autoTable(doc, {
-      startY: 55,
-      head: [['Método de pago', 'Monto (S/)']],
-      body: [
-        ['Efectivo', summary.cash.toFixed(2)],
-        ['Tarjeta', summary.card.toFixed(2)],
-        ['Transferencia', summary.transfer.toFixed(2)],
-        ['Billetera', summary.wallet.toFixed(2)],
-        ['Gastos', summary.expenses.toFixed(2)],
-        ['Esperado en caja', summary.expectedCash.toFixed(2)],
+    // Usar la función profesional unificada
+    generateProfessionalPdf({
+      filename: `cierre-caja-${registerId}-${format(new Date(), 'yyyy-MM-dd')}`,
+      title: 'CIERRE DE CAJA',
+      subtitle: `Unidad: ${unit} | ID: ${registerId}`,
+      headers: ['Concepto', 'Monto (S/)', 'Cantidad'],
+      rows: [
+        ...Object.entries(summary).map(([key, value]) => [
+          key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+          typeof value === 'number' ? value.toFixed(2) : String(value),
+          ''
+        ]),
+        ...Object.entries(denominations).map(([denom, qty]) => [
+          `Denominación S/ ${denom}`,
+          (Number(denom) * Number(qty)).toFixed(2),
+          qty.toString()
+        ])
       ],
+      totals: {
+        label: 'TOTAL CIERRE',
+        amount: Object.values(summary).reduce((sum: number, val: any) => sum + (typeof val === 'number' ? val : 0), 0),
+        currency: 'S/'
+      },
+      businessInfo: {
+        name: 'Barbería & Spa POS',
+        address: 'Dirección del negocio',
+        phone: 'Teléfono de contacto',
+        email: 'email@negocio.com'
+      },
+      includeLogo: true
     });
-
-    // Tabla de denominaciones
-    const denomBody = Object.entries(denominations).map(([denom, qty]) => [
-      `S/ ${Number(denom).toFixed(2)}`,
-      qty,
-      (Number(denom) * Number(qty)).toFixed(2),
-    ]);
-
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 10 : 120,
-      head: [['Denominación', 'Cantidad', 'Total (S/)']],
-      body: denomBody,
-    });
-
-    // Diferencia total
-    const totalDeclared = Object.entries(denominations).reduce(
-      (acc, [d, q]) => acc + Number(d) * Number(q),
-      0
-    );
-
-    const diff = totalDeclared - summary.expectedCash;
-
-    doc.text(`\nDiferencia total: S/ ${diff.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 15);
-
-    // Descargar PDF
-    doc.save(`Cierre_${unit}_${new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' }).replace(/[/:]/g, '-')}.pdf`);
   }
 
   const kpiCards = summary
@@ -742,7 +706,7 @@ export function CashRegisterPage(): JSX.Element {
                     <textarea
                       value={closeNotes}
                       onChange={(e) => setCloseNotes(e.target.value)}
-                        placeholder="Observaciones importantes sobre el cierre..."
+                        placeholder="Ej: Cierre correcto, faltante en caja, cliente especial, etc."
                         className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-[var(--unit-surface-elevated)] to-[var(--unit-surface)] px-4 py-3 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none"
                         rows={3}
                     />

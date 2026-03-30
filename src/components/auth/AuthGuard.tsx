@@ -28,7 +28,20 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     (p) => pathname === p || pathname?.startsWith(p + '/')
   );
   const isChangePassword = pathname === CHANGE_PASSWORD_PATH;
-    const requiredRoles = routePermissions[pathname];
+  
+  // Buscar permisos para la ruta exacta o para la ruta padre
+  let requiredRoles = routePermissions[pathname || ''];
+  if (!requiredRoles && pathname) {
+    // Buscar permisos para rutas padre (ej: /reports/appointments -> /reports)
+    const pathSegments = pathname.split('/').filter(Boolean);
+    for (let i = pathSegments.length; i > 0; i--) {
+      const parentPath = '/' + pathSegments.slice(0, i).join('/');
+      if (routePermissions[parentPath]) {
+        requiredRoles = routePermissions[parentPath];
+        break;
+      }
+    }
+  }
     
     return { isPublic, isChangePassword, requiredRoles };
   }, [pathname]);

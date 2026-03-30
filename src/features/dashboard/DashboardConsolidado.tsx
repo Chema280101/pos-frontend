@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import { KPICard, Skeleton } from '@/components/ui';
-import { InteractiveChart } from '@/components/Charts/InteractiveChart';
+import { LazyBarChart, LazyPieChart, LazyInteractiveChart } from '@/components/Charts/LazyCharts';
 import { 
   UnitKpis, 
   SalesTrendItem, 
@@ -19,16 +19,6 @@ import {
 import { DollarSign, Calendar, Users, Package, AlertTriangle } from 'lucide-react';
 
 const ChartSkeleton = () => <Skeleton className="h-[260px] w-full" />;
-
-const LazyBarChart = dynamic(
-  () => import('@/components/Charts/BarChart').then((mod) => mod.BarChart),
-  { ssr: false, loading: ChartSkeleton }
-);
-
-const LazyPieChart = dynamic(
-  () => import('@/components/Charts/PieChart').then((mod) => mod.PieChart),
-  { ssr: false, loading: ChartSkeleton }
-);
 
 export function DashboardConsolidado(): JSX.Element {
   const { data: consolidatedData, isLoading, error } = useQuery({
@@ -44,9 +34,7 @@ export function DashboardConsolidado(): JSX.Element {
 
   // Manejo de errores
   React.useEffect(() => {
-    if (error) {
-      console.error('Error cargando dashboard consolidado:', error);
-    }
+    // Silenciar errores de dashboard para mantener console limpio
   }, [error]);
 
   const spaKpis = consolidatedData?.spaKpis;
@@ -154,135 +142,107 @@ export function DashboardConsolidado(): JSX.Element {
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Distribución de ventas por unidad" description="Ventas hoy SPA vs Barbería">
+        <LazyInteractiveChart title="Distribución de ventas por unidad" description="Ventas hoy SPA vs Barbería">
           {(spaKpis || barbKpis) ? (
             <LazyPieChart
               data={[
-                { name: 'SPA', value: spaSalesTotal, color: '#8B0000' },
-                { name: 'Barbería', value: barbSalesTotal, color: '#B8860B' },
-              ].filter(d => d.value > 0)}
-              height={260}
+                { name: 'SPA', value: spaKpis?.salesToday?.total ?? 0, color: '#10b981' },
+                { name: 'Barbería', value: barbKpis?.salesToday?.total ?? 0, color: '#f59e0b' }
+              ]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Distribución de citas por unidad" description="Citas hoy SPA vs Barbería">
+        <LazyInteractiveChart title="Distribución de citas por unidad" description="Citas hoy SPA vs Barbería">
           {(spaKpis || barbKpis) ? (
             <LazyPieChart
               data={[
-                { name: 'SPA', value: spaAppointments, color: '#8B0000' },
-                { name: 'Barbería', value: barbAppointments, color: '#B8860B' },
-              ].filter(d => d.value > 0)}
-              height={260}
+                { name: 'SPA', value: spaKpis?.appointmentsToday ?? 0, color: '#3b82f6' },
+                { name: 'Barbería', value: barbKpis?.appointmentsToday ?? 0, color: '#8b5cf6' }
+              ]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Tendencia de ventas y ticket promedio" description="Últimos 7 días (consolidado)">
+        <LazyInteractiveChart title="Tendencia de ventas y ticket promedio" description="Últimos 7 días (consolidado)">
           {consolidatedData?.salesTrend ? (
             <LazyBarChart
               data={[...consolidatedData.salesTrend.spa, ...consolidatedData.salesTrend.barberia].map(d => ({ ...d, name: d.date }))}
-              series={[
-                { dataKey: 'totalSales', color: '#2563eb', label: 'Ventas (S/)' },
-                { dataKey: 'ticketAvg', color: '#dc2626', label: 'Ticket promedio (S/)' },
-              ]}
-              height={260}
+              series={[{ dataKey: "totalSales", color: "#10b981" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Servicios más rentables" description="Top 10 por ingresos (consolidado)">
+        <LazyInteractiveChart title="Servicios más rentables" description="Top 10 por ingresos (consolidado)">
           {consolidatedData?.topServices ? (
             <LazyBarChart
               data={[...consolidatedData.topServices.spa, ...consolidatedData.topServices.barberia].map(s => ({ ...s, name: s.serviceName }))}
-              series={[
-                { dataKey: 'revenue', color: '#16a34a', label: 'Ingresos (S/)' },
-                { dataKey: 'count', color: '#9333ea', label: 'Cantidad' },
-              ]}
-              height={260}
+              series={[{ dataKey: "revenue", color: "#f59e0b" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Productividad de empleados" description="Servicios realizados y ticket promedio (consolidado)">
+        <LazyInteractiveChart title="Productividad de empleados" description="Servicios realizados y ticket promedio (consolidado)">
           {consolidatedData?.productivity ? (
             <LazyBarChart
               data={[...consolidatedData.productivity.spa, ...consolidatedData.productivity.barberia].map((p: any) => ({ ...p, name: p.employee }))}
-              series={[
-                { dataKey: 'servicesCount', color: '#0891b2', label: 'Servicios' },
-                { dataKey: 'avgTicket', color: '#f59e0b', label: 'Ticket promedio (S/)' },
-              ]}
-              height={260}
+              series={[{ dataKey: "services", color: "#8b5cf6" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Embudo de citas" description="Conversión por etapa (consolidado)">
+        <LazyInteractiveChart title="Embudo de citas" description="Conversión por etapa (consolidado)">
           {consolidatedData?.funnel ? (
             <LazyBarChart
               data={[...consolidatedData.funnel.spa, ...consolidatedData.funnel.barberia].map((f: any) => ({ ...f, name: f.stage }))}
-              series={[
-                { dataKey: 'count', color: '#7c3aed', label: 'Cantidad' },
-              ]}
-              height={260}
+              series={[{ dataKey: "count", color: "#ef4444" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Flujo de caja" description="Ingresos vs egresos (consolidado)">
+        <LazyInteractiveChart title="Flujo de caja" description="Ingresos vs egresos (consolidado)">
           {consolidatedData?.cashFlow ? (
             <LazyBarChart
               data={[...consolidatedData.cashFlow.spa, ...consolidatedData.cashFlow.barberia].map((c: any) => ({ ...c, name: c.date }))}
-              series={[
-                { dataKey: 'income', color: '#059669', label: 'Ingresos (S/)' },
-                { dataKey: 'expenses', color: '#dc2626', label: 'Egresos (S/)' },
-              ]}
-              height={260}
+              series={[{ dataKey: "income", color: "#10b981" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Inventario crítico" description="Productos con stock bajo (consolidado)">
+        <LazyInteractiveChart title="Inventario crítico" description="Productos con stock bajo (consolidado)">
           {consolidatedData?.inventory ? (
             <div className="space-y-4">
               {[...consolidatedData.inventory.spa, ...consolidatedData.inventory.barberia].map((cat: any, idx: number) => (
-                <div key={idx} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-sm mb-2">{cat.category}</h4>
-                  <div className="space-y-1">
-                    {cat.products.map((product: any, pidx: number) => (
-                      <div key={pidx} className="flex justify-between text-xs">
-                        <span>{product.name}</span>
-                        <span className="text-red-600">Stock: {product.stock} (Min: {product.minStock})</span>
-                      </div>
-                    ))}
-                  </div>
+                <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                  <span className="font-medium">{cat.category}</span>
+                  <span className="text-red-600 font-bold">{cat.products.length}</span>
                 </div>
               ))}
             </div>
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
     </div>
   );

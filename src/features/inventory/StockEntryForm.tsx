@@ -116,7 +116,7 @@ export function StockEntryForm(): JSX.Element {
                   <AlertCircle className="h-4 w-4 text-white" />
                 </div>
                 <p className="font-medium text-red-800">
-                  {mutation.error instanceof Error ? mutation.error.message : 'Error al registrar entrada'}
+                  Error al registrar entrada
                 </p>
               </div>
             </div>
@@ -156,7 +156,7 @@ export function StockEntryForm(): JSX.Element {
                 min="1"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Ingresa la cantidad a agregar"
+                placeholder="Ej: 10"
                 className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
               />
               {selectedProduct && quantity && Number(quantity) > 0 && (

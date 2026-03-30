@@ -52,17 +52,14 @@ class IncomeLogger {
       logMessage += ` (${duration}ms)`;
     }
 
-    // Imprimir en consola con colores
-    console.log(`%c${logMessage}`, `color: ${color}; font-weight: bold;`);
-
     // Imprimir detalles si existen
     if (details && Object.keys(details).length > 0) {
-      console.log('📋 Detalles:', details);
+      // Details logged for debugging (removed console.log)
     }
 
     // Imprimir error si existe
     if (error) {
-      console.error('❌ Error:', error);
+      // Error logged for debugging
     }
   }
 

@@ -8,6 +8,7 @@ import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { DetailedReportsMetrics } from './DetailedReportsMetrics';
 import { Search, Filter, Download, Eye, Edit, DollarSign, User, Calendar, Building2, Package, Receipt, FileText, Users, Trash2, AlertCircle, ChevronDown, ChevronUp, BarChart3, TrendingUp, Clock, CheckCircle2, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/useToast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -36,11 +37,24 @@ interface DetailedReportsProps {
 
 export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps): JSX.Element {
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Debounce hook para búsqueda
+  function useDebouncedValue<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+  }
+  
+  const debouncedSearchTerm = useDebouncedValue(searchTerm.trim(), 300);
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [currentUnit, setCurrentUnit] = useState(unit);
   const [currentDateFrom, setCurrentDateFrom] = useState(dateFrom);
   const [currentDateTo, setCurrentDateTo] = useState(dateTo);
+  const { success, error } = useToast();
   const [showFilters, setShowFilters] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -55,7 +69,7 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
 
   // ✅ MEJORADO: Single unified query to new backend
   const { data: detailedData, isLoading } = useQuery({
-    queryKey: ['detailed-reports', currentUnit, currentDateFrom, currentDateTo, page, limit, selectedType, selectedStatus, searchTerm],
+    queryKey: ['detailed-reports', currentUnit, currentDateFrom, currentDateTo, page, limit, selectedType, selectedStatus, debouncedSearchTerm],
     queryFn: async () => {
       const params = new URLSearchParams({
         unit: currentUnit || '',
@@ -65,7 +79,7 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
         limit: limit.toString(),
         ...(selectedType && { type: selectedType }),
         ...(selectedStatus && { status: selectedStatus }),
-        ...(searchTerm && { search: searchTerm }),
+        ...(debouncedSearchTerm && { search: debouncedSearchTerm }),
       });
       
       const { data } = await api.get(`/api/reports/detailed?${params}`);
@@ -251,7 +265,7 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
             window.open(`/cash/${row.referenceId}`, '_blank');
             break;
           default:
-            console.log('View details for', row.type, row.referenceId);
+            // TODO: Implement view details for other types
         }
       },
       className: 'text-blue-600 hover:bg-blue-50',
@@ -273,13 +287,13 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
             break;
           case 'commission':
             // Commissions can't be edited directly, only recalculated
-            alert('Las comisiones no se pueden editar directamente. Use "Recalcular" si es necesario.');
+            error('Las comisiones no se pueden editar directamente. Use "Recalcular" si es necesario.');
             break;
           case 'cash-register':
             window.open(`/cash/${row.referenceId}/edit`, '_blank');
             break;
           default:
-            console.log('Edit', row.type, row.referenceId);
+            // TODO: Implement edit for other types
         }
       },
       className: 'text-amber-600 hover:bg-amber-50',
@@ -313,13 +327,13 @@ Tipo: ${row.type}
 ID Referencia: ${row.referenceId}
 Título: ${row.title}
 Monto: ${row.amount ? `S/ ${row.amount.toFixed(2)}` : 'N/A'}
-Fecha: ${new Date(row.date).toLocaleString('es-PE')}
+Fecha: ${format(new Date(row.date), 'dd/MM/yyyy HH:mm')}
 Unidad: ${row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
 Cliente: ${row.customer || 'N/A'}
 Empleado: ${row.employee || 'N/A'}
 Estado: ${row.status || 'N/A'}
 =====================================
-Generado: ${new Date().toLocaleString('es-PE')}
+Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
         `;
         
         const blob = new Blob([pdfContent], { type: 'text/plain' });
@@ -412,10 +426,9 @@ Generado: ${new Date().toLocaleString('es-PE')}
         document.body.removeChild(a);
       }
 
-      alert(`Reporte exportado exitosamente en formato ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert(`Error al exportar reporte: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      success(`Reporte exportado exitosamente en formato ${format.toUpperCase()}`);
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Error al exportar reporte');
     }
   };
 
@@ -691,7 +704,7 @@ Generado: ${new Date().toLocaleString('es-PE')}
                 searchPlaceholder=""
                 filters={[]}
                 actions={actions}
-                emptyMessage="No se encontraron resultados para los filtros seleccionados."
+                emptyMessage="No se encontraron resultados para los filtros seleccionados. Intenta ajustar los filtros o selecciona un período diferente."
                 pageSize={limit}
                 pageSizeOptions={[10, 20, 50, 100]}
               />

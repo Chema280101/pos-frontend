@@ -125,7 +125,7 @@ export function LiquidationForm({
             label="Notas (opcional)"
             value={paymentNotes}
             onChange={(e) => setPaymentNotes(e.target.value)}
-            placeholder="Referencia, observaciones..."
+            placeholder="Ej: Pago quincenal, bonificación especial, etc."
           />
         </div>
 

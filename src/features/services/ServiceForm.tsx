@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { t, getPlaceholder } from '@/lib/uiTranslations';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
+import { useToast } from '@/hooks/useToast';
 import { 
   Plus, 
   X, 
@@ -27,10 +31,10 @@ import {
 } from 'lucide-react';
 
 const schema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
   description: z.string().max(2000).optional().nullable(),
-  price: z.number().positive('Precio debe ser positivo'),
-  durationMin: z.number().int().positive('Duración en minutos requerida'),
+  price: z.number().positive({ message: "Precio debe ser positivo" }),
+  durationMin: z.number().int().positive({ message: "Duración en minutos requerida" }),
   unit: z.enum(['SPA', 'BARBERIA']),
   categoryId: z.string().uuid().optional().nullable(),
   isComboEligible: z.boolean().optional(),
@@ -60,13 +64,14 @@ interface Category {
 export function ServiceForm(): JSX.Element {
   const router = useRouter();
   const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : undefined;
   const isEdit = !!id && id !== 'new';
   const queryClient = useQueryClient();
+  const { success, error } = useToast();
 
-  // Success confirmation state
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  // Success confirmation state - eliminado en favor de toast
+  // const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  // const [successMessage, setSuccessMessage] = useState('');
 
   // Get user's business unit from auth store or unit store
   const user = useAuthStore((s) => s.user);
@@ -76,6 +81,23 @@ export function ServiceForm(): JSX.Element {
   // Category creation state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // ESC key handler for modals
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (showCategoryModal) {
+          setShowCategoryModal(false);
+          setNewCategoryName('');
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showCategoryModal, newCategoryName]);
 
   const { data: service } = useQuery({
     queryKey: ['service', id],
@@ -94,7 +116,7 @@ export function ServiceForm(): JSX.Element {
     },
   });
 
-  const { register, handleSubmit, setError, reset, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setError, reset, watch, formState: { errors, isSubmitting, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
@@ -147,15 +169,13 @@ export function ServiceForm(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
-      setSuccessMessage('¡Servicio creado exitosamente!');
-      setShowSuccessMessage(true);
-      setTimeout(() => {
-        setShowSuccessMessage(false);
-        router.replace('/services');
-      }, 2000);
+      success('Servicio creado exitosamente');
+      router.replace('/services');
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
+      const errorMessage = err.response?.data?.error ?? 'Error al guardar servicio';
+      setError('root', { message: errorMessage });
+      error(errorMessage);
     },
   });
 
@@ -211,15 +231,12 @@ export function ServiceForm(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       queryClient.invalidateQueries({ queryKey: ['service', id] });
-      setSuccessMessage('¡Servicio actualizado exitosamente!');
-      setShowSuccessMessage(true);
-      setTimeout(() => {
-        setShowSuccessMessage(false);
-        router.replace('/services');
-      }, 2000);
+      success('Servicio actualizado exitosamente');
+      router.replace('/services');
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
+      setError('root', { message: err.response?.data?.error ?? 'Error al guardar servicio' });
+      error(err.response?.data?.error ?? 'Error al guardar servicio');
     },
   });
 
@@ -288,7 +305,7 @@ export function ServiceForm(): JSX.Element {
         }}></div>
       </div>
       
-      <div className="relative max-w-2xl mx-auto p-6">
+      <div className="relative max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto p-4 md:p-6">
         {/* Enhanced Header - Exacto estilo ClientForm */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
@@ -351,7 +368,7 @@ export function ServiceForm(): JSX.Element {
                   <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre del servicio *</label>
                   <input 
                     className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                    placeholder="Ej: Masaje relajante, Corte de cabello, etc."
+                    placeholder={getPlaceholder('name')}
                     {...register('name')} 
                   />
                   {errors.name && (
@@ -368,7 +385,7 @@ export function ServiceForm(): JSX.Element {
                   <textarea 
                     className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
                     rows={4}
-                    placeholder="Describe los detalles del servicio, beneficios, técnicas utilizadas..."
+                    placeholder={getPlaceholder('description')}
                     {...register('description')} 
                   />
                   {errors.description && (
@@ -397,7 +414,7 @@ export function ServiceForm(): JSX.Element {
                       step="0.10"
                       min="0"
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder="0.00"
+                      placeholder={getPlaceholder('price')}
                       {...register('price', { valueAsNumber: true })}
                     />
                     {errors.price && (
@@ -415,7 +432,7 @@ export function ServiceForm(): JSX.Element {
                       type="number"
                       min="1"
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder="30"
+                      placeholder="Ej: 45"
                       {...register('durationMin', { valueAsNumber: true })}
                     />
                     {errors.durationMin && (
@@ -482,10 +499,12 @@ export function ServiceForm(): JSX.Element {
                     </button>
                   </div>
                   {categoriesForUnit.length === 0 && (
-                    <p className="text-xs text-[var(--unit-text-muted)] mt-2 flex items-center gap-1">
-                      <Info className="h-4 w-4" />
-                      No hay categorías para {unit === 'SPA' ? 'SPA' : 'Barbería'}. Crea una usando el botón +.
-                    </p>
+                    <EmptyState
+                      title={`No hay categorías para ${unit === 'SPA' ? 'SPA' : 'Barbería'}`}
+                      description={`No se encontraron categorías registradas para ${unit === 'SPA' ? 'SPA' : 'Barbería'}. Crea una categoría usando el botón de arriba para poder organizar tus servicios.`}
+                      icon={<FolderPlus className="mx-auto h-12 w-12" aria-hidden />}
+                      variant="data"
+                    />
                   )}
                 </div>
 
@@ -520,23 +539,16 @@ export function ServiceForm(): JSX.Element {
             {/* Enhanced Action Buttons - Exacto estilo ClientForm */}
             <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
               <div className="flex gap-4">
-                <button 
+                <Button 
                   type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  className="flex-1"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {isEdit ? 'Actualizando...' : 'Guardando...'}
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />
-                      {isEdit ? 'Actualizar servicio' : 'Guardar servicio'}
-                    </span>
-                  )}
-                </button>
+                  <Save className="h-4 w-4" />
+                  {isEdit ? 'Actualizar servicio' : 'Guardar servicio'}
+                </Button>
                 <button 
                   type="button" 
                   onClick={() => router.back()} 
@@ -555,27 +567,35 @@ export function ServiceForm(): JSX.Element {
 
       {/* Enhanced Category Creation Modal - Exacto estilo ClientForm */}
       {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowCategoryModal(false);
+            setNewCategoryName('');
+          }
+        }}>
           <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 max-w-md w-full">
-            {/* Modal Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <FolderPlus className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--unit-text)]">Nueva Categoría</h3>
-                    <p className="text-sm text-[var(--unit-text-muted)]">Crea una categoría para organizar servicios</p>
-                  </div>
+            {/* Modal Header - Estándar consistente */}
+            <div className="relative mb-6 flex items-start justify-between gap-4">
+              {/* Background gradient for header - Consistente con Modal.tsx */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
+              
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <FolderPlus className="h-6 w-6 text-white" />
                 </div>
-                <button
-                  onClick={() => setShowCategoryModal(false)}
-                  className="rounded-xl p-2 text-[var(--unit-text)] hover:bg-[var(--unit-surface-elevated)] transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Nueva Categoría</h3>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Crea una categoría para organizar servicios</p>
+                </div>
               </div>
+              
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             
             <div className="space-y-4">
@@ -585,7 +605,7 @@ export function ServiceForm(): JSX.Element {
                   type="text"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="Ej: Masajes, Faciales, Cortes..."
+                  placeholder={getPlaceholder('description')}
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
                   maxLength={50}
                 />
@@ -641,22 +661,6 @@ export function ServiceForm(): JSX.Element {
           </div>
         </div>
       )}
-
-        {/* Success Message Toast */}
-        {showSuccessMessage && (
-          <div className="fixed top-4 right-4 z-50 animate-pulse">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-lg border-2 border-green-400/50 backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span className="font-medium">{successMessage}</span>
-              </div>
-            </div>
-          </div>
-        )}
     </div>
   );
 }

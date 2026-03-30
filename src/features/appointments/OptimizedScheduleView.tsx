@@ -6,6 +6,18 @@ import { es } from 'date-fns/locale';
 import { Plus, Clock, User, Calendar, ChevronLeft, ChevronRight, Scissors, Sparkles, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type Appointment } from '@/types/appointment';
+import { useToast } from '@/hooks/useToast';
+
+const DEBOUNCE_MS = 300;
+
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 interface Employee {
   id: string;
@@ -34,6 +46,7 @@ const TIME_SLOTS = [
 
 const statusColors = {
   SCHEDULED: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600 shadow-blue-200',
+  CONFIRMED: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-600 shadow-emerald-200',
   IN_PROGRESS: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-600 shadow-yellow-200',
   COMPLETED: 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-600 shadow-green-200',
   CANCELLED: 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600 shadow-red-200',
@@ -58,11 +71,22 @@ export function OptimizedScheduleView({
 }: OptimizedScheduleViewProps) {
   const [selectedDate, setSelectedDate] = useState(date);
   const [draggedAppointment, setDraggedAppointment] = useState<string | null>(null);
+  const { success } = useToast();
+
+  // ✅ DEBOUNCE para cambios de fecha - evita múltiples peticiones API
+  const debouncedSelectedDate = useDebouncedValue(selectedDate, DEBOUNCE_MS);
 
   // Sincronizar selectedDate con la prop date cuando cambia
   useEffect(() => {
     setSelectedDate(date);
   }, [date]);
+
+  // ✅ Solo notificar cambios cuando la fecha debounced sea diferente
+  useEffect(() => {
+    if (debouncedSelectedDate.getTime() !== date.getTime()) {
+      onDateChange?.(debouncedSelectedDate);
+    }
+  }, [debouncedSelectedDate, date, onDateChange]);
 
   // Group employees by unit
   const employeesByUnit = useMemo(() => {
@@ -77,31 +101,15 @@ export function OptimizedScheduleView({
     // ✅ SAFETY: Ensure appointments is an array
     if (!Array.isArray(appointments)) return [];
     
-    console.log('📅 OptimizedScheduleView: Filtering appointments for date:', {
-      selectedDate: selectedDate.toLocaleDateString(),
-      totalAppointments: appointments.length,
-      appointments: appointments.map(apt => ({
-        id: apt.id,
-        startTime: apt.startTime,
-        date: new Date(apt.startTime).toLocaleDateString(),
-        customer: apt.customer?.name
-      }))
-    });
-    
-    const filtered = appointments.filter(apt => {
-      const aptDate = new Date(apt.startTime);
-      const isWithin = isWithinInterval(aptDate, { start: startOfDay(selectedDate), end: endOfDay(selectedDate) });
-      console.log('📅 OptimizedScheduleView: Checking appointment:', {
-        id: apt.id,
-        startTime: apt.startTime,
-        aptDate: aptDate.toLocaleDateString(),
-        selectedDate: selectedDate.toLocaleDateString(),
-        isWithin
+    const filtered = appointments.filter((apt) => {
+      const appointmentDate = new Date(apt.startTime);
+      const isWithin = isWithinInterval(appointmentDate, {
+        start: startOfDay(selectedDate),
+        end: endOfDay(selectedDate),
       });
       return isWithin;
     });
     
-    console.log('📅 OptimizedScheduleView: Filtered appointments:', filtered.length);
     return filtered;
   }, [appointments, selectedDate]);
 
@@ -129,21 +137,23 @@ export function OptimizedScheduleView({
   }, [dayAppointments, employees]);
 
   const handlePrevDay = () => {
-    const newDate = new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000);
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
     setSelectedDate(newDate);
-    onDateChange?.(newDate);
+    // ✅ No llamar a onDateChange aquí - el debounce se encarga
   };
 
   const handleNextDay = () => {
-    const newDate = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
     setSelectedDate(newDate);
-    onDateChange?.(newDate);
+    // ✅ No llamar a onDateChange aquí - el debounce se encarga
   };
 
   const handleToday = () => {
     const newDate = new Date();
     setSelectedDate(newDate);
-    onDateChange?.(newDate);
+    // ✅ No llamar a onDateChange aquí - el debounce se encarga
   };
 
   const handleTimeSlotClick = (employeeId: string, time: string, unit: 'SPA' | 'BARBERIA') => {
@@ -170,9 +180,8 @@ export function OptimizedScheduleView({
       
       try {
         await onReschedule(draggedAppointment, employeeId, newTime);
-        console.log('✅ Appointment rescheduled successfully');
+        success('Cita reprogramada exitosamente');
       } catch (error) {
-        console.error('❌ Failed to reschedule appointment:', error);
         // Show error notification
         alert('Error al reprogramar la cita. Por favor, inténtalo nuevamente.');
       } finally {

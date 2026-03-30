@@ -34,10 +34,9 @@ export function useOpenCashRegisterMutation() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cash-register-open', variables.unit] });
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      console.log('✅ Caja abierta exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al abrir caja:', error);
+      // Error al abrir caja
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -45,21 +44,21 @@ export function useOpenCashRegisterMutation() {
         
         // Error de caja ya abierta
         if (errorMessage.includes('Ya hay una caja abierta')) {
-          console.warn('⚠️ Ya existe una caja abierta para esta unidad');
+          // Ya existe una caja abierta para esta unidad
           // Mostrar toast específico
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -88,10 +87,9 @@ export function useCloseCashRegisterMutation() {
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
       queryClient.invalidateQueries({ queryKey: ['cash-register-summary'] });
-      console.log('✅ Caja cerrada exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al cerrar caja:', error);
+      // Error al cerrar caja
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -99,27 +97,27 @@ export function useCloseCashRegisterMutation() {
         
         // Error de comisiones pendientes
         if (errorMessage.includes('comisiones pendientes')) {
-          console.warn('⚠️ Comisiones pendientes:', errorMessage);
+          // Comisiones pendientes
           // Mostrar toast detallado con comisiones
         }
         // Error de concurrencia
         else if (errorMessage.includes('modificada por otro usuario')) {
-          console.warn('⚠️ Error de concurrencia:', errorMessage);
+          // Error de concurrencia
           // Mostrar toast para recargar
           queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido al cerrar caja:', errorMessage);
+          // Error desconocido al cerrar caja
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor al cerrar caja:', error);
+        // Error de red o servidor al cerrar caja
         // Mostrar toast de error de conexión
       }
     }
@@ -147,10 +145,9 @@ export function useAddExpenseMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['cash-register-summary'] });
-      console.log('✅ Egreso agregado exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al agregar egreso:', error);
+      // Error al agregar egreso
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -158,22 +155,22 @@ export function useAddExpenseMutation() {
         
         // Error de caja cerrada
         if (errorMessage.includes('cerrada')) {
-          console.warn('⚠️ La caja está cerrada:', errorMessage);
+          // La caja está cerrada
           // Mostrar toast específico
           queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -201,10 +198,9 @@ export function useAddCashEntryMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['cash-register-summary'] });
-      console.log('✅ Entrada de efectivo agregada exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al agregar entrada de efectivo:', error);
+      // Error al agregar entrada de efectivo
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -212,22 +208,22 @@ export function useAddCashEntryMutation() {
         
         // Error de caja cerrada
         if (errorMessage.includes('cerrada')) {
-          console.warn('⚠️ La caja está cerrada:', errorMessage);
+          // La caja está cerrada
           // Mostrar toast específico
           queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
         }
         // Error de validación
         else if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -248,10 +244,9 @@ export function useReopenCashRegisterMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      console.log('✅ Caja reabierta exitosamente');
     },
     onError: (error: any) => {
-      console.error('❌ Error al reabrir caja:', error);
+      // Error al reabrir caja
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -259,21 +254,21 @@ export function useReopenCashRegisterMutation() {
         
         // Error de permisos
         if (error?.response?.status === 403) {
-          console.warn('⚠️ Error de permisos:', 'No tienes permisos para reabrir cajas');
+          // Error de permisos
           // Mostrar toast de permisos
         }
         // Error de validación
         else if (errorMessage.includes('obligatorio') || errorMessage.includes('inválido')) {
-          console.warn('⚠️ Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Otros errores
         else {
-          console.error('❌ Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('❌ Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }

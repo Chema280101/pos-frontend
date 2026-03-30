@@ -144,7 +144,7 @@ export function CommissionsReport({ unit, dateFrom, dateTo, compact = false }: C
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Commission) => {
-        console.log('View commission', row.id);
+        // TODO: Implement view commission functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -153,7 +153,7 @@ export function CommissionsReport({ unit, dateFrom, dateTo, compact = false }: C
       icon: <DollarSign className="h-4 w-4" />,
       onClick: (row: Commission) => {
         if (row.status === 'PENDING') {
-          console.log('Pay commission', row.id);
+          // TODO: Implement pay commission functionality
         }
       },
       className: 'text-green-600 hover:bg-green-100',
@@ -163,7 +163,7 @@ export function CommissionsReport({ unit, dateFrom, dateTo, compact = false }: C
       label: 'Editar',
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Commission) => {
-        console.log('Edit commission', row.id);
+        // TODO: Implement edit commission functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -206,7 +206,7 @@ export function CommissionsReport({ unit, dateFrom, dateTo, compact = false }: C
         searchPlaceholder="Buscar por empleado, período..."
         filters={filters}
         actions={!compact ? actions : []}
-        emptyMessage="No hay comisiones en el período seleccionado."
+        emptyMessage="No hay comisiones en el período seleccionado. Intenta ajustar las fechas o verifica los empleados activos."
         pageSize={compact ? 5 : 20}
         maxHeight={compact ? "300px" : "500px"}
         pageSizeOptions={compact ? [5] : [10, 20, 50, 100]}

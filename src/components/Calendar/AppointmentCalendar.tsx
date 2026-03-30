@@ -5,6 +5,7 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
 import type { DatesSetArg, EventClickArg, EventDropArg, DateSelectArg, ViewApi } from '@fullcalendar/core';
 
 export interface CalendarAppointment {
@@ -43,9 +44,11 @@ function eventClassNames(apt: CalendarAppointment): string[] {
   const classes = ['fc-event-unit'];
   if (apt.unit === 'SPA') classes.push('fc-event-spa');
   if (apt.unit === 'BARBERIA') classes.push('fc-event-barberia');
+  if (apt.status === 'CONFIRMED') classes.push('fc-event-confirmed');
   if (apt.status === 'COMPLETED') classes.push('fc-event-completed');
   if (apt.status === 'CANCELLED' || apt.status === 'NO_SHOW') classes.push('fc-event-cancelled');
   if (apt.status === 'IN_PROGRESS') classes.push('fc-event-progress');
+  if (apt.status === 'RESCHEDULED') classes.push('fc-event-rescheduled');
   return classes;
 }
 
@@ -115,14 +118,15 @@ export function AppointmentCalendar({
     initialView,
     initialDate,
     events,
+    locale: esLocale,
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
       right: 'timeGridDay,timeGridWeek,dayGridMonth',
     },
     height: 'auto',
-    slotMinTime: '08:00:00',
-    slotMaxTime: '20:00:00',
+    slotMinTime: '06:00:00',  // ✅ 6 AM para permitir citas tempranas
+    slotMaxTime: '02:00:00',  // ✅ 2 AM del día siguiente para soportar citas que cruzan medianoche
     slotDuration: '00:30:00',
     allDaySlot: false,
     editable: !!onEventDrop,

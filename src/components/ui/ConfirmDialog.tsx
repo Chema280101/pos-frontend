@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onCancel: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
@@ -18,11 +19,12 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title,
   message,
   type = 'danger',
-  confirmText = 'Confirmar',
+  confirmText = type === 'danger' ? 'Confirmar eliminación' : 'Confirmar',
   cancelText = 'Cancelar',
   isLoading = false,
 }: ConfirmDialogProps): JSX.Element {

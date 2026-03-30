@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useToast } from '@/hooks/useToast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { t, getPlaceholder } from '@/lib/uiTranslations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { Button } from '@/components/ui';
+import { Select } from '@/components/ui';
 import type { UserRole, BusinessUnit, getRoleLabel } from '@/types/auth';
 import type { User, CreateUserRequest, UpdateUserRequest } from '@/types/users';
 import { 
@@ -27,13 +31,13 @@ import {
 } from 'lucide-react';
 
 const schema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
-  email: z.string().email('Email inválido'),
-  role: z.enum(['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER']),
-  unit: z.enum(['SPA', 'BARBERIA']).nullable(),
+  name: z.string().min(1, { message: t('required') }).max(200),
+  email: z.string().email({ message: t('invalidEmail') }).min(1, { message: t('required') }),
+  role: z.enum(['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER', 'BEAUTICIAN', 'MANAGER']),
+  unit: z.enum(['SPA', 'BARBERIA']).nullable().optional(),
   phone: z.string().optional(),
   commissionPct: z.string().optional(),
-  password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
+  password: z.string().min(6, { message: t('passwordTooShort') }).optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -43,9 +47,11 @@ const roleOptions: { value: UserRole; label: string }[] = [
   { value: 'RECEPTIONIST', label: 'Recepcionista' },
   { value: 'SPA_SPECIALIST', label: 'Especialista SPA' },
   { value: 'BARBER', label: 'Barbero' },
+  { value: 'BEAUTICIAN', label: 'Esteticista' },
+  { value: 'MANAGER', label: 'Gerente' },
 ];
 
-const unitOptions: { value: BusinessUnit | ''; label: string }[] = [
+const unitOptions: { value: string | number; label: string; disabled?: boolean }[] = [
   { value: '', label: 'Todas las unidades' },
   { value: 'SPA', label: 'SPA' },
   { value: 'BARBERIA', label: 'Barbería' },
@@ -54,8 +60,9 @@ const unitOptions: { value: BusinessUnit | ''; label: string }[] = [
 export function UserForm(): JSX.Element {
   const router = useRouter();
   const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
   const isEdit = id && id !== 'new';
+  const { success, error } = useToast();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -78,42 +85,40 @@ export function UserForm(): JSX.Element {
     reset,
     setValue,
     setError,
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
       email: '',
       role: 'RECEPTIONIST',
-      unit: null,
-      phone: '',
       commissionPct: '',
+      unit: undefined,
+      phone: '',
       password: '',
-    },
+    } as Partial<FormData>,
   });
 
   // Reset form when mode changes or data loads
   useEffect(() => {
-    console.log('🔍 UserForm useEffect:', { isEdit, user });
-    
+        
     if (isEdit && user) {
       // Set values for edit mode
-      console.log('📝 Modo edición - seteando valores:', user);
       setValue('name', user.name || '');
       setValue('email', user.email || '');
-      setValue('role', (user.role === 'BEAUTICIAN' || user.role === 'MANAGER') ? 'RECEPTIONIST' : (user.role || 'RECEPTIONIST') as any);
-      setValue('unit', user.unit || null);
+      setValue('role', (user.role === 'BEAUTICIAN' || user.role === 'MANAGER' ? 'RECEPTIONIST' : user.role));
+      setValue('unit', (user.unit === null || user.unit === undefined) ? undefined : user.unit);
       setValue('phone', user.phone || '');
       setValue('commissionPct', user.commissionPct?.toString() || '');
       setValue('password', '');
       setShowPassword(false);
     } else if (!isEdit) {
       // Reset for new user
-      console.log('🆕 Modo creación - reseteando a valores vacíos');
       reset({
         name: '',
         email: '',
         role: 'RECEPTIONIST',
-        unit: null,
+        unit: undefined,
         phone: '',
         commissionPct: '',
         password: '',
@@ -123,53 +128,62 @@ export function UserForm(): JSX.Element {
   }, [isEdit, user, reset, setValue]);
 
   const createMutation = useMutation({
-    mutationFn: async (body: FormData) => {
-      console.log('createMutation called with:', body);
+    mutationFn: async (body: CreateUserRequest) => {
       const { data } = await api.post<User>('/api/users', body);
-      console.log('createMutation response:', data);
       return data;
     },
     onSuccess: (data) => {
-      console.log('createMutation success:', data);
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      success('Usuario creado exitosamente');
       router.replace(`/admin/users`);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      console.log('createMutation error:', err);
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
+      setError('root', { message: err.response?.data?.error ?? t('errorOccurred') });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (body: FormData) => {
+    mutationFn: async (body: UpdateUserRequest) => {
       const { data } = await api.patch<User>(`/api/users/${id}`, body);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['user', id] });
+      success('Usuario actualizado exitosamente');
       router.replace(`/admin/users`);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      setError('root', { message: err.response?.data?.error ?? 'Error al guardar' });
+      setError('root', { message: err.response?.data?.error ?? t('errorOccurred') });
     },
   });
 
   const onSubmit = (data: FormData): void => {
-    // 💡 Convertimos commissionPct de string a número antes de enviarlo
-    const processedData = {
-      ...data,
-      commissionPct: data.commissionPct && data.commissionPct !== '' 
-        ? parseFloat(data.commissionPct) 
-        : undefined, // Si está vacío, enviamos undefined para que no falle
-    };
-
-    console.log('Enviando datos procesados:', processedData);
-    
     if (isEdit) {
-      updateMutation.mutate(processedData as any);
+      const updateData: UpdateUserRequest = {
+        name: data.name || undefined,
+        email: data.email,
+        role: data.role as UserRole,
+        unit: data.unit,
+        phone: data.phone || null,
+        commissionPct: data.commissionPct && data.commissionPct !== '' 
+          ? parseFloat(data.commissionPct) 
+          : null, 
+      };
+      updateMutation.mutate(updateData);
     } else {
-      createMutation.mutate(processedData as any);
+      const createData: CreateUserRequest = {
+        name: data.name || '',
+        email: data.email,
+        role: data.role as UserRole,
+        unit: data.unit,
+        phone: data.phone || null,
+        commissionPct: data.commissionPct && data.commissionPct !== '' 
+          ? parseFloat(data.commissionPct) 
+          : null, 
+        password: data.password || '',
+      };
+      createMutation.mutate(createData);
     }
   };
 
@@ -188,7 +202,7 @@ export function UserForm(): JSX.Element {
         }}></div>
       </div>
       
-      <div className="relative max-w-2xl mx-auto p-6">
+      <div className="relative max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto p-4 md:p-6">
         {/* Enhanced Header - Exacto ClientForm */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
@@ -244,11 +258,11 @@ export function UserForm(): JSX.Element {
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre completo *</label>
                 <input 
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                  placeholder="Ingresa el nombre completo"
+                  placeholder={getPlaceholder('name')}
                   {...register('name')} 
                 />
                 {errors.name && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                  <p className="mt-2 text-sm text-[var(--unit-error)] font-medium flex items-center gap-1">
                     <AlertCircle className="h-4 w-4" />
                     {errors.name.message}
                   </p>
@@ -261,12 +275,12 @@ export function UserForm(): JSX.Element {
                 <input
                   type="email"
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="juan@ejemplo.com"
+                  placeholder={getPlaceholder('email')}
                   {...register('email')}
                   disabled={isEdit ? true : undefined}
                 />
                 {errors.email && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                  <p className="mt-2 text-sm text-[var(--unit-error)] font-medium flex items-center gap-1">
                     <AlertCircle className="h-4 w-4" />
                     {errors.email.message}
                   </p>
@@ -280,39 +294,21 @@ export function UserForm(): JSX.Element {
               </div>
 
               {/* Enhanced Role Field */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Rol *</label>
-                <select className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" {...register('role')}>
-                  {roleOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.role && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.role.message}
-                  </p>
-                )}
-              </div>
+              <Select
+                label="Rol *"
+                options={roleOptions}
+                value={watch('role')}
+                onChange={(e: any) => setValue('role', e.target.value)}
+                error={errors.role?.message}
+              />
 
               {/* Enhanced Unit Field */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Unidad de negocio</label>
-                <select
-                  {...register('unit', {
-                    setValueAs: (v: string) => (v === '' ? null : v),
-                  })}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                >
-                  {unitOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Unidad de negocio"
+                options={unitOptions}
+                value={watch('unit') || ''}
+                onChange={(e: any) => setValue('unit', e.target.value === '' ? undefined : e.target.value as BusinessUnit | undefined)}
+              />
 
               {/* Enhanced Phone Field */}
               <div>
@@ -320,11 +316,11 @@ export function UserForm(): JSX.Element {
                 <input
                   type="tel"
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  placeholder="+51 987 654 321"
+                  placeholder={getPlaceholder('phone')}
                   {...register('phone')}
                 />
                 {errors.phone && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                  <p className="mt-2 text-sm text-[var(--unit-error)] font-medium flex items-center gap-1">
                     <AlertCircle className="h-4 w-4" />
                     {errors.phone.message}
                   </p>
@@ -337,11 +333,11 @@ export function UserForm(): JSX.Element {
                 <input
                   type="text"
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  placeholder="10.5"
+                  placeholder="Ej: 15.5"
                   {...register('commissionPct')}
                 />
                 {errors.commissionPct && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                  <p className="mt-2 text-sm text-[var(--unit-error)] font-medium flex items-center gap-1">
                     <AlertCircle className="h-4 w-4" />
                     {errors.commissionPct.message}
                   </p>
@@ -359,7 +355,7 @@ export function UserForm(): JSX.Element {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 pr-12 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder={getPlaceholder('password')}
                       {...register('password')}
                     />
                     <button
@@ -375,7 +371,7 @@ export function UserForm(): JSX.Element {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                    <p className="mt-2 text-sm text-[var(--unit-error)] font-medium flex items-center gap-1">
                       <AlertCircle className="h-4 w-4" />
                       {errors.password.message}
                     </p>
@@ -385,38 +381,31 @@ export function UserForm(): JSX.Element {
                   </p>
                 </div>
               )}
-            </div>
 
-            {/* Enhanced Action Buttons - Exacto ClientForm */}
-            <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
-              <div className="flex gap-4">
-                <button 
-                  type="submit" 
-                  disabled={isLoading} 
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Guardando...
+              {/* Enhanced Action Buttons - Exacto ClientForm */}
+              <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
+                <div className="flex gap-4">
+                  <Button 
+                    type="submit" 
+                    variant="primary"
+                    isLoading={isLoading}
+                    disabled={isLoading}
+                    className="flex-1"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isEdit ? 'Actualizar usuario' : 'Guardar usuario'}
+                  </Button>
+                  <button 
+                    type="button" 
+                    onClick={() => router.back()} 
+                    className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <X className="h-4 w-4" />
+                      Cancelar
                     </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />
-                      Guardar usuario
-                    </span>
-                  )}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => router.back()} 
-                  className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  <span className="flex items-center gap-2">
-                    <X className="h-4 w-4" />
-                    Cancelar
-                  </span>
-                </button>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

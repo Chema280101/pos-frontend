@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useToastStore } from '@/store/toastStore';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export function SyncQueue(): JSX.Element | null {
   const [ops, setOps] = useState<QueuedOperation[]>([]);
@@ -113,7 +114,7 @@ export function SyncQueue(): JSX.Element | null {
                   {op.description}
                 </p>
                 <p className="text-[10px] text-[var(--unit-text)]/60">
-                  {new Date(op.createdAt).toLocaleString('es-CO')}
+                  {format(new Date(op.createdAt), 'dd/MM/yyyy HH:mm')}
                 </p>
               </div>
               <button

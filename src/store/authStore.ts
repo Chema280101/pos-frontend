@@ -55,6 +55,17 @@ export const useAuthStore = create<AuthState>()(
         useUnitStore.getState().setUnit(null);
         set({ user: null, accessToken: null });
         
+        // ✅ NUEVO: Limpiar cache de React Query para evitar filtración entre sesiones
+        if (typeof window !== 'undefined' && window.queryClient) {
+          try {
+            // Limpiar todas las queries cacheadas
+            window.queryClient.clear();
+            // React Query cache cleared on logout
+          } catch (error) {
+            // Error clearing React Query cache
+          }
+        }
+        
         // Reset flag after clearing
         setTimeout(() => {
           isClearingSession = false;
@@ -65,55 +76,42 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
-          await api.post('/api/auth/logout');
+          await api.post('/auth/logout');
+        } catch (error) {
+          // Logout error
         } finally {
           get().clearSession();
         }
       },
 
       fetchMe: async () => {
-        const token = getAccessToken();
-        if (!token) return null;
-
         try {
-          const { data } = await api.get<AuthUser>('/api/auth/me');
-          set({ user: data });
-          return data;
-        } catch {
+          const response = await api.get('/auth/me');
+          const userData = response.data;
+          get().setSession(userData, getAccessToken()!);
+          return userData;
+        } catch (error) {
+          // fetchMe error
           get().clearSession();
           return null;
         }
       },
 
       tryRefresh: async () => {
-        if (refreshPromise) return refreshPromise;
+        if (refreshPromise) {
+          return refreshPromise;
+        }
 
         refreshPromise = (async () => {
-          set({ isLoading: true });
-
           try {
-            const { data } = await api.post<{ user: AuthUser; accessToken: string }>(
-              '/api/auth/refresh',
-              {},
-              { withCredentials: true }
-            );
-
-            setAccessToken(data.accessToken);
-            set({
-              user: data.user,
-              accessToken: data.accessToken,
-              isLoading: false,
-            });
-
+            const response = await api.post('/api/auth/refresh');
+            const { accessToken: newToken } = response.data;
+            setAccessToken(newToken);
+            set({ accessToken: newToken });
             return true;
-          } catch {
-            setAccessToken(null);
-            set({
-              user: null,
-              accessToken: null,
-              isLoading: false,
-            });
-
+          } catch (error) {
+            // Token refresh failed
+            get().clearSession();
             return false;
           } finally {
             refreshPromise = null;
@@ -124,10 +122,13 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => sessionStorage),
+      name: 'auth-store',
+      storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
+        if (state?.accessToken) {
+          setAccessToken(state.accessToken);
+        }
       },
       partialize: (state) => ({
         user: state.user,

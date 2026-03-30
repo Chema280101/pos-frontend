@@ -22,12 +22,51 @@
   /* Sombras: Profundidad equilibrada */
   --unit-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   --unit-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08);
+  /* Estados del sistema */
+  --unit-error: #DC2626;
+  --unit-warning: #D97706;
+  --unit-success: #059669;
+  --unit-info: #2563EB;
   /* Tipografía: El mix perfecto */
   --unit-font-heading: 'Playfair Display', serif; /* Elegancia */
   --unit-font-body: 'Outfit', sans-serif; /* Modernidad Urbana */
   /* Gradiente hero: Fusión de ambos mundos */
   --unit-gradient-hero: linear-gradient(135deg, #4A0E0E 0%, #2D0A31 100%);
   --unit-icon-style: outline;
+}
+
+/* ========== Dark Mode ========== */
+.dark {
+  /* Colores principales invertidos para modo oscuro */
+  --unit-primary: #F8F5FF; /* Color secundario claro como primario */
+  --unit-primary-dark: #FFFFFF;
+  --unit-secondary: #1a1a1a; /* Color primario oscuro como secundario */
+  --unit-accent: #7C3AED; /* Acento más brillante para modo oscuro */
+  --unit-accent-hover: #A78BFA;
+  
+  /* Texto: Alto contraste para modo oscuro */
+  --unit-text: #FFFFFF; /* Blanco puro para texto principal */
+  --unit-text-muted: #D1D5DB; /* Gris claro para texto secundario */
+  
+  /* Superficies: Oscuras pero con contraste */
+  --unit-surface: #111827; /* Gris muy oscuro */
+  --unit-surface-elevated: #1F2937; /* Gris oscuro para elementos elevados */
+  
+  /* Bordes: Más visibles en modo oscuro */
+  --unit-border: rgba(255, 255, 255, 0.1);
+  
+  /* Sombras: Más profundas para modo oscuro */
+  --unit-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  --unit-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
+  
+  /* Estados del sistema en modo oscuro */
+  --unit-error: #EF4444;
+  --unit-warning: #F59E0B;
+  --unit-success: #10B981;
+  --unit-info: #3B82F6;
+  
+  /* Gradiente hero invertido */
+  --unit-gradient-hero: linear-gradient(135deg, #111827 0%, #1F2937 100%);
 }
 
 /* ========== Dark theme para panel izquierdo ========== */
@@ -68,6 +107,34 @@
   --unit-icon-style: outline;
 }
 
+/* ========== SPA Dark Mode ========== */
+.dark[data-unit='SPA'] {
+  /* Colores principales para SPA en modo oscuro */
+  --unit-primary: #E9D5FF; /* Lavanda brillante */
+  --unit-primary-dark: #DDD6FE;
+  --unit-secondary: #4C1D95; /* Púrpura muy oscuro */
+  --unit-accent: #A78BFA; /* Púrpura brillante */
+  --unit-accent-hover: #C4B5FD;
+  
+  /* Texto para SPA dark */
+  --unit-text: #FFFFFF;
+  --unit-text-muted: #E9D5FF;
+  
+  /* Superficies para SPA dark */
+  --unit-surface: #1E1B4B; /* Púrpura muy oscuro */
+  --unit-surface-elevated: #312E81; /* Púrpura oscuro medio */
+  
+  /* Bordes para SPA dark */
+  --unit-border: rgba(167, 139, 250, 0.2);
+  
+  /* Sombras para SPA dark */
+  --unit-shadow: 0 4px 20px rgba(147, 51, 234, 0.25);
+  --unit-shadow-lg: 0 12px 40px rgba(147, 51, 234, 0.35);
+  
+  /* Gradiente hero para SPA dark */
+  --unit-gradient-hero: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+}
+
 /* ========== Barbería — Urbana y masculina ========== */
 [data-unit='BARBERIA'] {
   /* Colores principales con mejor profundidad */
@@ -96,6 +163,70 @@
   /* Gradiente hero con colores mantenidos */
   --unit-gradient-hero: linear-gradient(135deg, #7A0A0A 0%, #000000 100%);
   --unit-icon-style: outline;
+}
+
+/* ========== Barbería Dark Mode ========== */
+.dark[data-unit='BARBERIA'] {
+  /* Colores principales para Barbería en modo oscuro */
+  --unit-primary: #FFFFFF; /* Blanco brillante */
+  --unit-primary-dark: #F8F8F8;
+  --unit-secondary: #1A0000; /* Rojo muy oscuro */
+  --unit-accent: #EF4444; /* Rojo brillante */
+  --unit-accent-hover: #F87171;
+  
+  /* Texto para Barbería dark */
+  --unit-text: #FFFFFF;
+  --unit-text-muted: #FCA5A5; /* Rojo claro */
+  
+  /* Superficies para Barbería dark */
+  --unit-surface: #1A0000; /* Rojo muy oscuro */
+  --unit-surface-elevated: #450A0A; /* Rojo oscuro medio */
+  
+  /* Bordes para Barbería dark */
+  --unit-border: rgba(239, 68, 68, 0.2);
+  
+  /* Sombras para Barbería dark */
+  --unit-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+  --unit-shadow-lg: 0 15px 50px rgba(239, 68, 68, 0.35);
+  
+  /* Gradiente hero para Barbería dark */
+  --unit-gradient-hero: linear-gradient(135deg, #1A0000 0%, #450A0A 100%);
+}
+
+/* ========== Tailwind Dark Mode Utilities ========== */
+@layer utilities {
+  /* Transiciones suaves para modo oscuro */
+  .transition-theme {
+    transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
+  }
+  
+  /* Overlay para modo oscuro */
+  .dark-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Scrollbar para modo oscuro */
+  .dark .scrollbar-dark {
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+  
+  .dark .scrollbar-dark::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .dark .scrollbar-dark::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .dark .scrollbar-dark::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+  }
+  
+  .dark .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+  }
 }
 
 /* Transición suave al cambiar de unidad */
@@ -185,9 +316,37 @@ body {
   border-color: #8b0000;
   color: #f5f5f5;
 }
-.appointment-calendar .fc-event-completed { opacity: 0.85; }
-.appointment-calendar .fc-event-cancelled { opacity: 0.5; text-decoration: line-through; }
-.appointment-calendar .fc-event-progress { border-width: 2px; }
+.appointment-calendar .fc-event-confirmed {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #059669;
+  color: white;
+  font-weight: 500;
+}
+.appointment-calendar .fc-event-completed { 
+  opacity: 0.85; 
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-color: #16a34a;
+  color: white;
+}
+.appointment-calendar .fc-event-cancelled { 
+  opacity: 0.6; 
+  text-decoration: line-through;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #dc2626;
+  color: white;
+}
+.appointment-calendar .fc-event-progress { 
+  border-width: 2px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #d97706;
+  color: white;
+}
+.appointment-calendar .fc-event-rescheduled {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-color: #0891b2;
+  color: white;
+  font-style: italic;
+}
 
 /* ========== Print styles for reports ========== */
 @media print {
@@ -238,5 +397,214 @@ body {
   .recharts-wrapper {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+}
+
+/* ========== Responsive Design System ========== */
+
+/* Mobile First Approach */
+@media (max-width: 640px) {
+  /* Mobile Optimizations */
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-full {
+    width: 100% !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  
+  .mobile-center {
+    text-align: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Reduce padding on mobile */
+  .mobile-compact {
+    padding: 1rem !important;
+  }
+  
+  /* Optimize modals for mobile */
+  .modal-mobile {
+    margin: 1rem !important;
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100vh - 2rem) !important;
+  }
+  
+  /* Optimize tables for mobile */
+  .table-mobile {
+    font-size: 0.875rem !important;
+  }
+  
+  .table-mobile th,
+  .table-mobile td {
+    padding: 0.5rem 0.25rem !important;
+  }
+}
+
+/* Tablet Optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Tablet Specific Styles */
+  .tablet-optimized {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+  
+  /* Better use of tablet space */
+  .tablet-grid-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .tablet-grid-3 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  
+  /* Optimize navigation for tablet */
+  .nav-tablet {
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Improve touch targets */
+  .tablet-touch {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Large Desktop */
+@media (min-width: 1025px) {
+  .desktop-full {
+    max-width: 100%;
+  }
+  
+  .desktop-grid-4 {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* Responsive Typography */
+@media (max-width: 640px) {
+  .responsive-text {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+  
+  .responsive-title {
+    font-size: 1.25rem !important;
+    line-height: 1.5rem !important;
+  }
+  
+  .responsive-heading {
+    font-size: 1.5rem !important;
+    line-height: 1.75rem !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .responsive-text {
+    font-size: 0.9375rem !important;
+    line-height: 1.3125rem !important;
+  }
+  
+  .responsive-title {
+    font-size: 1.375rem !important;
+    line-height: 1.625rem !important;
+  }
+  
+  .responsive-heading {
+    font-size: 1.75rem !important;
+    line-height: 1.875rem !important;
+  }
+}
+
+/* Responsive Spacing */
+@media (max-width: 640px) {
+  .responsive-gap {
+    gap: 0.75rem !important;
+  }
+  
+  .responsive-padding {
+    padding: 0.75rem !important;
+  }
+  
+  .responsive-margin {
+    margin: 0.75rem !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .responsive-gap {
+    gap: 1rem !important;
+  }
+  
+  .responsive-padding {
+    padding: 1rem !important;
+  }
+  
+  .responsive-margin {
+    margin: 1rem !important;
+  }
+}
+
+/* Responsive Grid System */
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Responsive Flex System */
+.responsive-flex {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-flex {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* Responsive Cards */
+.responsive-card {
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-card {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-card {
+    padding: 2rem;
+    border-radius: 1rem;
   }
 }

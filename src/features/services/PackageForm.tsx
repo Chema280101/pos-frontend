@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui';
+import { EmptyStateData } from '@/components/ui/EmptyState';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { Edit, Plus, AlertCircle, X, Package, Save, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/useToast';
 
 const schema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
   description: z.string().max(2000).optional().nullable(),
-  fixedPrice: z.number().positive('Precio debe ser positivo'),
+  fixedPrice: z.number().positive({ message: "Precio debe ser positivo" }),
   status: z.enum(['ACTIVE', 'INACTIVE']),
 });
 
@@ -41,8 +44,8 @@ interface PackageDetail {
 
 export function PackageForm(): JSX.Element {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const params = useParams<{ id?: string | string[] }>();
+  const id = params?.id == null ? undefined : Array.isArray(params?.id) ? params?.id[0] : params?.id;
   const isEdit = !!id && id !== 'new';
   const queryClient = useQueryClient();
   const [selectedServices, setSelectedServices] = useState<Array<{ serviceId: string; commissionShare: number | null }>>([]);
@@ -54,6 +57,7 @@ export function PackageForm(): JSX.Element {
   const { data: pkg } = useQuery({
     queryKey: ['package', id],
     queryFn: async (): Promise<PackageDetail> => {
+      if (!id) throw new Error('ID no proporcionado');
       const { data } = await api.get<PackageDetail>(`/api/packages/${id}`);
       return data;
     },
@@ -68,6 +72,7 @@ export function PackageForm(): JSX.Element {
     },
   });
 
+  const { success } = useToast();
   const { register, handleSubmit, setError, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', description: '', fixedPrice: 0, status: 'ACTIVE' },
@@ -130,17 +135,14 @@ export function PackageForm(): JSX.Element {
           commissionShare: s.commissionShare !== null ? Number(s.commissionShare) : null,
         })),
       };
-
-      console.log('🚀 Enviando paquete:', payload);
+      
       const { data } = await api.post('/api/packages', payload);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
-      setSuccessMessage('¡Paquete creado exitosamente!');
-      setShowSuccessMessage(true);
+      success('Paquete creado exitosamente');
       setTimeout(() => {
-        setShowSuccessMessage(false);
         router.replace('/packages');
       }, 2000);
     },
@@ -170,10 +172,8 @@ export function PackageForm(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
-      setSuccessMessage('¡Paquete actualizado exitosamente!');
-      setShowSuccessMessage(true);
+      success('Paquete actualizado exitosamente');
       setTimeout(() => {
-        setShowSuccessMessage(false);
         router.replace('/packages');
       }, 2000);
     },
@@ -200,7 +200,7 @@ export function PackageForm(): JSX.Element {
         }}></div>
       </div>
 
-      <div className="relative max-w-2xl mx-auto p-6">
+      <div className="relative max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto p-4 md:p-6">
         {/* Enhanced Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
@@ -256,7 +256,7 @@ export function PackageForm(): JSX.Element {
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre del paquete *</label>
                 <input
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  placeholder="Ingresa el nombre del paquete"
+                  placeholder="Ej: Paquete Premium + Corte + Barba"
                   {...register('name')}
                 />
                 {errors.name && (
@@ -280,7 +280,7 @@ export function PackageForm(): JSX.Element {
 
               {/* Enhanced Price Field */}
               <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio fijo (S/) *</label>
+                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio (S/) *</label>
                 <input
                   type="number"
                   step="0.10"
@@ -356,11 +356,19 @@ export function PackageForm(): JSX.Element {
                 ))}
 
                 {selectedServices.length === 0 && (
-                  <div className="text-center py-8 rounded-xl border-2 border-dashed border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50">
-                    <Package className="h-12 w-12 text-[var(--unit-text-muted)]/50 mx-auto mb-3" />
-                    <p className="text-[var(--unit-text-muted)] font-medium">No hay servicios agregados</p>
-                    <p className="text-sm text-[var(--unit-text-muted)]/70 mt-1">Agrega al menos un servicio para crear el paquete</p>
-                  </div>
+                  <EmptyStateData
+                    title="No hay servicios agregados"
+                    description="Agrega al menos un servicio para crear el paquete. Los paquetes te permiten ofrecer múltiples servicios con un precio especial."
+                    action={
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => document.getElementById('service-search')?.focus()}
+                      >
+                        Buscar servicios
+                      </Button>
+                    }
+                  />
                 )}
               </div>
             </div>
@@ -368,23 +376,16 @@ export function PackageForm(): JSX.Element {
             {/* Enhanced Action Buttons */}
             <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
               <div className="flex gap-4">
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  isLoading={isSubmitting}
                   disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                  className="flex-1"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Guardando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />
-                      {isEdit ? 'Actualizar paquete' : 'Crear paquete'}
-                    </span>
-                  )}
-                </button>
+                  <Save className="h-4 w-4" />
+                  {isEdit ? 'Actualizar paquete' : 'Crear paquete'}
+                </Button>
                 <button
                   type="button"
                   onClick={() => router.push('/packages')}

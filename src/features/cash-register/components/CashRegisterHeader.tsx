@@ -6,6 +6,7 @@ import { useUnitStore } from '@/store/unitStore';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { Select } from '@/components/ui';
 import { CashRegisterStatus } from '../CashRegisterStatus';
 import type { CashRegisterOpen, BusinessUnit } from '@/types/cash';
 
@@ -184,33 +185,29 @@ export function CashRegisterHeader({
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unidad
-              </label>
-              <select
+              <Select
+                label="Unidad"
+                options={[
+                  { value: '', label: 'Todas' },
+                  { value: 'SPA', label: 'SPA' },
+                  { value: 'BARBERIA', label: 'Barbería' }
+                ]}
                 value={unitFilter}
                 onChange={(e) => onUnitFilterChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Todas</option>
-                <option value="SPA">SPA</option>
-                <option value="BARBERIA">Barbería</option>
-              </select>
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado
-              </label>
-              <select
+              <Select
+                label="Estado"
+                options={[
+                  { value: '', label: 'Todos' },
+                  { value: 'OPEN', label: 'Abierta' },
+                  { value: 'CLOSED', label: 'Cerrada' }
+                ]}
                 value={statusFilter}
                 onChange={(e) => onStatusFilterChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Todos</option>
-                <option value="OPEN">Abierta</option>
-                <option value="CLOSED">Cerrada</option>
-              </select>
+              />
             </div>
 
             <div className="lg:col-span-2">
@@ -220,8 +217,8 @@ export function CashRegisterHeader({
               <DateRangeFilter
                 dateFrom={dateFrom}
                 dateTo={dateTo}
-                onDateFromChange={onDateFromChange}
-                onDateToChange={onDateToChange}
+                onDateFromChange={(date) => date && onDateFromChange(date)}
+                onDateToChange={(date) => date && onDateToChange(date)}
               />
             </div>
           </div>

@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { Drawer } from '@/components/ui';
 import { useToastStore } from '@/store/toastStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useToast } from '@/hooks/useToast';
 
 export interface AppointmentDetailDrawerProps {
   appointmentId: string | null;
@@ -40,6 +41,12 @@ function StatusBadge({ status }: { status: string }): JSX.Element {
       text: 'text-emerald-800', 
       border: 'border-emerald-200',
       label: 'Completada' 
+    },
+    CONFIRMED: { 
+      bg: 'bg-green-100', 
+      text: 'text-green-800', 
+      border: 'border-green-200',
+      label: 'Confirmada' 
     },
     CANCELLED: { 
       bg: 'bg-red-100', 
@@ -89,6 +96,7 @@ export function AppointmentDetailDrawer({
   onInvalidateList,
 }: AppointmentDetailDrawerProps): JSX.Element {
   const queryClient = useQueryClient();
+  const { success } = useToast();
 
   const { data: apt, isLoading } = useQuery({
     queryKey: ['appointment', appointmentId],
@@ -108,22 +116,17 @@ export function AppointmentDetailDrawer({
       return data;
     },
     onSuccess: (data: Appointment | undefined, variables) => {
-      console.log('🔄 DetailDrawer - Invalidating queries after status change...');
-      console.log('🔄 DetailDrawer - Status changed to:', variables.status);
-      
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
       queryClient.invalidateQueries({ queryKey: ['appointments-table'] });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       onInvalidateList?.();
       
-      console.log('🔄 DetailDrawer - All queries invalidated successfully');
-      
       const serviceNames = data?.items?.map((i) => i.service.name).join(', ') ?? 'Servicio';
       const customerName = data?.customer?.name ?? 'Cliente';
       
       if (variables.status === 'IN_PROGRESS' && data) {
-        addToast(`${customerName} llegó — ${serviceNames}`, 'success', 6000);
+        success(`${customerName} llegó — ${serviceNames}`);
         addNotification({
           type: 'appointment',
           title: 'Cliente llegó',
@@ -132,7 +135,7 @@ export function AppointmentDetailDrawer({
           linkLabel: 'Ver cita',
         });
       } else if (variables.status === 'COMPLETED' && data) {
-        addToast(`${customerName} — ${serviceNames} completada`, 'success', 6000);
+        success(`${customerName} — ${serviceNames} completada`);
         addNotification({
           type: 'appointment',
           title: 'Cita completada',
@@ -141,7 +144,7 @@ export function AppointmentDetailDrawer({
           linkLabel: 'Ver cita',
         });
       } else if (variables.status === 'CANCELLED' && data) {
-        addToast(`${customerName} — ${serviceNames} cancelada`, 'error', 6000);
+        success(`${customerName} — ${serviceNames} cancelada`);
         addNotification({
           type: 'appointment',
           title: 'Cita cancelada',
@@ -150,7 +153,7 @@ export function AppointmentDetailDrawer({
           linkLabel: 'Ver cita',
         });
       } else if (variables.status === 'NO_SHOW' && data) {
-        addToast(`${customerName} — ${serviceNames} no se presentó`, 'warning', 6000);
+        success(`${customerName} — ${serviceNames} no se presentó`);
         addNotification({
           type: 'appointment',
           title: 'Cliente no se presentó',
@@ -159,14 +162,16 @@ export function AppointmentDetailDrawer({
           linkLabel: 'Ver cita',
         });
       }
+      
+      // Cerrar el modal después de cambiar el estado
+      onClose();
     },
     onError: (error: any) => {
       addToast('Error al actualizar el estado de la cita', 'error', 6000);
-      console.error('Failed to update appointment status:', error);
     },
   });
 
-  const canChangeStatus = apt?.status === 'SCHEDULED' || apt?.status === 'IN_PROGRESS' || apt?.status === 'RESCHEDULED';
+  const canChangeStatus = apt?.status === 'SCHEDULED' || apt?.status === 'CONFIRMED' || apt?.status === 'IN_PROGRESS' || apt?.status === 'RESCHEDULED';
 
   return (
     <Drawer open={open} onClose={onClose} title={apt ? apt.customer.name : 'Cita'} width="md">
@@ -191,8 +196,8 @@ export function AppointmentDetailDrawer({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-[var(--unit-text)]">
                   <Calendar className="h-4 w-4 text-[var(--unit-accent)]" />
-                  {format(new Date(apt.startTime), "EEEE d MMM yyyy, HH:mm", { locale: es })} –{' '}
-                  {format(new Date(apt.endTime), 'HH:mm', { locale: es })}
+                  {format(new Date(apt.startTime), "dd 'de' MMMM yyyy, HH:mm")} – {' '}
+                  {format(new Date(apt.endTime), 'HH:mm')}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-[var(--unit-text)]">
                   <MapPin className="h-4 w-4 text-[var(--unit-accent)]" />
@@ -251,7 +256,7 @@ export function AppointmentDetailDrawer({
               <div className="relative">
                 <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider mb-3">Acciones</h4>
                 <div className="flex flex-wrap gap-3">
-                  {(apt.status === 'SCHEDULED' || apt.status === 'RESCHEDULED') && (
+                  {(apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED' || apt.status === 'RESCHEDULED') && (
                     <button
                       type="button"
                       onClick={() => statusMutation.mutate({ status: 'IN_PROGRESS' })}
@@ -262,7 +267,7 @@ export function AppointmentDetailDrawer({
                       Cliente llegó (check-in)
                     </button>
                   )}
-                  {(apt.status === 'SCHEDULED' || apt.status === 'IN_PROGRESS' || apt.status === 'RESCHEDULED') && (
+                  {(apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED' || apt.status === 'IN_PROGRESS' || apt.status === 'RESCHEDULED') && (
                     <>
                       <button
                         type="button"

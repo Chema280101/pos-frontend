@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { DataTable } from '@/components/ui/DataTable';
 import { PersonalCommissionsMetrics } from './PersonalCommissionsMetrics';
+import { getCommissionStatusLabel } from '@/lib/translations';
 import { DollarSign, Eye, TrendingUp, Calendar, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp, Filter, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -114,7 +115,7 @@ export function MyCommissions(): JSX.Element {
             ? 'bg-blue-100 text-blue-800'
             : 'bg-gray-100 text-gray-800'
         )}>
-          {row.status === 'PENDING' ? 'Pendiente' : row.status === 'APPROVED' ? 'Aprobada' : 'Pagada'}
+          {getCommissionStatusLabel(row.status)}
         </span>
       ),
     },
@@ -145,8 +146,7 @@ export function MyCommissions(): JSX.Element {
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Commission) => {
-        // Aquí podrías abrir un modal con detalles
-        console.log('Ver detalles de comisión:', row);
+        // TODO: Implement view commission details
       },
       className: 'text-blue-600 hover:bg-blue-50',
     },
@@ -308,7 +308,7 @@ export function MyCommissions(): JSX.Element {
                       <div className="flex flex-wrap gap-2">
                         {statusFilter && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Estado: {statusFilter === 'PENDING' ? 'Pendientes' : statusFilter === 'APPROVED' ? 'Aprobadas' : 'Pagadas'}
+                            Estado: {getCommissionStatusLabel(statusFilter)}
                           </span>
                         )}
                         {search && (

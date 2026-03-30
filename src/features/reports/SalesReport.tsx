@@ -2,9 +2,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from '@/components/ui';
 import { Edit, Eye, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getStatusColor, getUnitColor } from '@/lib/table-colors';
 
 interface Sale {
   id: string;
@@ -94,12 +95,7 @@ export function SalesReport({ unit, dateFrom, dateTo, compact = false }: SalesRe
       key: 'unit',
       header: 'Unidad',
       render: (row: Sale) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.unit === 'SPA'
-            ? 'bg-purple-100 text-purple-800'
-            : 'bg-amber-100 text-amber-800'
-        )}>
+        <span className={getUnitColor(row.unit)}>
           {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
       ),
@@ -121,10 +117,7 @@ export function SalesReport({ unit, dateFrom, dateTo, compact = false }: SalesRe
       key: 'status',
       header: 'Estado',
       render: (row: Sale) => (
-        <span className={cn(
-          'px-2 py-1 rounded-full text-xs font-medium',
-          row.status === 'CLOSED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-        )}>
+        <span className={getStatusColor(row.status)}>
           {translateBackendTerm(row.status)}
         </span>
       ),
@@ -144,7 +137,7 @@ export function SalesReport({ unit, dateFrom, dateTo, compact = false }: SalesRe
       label: 'Editar',
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Sale) => {
-        console.log('Edit sale', row.id);
+        // TODO: Implement sale edit functionality
       },
       className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
@@ -175,7 +168,7 @@ export function SalesReport({ unit, dateFrom, dateTo, compact = false }: SalesRe
         searchPlaceholder="Buscar por cliente, empleado, método de pago..."
         filters={filters}
         actions={!compact ? actions : []}
-        emptyMessage="No hay ventas en el período seleccionado."
+        emptyMessage="No hay ventas en el período seleccionado. Intenta ajustar las fechas o selecciona un rango más amplio."
         pageSize={compact ? 5 : 20}
         maxHeight={compact ? "300px" : "500px"}
         pageSizeOptions={compact ? [5] : [10, 20, 50, 100]}

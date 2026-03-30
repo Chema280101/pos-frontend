@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import { KPICard, Skeleton } from '@/components/ui';
-import { InteractiveChart } from '@/components/Charts/InteractiveChart';
+import { LazyBarChart, LazyInteractiveChart } from '@/components/Charts/LazyCharts';
 import { 
   UnitKpis, 
   SalesTrendItem, 
@@ -17,11 +17,6 @@ import {
 import { DollarSign, Calendar, Users, Package, AlertTriangle } from 'lucide-react';
 
 const ChartSkeleton = () => <Skeleton className="h-[260px] w-full" />;
-
-const LazyBarChart = dynamic(
-  () => import('@/components/Charts/BarChart').then((mod) => mod.BarChart),
-  { ssr: false, loading: ChartSkeleton }
-);
 
 export function DashboardBarberia(): JSX.Element {
   const { data: kpis, isLoading } = useQuery({
@@ -153,119 +148,99 @@ export function DashboardBarberia(): JSX.Element {
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Ventas últimos 7 días" description="Ingresos diarios Barbería">
+        <LazyInteractiveChart title="Ventas últimos 7 días" description="Ingresos diarios Barbería">
           {salesTrend?.data ? (
             <LazyBarChart
               data={salesTrend.data.map(d => ({ ...d, name: d.date, ventas: d.totalSales }))}
-              series={[{ dataKey: 'ventas', color: '#8B0000', label: 'Ventas (S/)' }]}
-              height={260}
+              series={[{ dataKey: "ventas", color: "#10b981" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Servicios más solicitados" description="Top servicios Barbería">
+        <LazyInteractiveChart title="Servicios más solicitados" description="Top servicios Barbería">
           {topServices?.data ? (
             <LazyBarChart
               data={topServices.data.map(s => ({ ...s, name: s.serviceName, cantidad: s.count }))}
-              series={[{ dataKey: 'cantidad', color: '#B8860B', label: 'Cantidad' }]}
-              height={260}
+              series={[{ dataKey: "cantidad", color: "#3b82f6" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Tendencia de ventas y ticket promedio" description="Últimos 7 días">
+        <LazyInteractiveChart title="Tendencia de ventas y ticket promedio" description="Últimos 7 días">
           {salesTrend?.data ? (
             <LazyBarChart
               data={salesTrend.data.map(d => ({ ...d, name: d.date }))}
-              series={[
-                { dataKey: 'totalSales', color: '#2563eb', label: 'Ventas (S/)' },
-                { dataKey: 'ticketAvg', color: '#dc2626', label: 'Ticket promedio (S/)' },
-              ]}
-              height={260}
+              series={[{ dataKey: "totalSales", color: "#10b981" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Servicios más rentables" description="Top 10 por ingresos">
+        <LazyInteractiveChart title="Servicios más rentables" description="Top 10 por ingresos">
           {topServices?.data ? (
             <LazyBarChart
               data={topServices.data.map(s => ({ ...s, name: s.serviceName }))}
-              series={[
-                { dataKey: 'revenue', color: '#16a34a', label: 'Ingresos (S/)' },
-                { dataKey: 'count', color: '#9333ea', label: 'Cantidad' },
-              ]}
-              height={260}
+              series={[{ dataKey: "revenue", color: "#f59e0b" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Productividad por empleado" description="Servicios y ticket promedio">
+        <LazyInteractiveChart title="Productividad por empleado" description="Servicios y ticket promedio">
           {productivity?.data ? (
             <LazyBarChart
               data={productivity.data.map(p => ({ ...p, name: p.employee }))}
-              series={[
-                { dataKey: 'servicesCount', color: '#0891b2', label: 'Servicios' },
-                { dataKey: 'avgTicket', color: '#f59e0b', label: 'Ticket promedio (S/)' },
-              ]}
-              height={260}
+              series={[{ dataKey: "services", color: "#8b5cf6" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Embudo de agenda" description="Estado de citas últimos 7 días">
+        <LazyInteractiveChart title="Embudo de agenda" description="Estado de citas últimos 7 días">
           {funnel?.data ? (
             <LazyBarChart
               data={funnel.data.map(f => ({ ...f, name: f.stage }))}
-              series={[{ dataKey: 'count', color: '#0d9488', label: 'Cantidad' }]}
-              height={260}
+              series={[{ dataKey: "count", color: "#ef4444" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <InteractiveChart title="Flujo de caja" description="Ingresos vs egresos últimos 7 días">
+        <LazyInteractiveChart title="Flujo de caja" description="Ingresos vs egresos últimos 7 días">
           {cashFlow?.data ? (
             <LazyBarChart
               data={cashFlow.data.map(c => ({ ...c, name: c.date }))}
-              series={[
-                { dataKey: 'income', color: '#059669', label: 'Ingresos (S/)' },
-                { dataKey: 'expenses', color: '#dc2626', label: 'Egresos (S/)' },
-              ]}
-              height={260}
+              series={[{ dataKey: "income", color: "#10b981" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
 
-        <InteractiveChart title="Inventario crítico por categoría" description="Productos con stock bajo">
+        <LazyInteractiveChart title="Inventario crítico por categoría" description="Productos con stock bajo">
           {inventoryCritical?.data ? (
             <LazyBarChart
               data={inventoryCritical.data.map(cat => ({ name: cat.category, count: cat.products.length }))}
-              series={[{ dataKey: 'count', color: '#7c3aed', label: 'Productos críticos' }]}
-              height={260}
+              series={[{ dataKey: "count", color: "#f59e0b" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
           )}
-        </InteractiveChart>
+        </LazyInteractiveChart>
       </div>
     </div>
   );

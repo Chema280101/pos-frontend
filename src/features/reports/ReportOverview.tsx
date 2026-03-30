@@ -1,10 +1,14 @@
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui';
+import { EmptyStateReports } from '@/components/ui/EmptyState';
+import { FileText, Calendar, TrendingUp, Users, DollarSign, Package, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { ReportKPICard } from './shared/ReportKPICard';
-import { DollarSign, Calendar, Users, FileText, TrendingUp, Package, CreditCard, Calculator } from 'lucide-react';
+import { useUnitStore } from '@/store/unitStore';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { CreditCard, Calculator, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OverviewStats {
@@ -54,8 +58,11 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
 
   if (!overviewStats) {
     return (
-      <div className="text-center py-8 text-[var(--unit-text-muted)]">
-        No hay datos disponibles para el período seleccionado.
+      <div className="text-center">
+        <EmptyStateReports
+          title="No hay datos disponibles para el período seleccionado"
+          description="No se encontraron datos para el período seleccionado. Intenta seleccionar un período diferente o ajusta los filtros para ver los reportes."
+        />
       </div>
     );
   }

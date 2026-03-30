@@ -3,10 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, User, X, Search, Plus, Calendar, Clock, Scissors } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
+import { Select } from '@/components/ui';
+import { useCrossTabSync } from '@/hooks';
+import { useToast } from '@/hooks/useToast';
 import { 
   type CreateAppointmentInput,
   type Appointment,
@@ -43,6 +47,7 @@ export function AppointmentFormNew(): JSX.Element {
   const [serviceId, setServiceId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
   const [notes, setNotes] = useState('');
+  const { success } = useToast();
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,9 +55,15 @@ export function AppointmentFormNew(): JSX.Element {
   // Success confirmation state
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // ✅ Estado para advertencia de cruce de medianoche
+  const [crossesMidnight, setCrossesMidnight] = useState(false);
+  const [showMidnightWarning, setShowMidnightWarning] = useState(false);
 
   // Read URL parameters and set initial values
   useEffect(() => {
+    if (!searchParams) return;
+    
     const urlEmployeeId = searchParams.get('employeeId');
     const urlUnit = searchParams.get('unit') as 'SPA' | 'BARBERIA' | null;
     const urlStart = searchParams.get('start');
@@ -108,16 +119,12 @@ export function AppointmentFormNew(): JSX.Element {
     },
   });
   const allEmployees = employeesResponse?.data ?? [];
+  
+  // Hook para sincronización entre pestañas
+  const { invalidateAcrossTabs } = useCrossTabSync();
   const employees = allEmployees.filter((u: any) => 
     u.role === 'BARBER' || u.role === 'SPA_SPECIALIST'
   );
-  
-  console.log('👥 Employees loaded:', {
-    unit,
-    allEmployees: allEmployees.length,
-    filteredEmployees: employees.length,
-    employees: employees.map((e: any) => ({ id: e.id, name: e.name, role: e.role }))
-  });
 
   const handleSelectCustomer = useCallback((c: any) => {
     setCustomerId(c.id);
@@ -136,6 +143,35 @@ export function AppointmentFormNew(): JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ✅ Validación para detectar cruce de medianoche
+  useEffect(() => {
+    if (!date || !time || !serviceId) {
+      setCrossesMidnight(false);
+      setShowMidnightWarning(false);
+      return;
+    }
+
+    const selectedService = servicesForUnit.find((s: any) => s.id === serviceId);
+    const duration = selectedService?.durationMin ?? 30;
+    
+    const startTime = new Date(`${date}T${time}`);
+    const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+    
+    // Verificar si la cita cruza medianoche (diferente día)
+    const crosses = endTime.getDate() !== startTime.getDate() || 
+                   endTime.getMonth() !== startTime.getMonth() ||
+                   endTime.getFullYear() !== startTime.getFullYear();
+    
+    setCrossesMidnight(crosses);
+    
+    // Mostrar advertencia solo si cruza medianoche
+    if (crosses) {
+      setShowMidnightWarning(true);
+    } else {
+      setShowMidnightWarning(false);
+    }
+  }, [date, time, serviceId, servicesForUnit]);
+
   const createClientMutation = useMutation({
     mutationFn: async () => {
       const { data } = await api.post<any>('/api/clients', {
@@ -147,8 +183,9 @@ export function AppointmentFormNew(): JSX.Element {
       return data;
     },
     onSuccess: (newClient) => {
-      queryClient.invalidateQueries({ queryKey: ['clients-search'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      // ✅ Invalidar en todas las pestañas
+      invalidateAcrossTabs(['clients-search', 'clients']);
+      
       handleSelectCustomer(newClient);
       setShowNewClientForm(false);
       setNewClientName('');
@@ -160,19 +197,6 @@ export function AppointmentFormNew(): JSX.Element {
   const createMutation = useMutation({
     mutationFn: async () => {
       const startTime = new Date(`${date}T${time}`);
-      console.log('📅 Creating appointment with data:', {
-        unit,
-        customerId,
-        startTime: startTime.toISOString(),
-        items: [
-          {
-            serviceId,
-            employeeId,
-            durationMin: servicesForUnit.find((s: any) => s.id === serviceId)?.durationMin ?? 30,
-          },
-        ],
-        notes: notes.trim() || undefined,
-      });
       
       const result = await api.post('/api/appointments', {
         unit,
@@ -188,27 +212,24 @@ export function AppointmentFormNew(): JSX.Element {
         notes: notes.trim() || undefined,
       });
       
-      console.log('✅ Appointment created successfully:', result.data);
       return result;
     },
     onSuccess: (data) => {
-      console.log('🎉 onSuccess triggered, invalidating queries');
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      // ✅ Invalidar en todas las pestañas
+      invalidateAcrossTabs(['appointments']);
+      success('Cita creada exitosamente');
       
       // Emit custom event for real-time updates
       window.dispatchEvent(new CustomEvent('appointment:created', {
         detail: { appointment: data.data }
       }));
       
-      setSuccessMessage('¡Cita creada exitosamente!');
-      setShowSuccessMessage(true);
       setTimeout(() => {
-        setShowSuccessMessage(false);
-        router.push('/appointments');
-      }, 2000);
+        router.replace('/appointments');
+      }, 1500);
     },
     onError: (error) => {
-      console.error('❌ Error creating appointment:', error);
+      // Error silencioso para mantener console limpio
     },
   });
 
@@ -268,22 +289,20 @@ export function AppointmentFormNew(): JSX.Element {
             {/* Enhanced Form Content */}
             <div className="p-6 space-y-6">
             {/* Enhanced Unit Field */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Unidad *</label>
-                <select
-                  value={unit}
-                  onChange={(e) => {
-                    setUnit(e.target.value as 'SPA' | 'BARBERIA');
-                    setCustomerId('');
-                    setCustomerDisplay('');
-                    setClientSearch('');
-                  }}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                >
-                  <option value="SPA">SPA</option>
-                  <option value="BARBERIA">Barbería</option>
-                </select>
-              </div>
+              <Select
+                label="Unidad *"
+                value={unit}
+                onChange={(e) => {
+                  setUnit(e.target.value as 'SPA' | 'BARBERIA');
+                  setCustomerId('');
+                  setCustomerDisplay('');
+                  setClientSearch('');
+                }}
+                options={[
+                  { value: 'SPA', label: 'SPA' },
+                  { value: 'BARBERIA', label: 'Barbería' }
+                ]}
+              />
 
           {/* Enhanced Client Field */}
               <div className="relative" ref={dropdownRef}>
@@ -442,50 +461,60 @@ export function AppointmentFormNew(): JSX.Element {
 
           {/* Service Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">
-              Servicio *
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Scissors className="h-5 w-5 text-[var(--unit-text-muted)]" />
-              </div>
-              <select
-                value={serviceId}
-                onChange={(e) => setServiceId(e.target.value)}
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all appearance-none cursor-pointer"
-              >
-                <option value="">Seleccionar servicio...</option>
-                {servicesForUnit.map((s: any) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.durationMin} min)
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Servicio *"
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              options={[
+                { value: '', label: 'Seleccionar servicio...', disabled: true },
+                ...servicesForUnit.map((s: any) => ({
+                  value: s.id,
+                  label: `${s.name} (${s.durationMin} min)`
+                }))
+              ]}
+              className="pl-12"
+            />
           </div>
+
+          {/* ✅ Advertencia de cruce de medianoche */}
+          {showMidnightWarning && (
+            <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-amber-800">
+                  Esta cita cruza la medianoche
+                </h4>
+                <p className="text-sm text-amber-700 mt-1">
+                  La cita finalizará después de medianoche. Se mostrará correctamente en el calendario extendido.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMidnightWarning(false)}
+                className="flex-shrink-0 text-amber-600 hover:text-amber-800 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {/* Employee Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">
-              Empleado *
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-[var(--unit-text-muted)]" />
-              </div>
-              <select
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all appearance-none cursor-pointer"
-              >
-                <option value="">Seleccionar empleado...</option>
-                {employees.map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Empleado *"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              options={[
+                { value: '', label: 'Seleccionar empleado...', disabled: true },
+                ...employees.map((u: any) => ({
+                  value: u.id,
+                  label: u.name
+                }))
+              ]}
+              className="pl-12"
+            />
           </div>
 
           {/* Notes */}
@@ -498,38 +527,26 @@ export function AppointmentFormNew(): JSX.Element {
               onChange={(e) => setNotes(e.target.value)}
               className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none"
               rows={3}
-              placeholder="Añade notas adicionales sobre la cita..."
+              placeholder="Ej: Cliente prefiere horario matutino, alérgico a ciertos productos, etc."
             />
           </div>
 
           {/* Submit Button */}
-          <button
+          <Button
             type="button"
             onClick={() => {
-              console.log('🔘 Submit button clicked');
-              console.log('📊 Form data:', { customerId, date, time, serviceId, employeeId, unit, canSubmit });
               if (!canSubmit) {
-                console.log('❌ Cannot submit - missing required fields');
                 return;
               }
-              console.log('✅ All fields valid, creating appointment...');
               createMutation.mutate();
             }}
             disabled={!canSubmit || createMutation.isPending}
             className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            isLoading={createMutation.isPending}
           >
-            {createMutation.isPending ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Creando cita...
-              </>
-            ) : (
-              <>
-                <Calendar className="h-5 w-5" />
-                Crear cita
-              </>
-            )}
-          </button>
+            <Calendar className="h-5 w-5" />
+            Crear cita
+          </Button>
         </div>
       </div>
 

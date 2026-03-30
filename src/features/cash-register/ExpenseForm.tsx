@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button, Input } from '@/components/ui';
+import { useToast } from '@/hooks/useToast';
 
 interface Props {
   registerId: string;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
+  const { success, error } = useToast();
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [category, setCategory] = useState('supplies');
@@ -18,12 +20,12 @@ export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
     const parsedAmount = Number(amount);
 
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('El monto debe ser mayor a 0');
+      error('El monto debe ser mayor a 0');
       return;
     }
 
     if (!reason.trim()) {
-      alert('El motivo es obligatorio');
+      error('El motivo es obligatorio');
       return;
     }
 
@@ -48,14 +50,14 @@ export function ExpenseForm({ registerId, onSuccess }: Props): JSX.Element {
         throw new Error(err.error || 'Error al registrar egreso');
       }
 
-      alert('Egreso registrado correctamente');
+      success('Egreso registrado correctamente');
 
       setAmount('');
       setReason('');
       setCategory('supplies');
       onSuccess?.();
     } catch (err: any) {
-      alert(err.message);
+      error(err.message);
     } finally {
       setLoading(false);
     }

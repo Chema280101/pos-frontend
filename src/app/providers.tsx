@@ -6,6 +6,7 @@ import { useUnitStore } from '@/store/unitStore';
 import { applyUnitTheme } from '@/lib/theme';
 import { setOnTokenUpdate } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { ModalStackProvider } from '@/hooks/useModalStack';
 
 function ThemeSync(): null {
   const activeUnit = useUnitStore((s) => s.activeUnit);
@@ -27,6 +28,13 @@ export function Providers({ children }: { children: React.ReactNode }): JSX.Elem
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // ✅ Exponer queryClient globalmente para acceso desde authStore
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.queryClient = queryClient;
+    }
+  }, [queryClient]);
+
   useEffect(() => {
     if (!mounted) return;
   
@@ -43,8 +51,10 @@ export function Providers({ children }: { children: React.ReactNode }): JSX.Elem
 
   return (
     <QueryClientProvider client={queryClient}>
-      {mounted && <ThemeSync />}
-      {children}
+      <ModalStackProvider>
+        {mounted && <ThemeSync />}
+        {children}
+      </ModalStackProvider>
     </QueryClientProvider>
   );
 }

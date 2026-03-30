@@ -53,6 +53,43 @@ export function setOnTokenUpdate(cb: (token: string | null) => void): void {
   onTokenUpdate = cb;
 }
 
+// Función para crear errores amigables
+function createFriendlyError(error: AxiosError): Error {
+  // Errores de red/conexión
+  if (!error.response) {
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+      return new Error('Error de conexión. Por favor intenta de nuevo.');
+    }
+    if (error.code === 'ETIMEDOUT') {
+      return new Error('La conexión tardó demasiado tiempo. Por favor intenta de nuevo.');
+    }
+    return new Error('Error de conexión. Por favor verifica tu internet e intenta de nuevo.');
+  }
+
+  // Errores HTTP específicos
+  const status = error.response.status;
+  switch (status) {
+    case 400:
+      return new Error('La solicitud no es válida. Por favor verifica los datos e intenta de nuevo.');
+    case 401:
+      return new Error('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+    case 403:
+      return new Error('No tienes permisos para realizar esta acción.');
+    case 404:
+      return new Error('El recurso solicitado no fue encontrado.');
+    case 429:
+      return new Error('Demasiadas solicitudes. Por favor espera un momento e intenta de nuevo.');
+    case 500:
+      return new Error('Error interno del servidor. Por favor intenta de nuevo más tarde.');
+    case 502:
+    case 503:
+    case 504:
+      return new Error('El servidor no está disponible. Por favor intenta de nuevo en unos minutos.');
+    default:
+      return new Error('Ocurrió un error inesperado. Por favor intenta de nuevo.');
+  }
+}
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -65,40 +102,53 @@ api.interceptors.response.use(
   async (err: AxiosError) => {
     const original = err.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (!err.response || err.response.status !== 401 || !original) {
-      return Promise.reject(err);
+    // Si no hay respuesta, es un error de red
+    if (!err.response) {
+      const friendlyError = createFriendlyError(err);
+      return Promise.reject(friendlyError);
     }
 
-    if (
-      original.url?.includes('/api/auth/refresh') ||
-      original.url?.includes('/api/auth/login')
-    ) {
-      return Promise.reject(err);
-    }
-
-    if (original._retry) {
-      return Promise.reject(err);
-    }
-
-    original._retry = true;
-
-    try {
-      const success = await useAuthStore.getState().tryRefresh();
-
-      if (!success) {
-        return Promise.reject(err);
+    // Manejo de 401 (no autorizado)
+    if (err.response.status === 401) {
+      if (
+        original.url?.includes('/api/auth/refresh') ||
+        original.url?.includes('/api/auth/login')
+      ) {
+        const friendlyError = createFriendlyError(err);
+        return Promise.reject(friendlyError);
       }
 
-      const newToken = getAccessToken();
-
-      if (newToken && original.headers) {
-        original.headers.Authorization = `Bearer ${newToken}`;
+      if (original._retry) {
+        const friendlyError = createFriendlyError(err);
+        return Promise.reject(friendlyError);
       }
 
-      return api(original);
-    } catch {
-      useAuthStore.getState().clearSession();
-      return Promise.reject(err);
+      original._retry = true;
+
+      try {
+        const success = await useAuthStore.getState().tryRefresh();
+
+        if (!success) {
+          const friendlyError = createFriendlyError(err);
+          return Promise.reject(friendlyError);
+        }
+
+        const newToken = getAccessToken();
+
+        if (newToken && original.headers) {
+          original.headers.Authorization = `Bearer ${newToken}`;
+        }
+
+        return api(original);
+      } catch {
+        useAuthStore.getState().clearSession();
+        const friendlyError = createFriendlyError(err);
+        return Promise.reject(friendlyError);
+      }
     }
+
+    // Para otros errores HTTP, crear error amigable
+    const friendlyError = createFriendlyError(err);
+    return Promise.reject(friendlyError);
   }
 );

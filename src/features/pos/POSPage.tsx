@@ -2,12 +2,15 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShoppingBag, Trash2, UserCircle, Search, Printer, X, Package, Scissors, Box, TrendingUp, Clock, Star, Zap, CreditCard, Smartphone, DollarSign, ChevronRight, Plus, Minus, ChevronLeft, AlertCircle, Lock } from 'lucide-react';
+import { ShoppingBag, Trash2, UserCircle, Search, Printer, X, Package, Scissors, Box, TrendingUp, Clock, Star, Zap, CreditCard, Smartphone, DollarSign, ChevronRight, Plus, Minus, ChevronLeft, AlertCircle, Lock, Palette, Sparkles, Hand, Users, Smile, Wand2, Wind } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
 import { useAuthStore } from '@/store/authStore';
 import { printReceipt, type ReceiptSaleData } from '@/lib/receipt';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
+import { useToast } from '@/hooks/useToast';
+import { Button } from '@/components/ui';
+import { EmptyStateData } from '@/components/ui/EmptyState';
 import { PaymentModal } from './PaymentModal';
 import { PendingSales } from './PendingSales';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -38,6 +41,7 @@ export function POSPage(): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const setUnit = useUnitStore((s) => s.setUnit);
   const user = useAuthStore((s) => s.user);
+  const { success } = useToast();
   
   // For RECEPTIONIST, use their assigned unit instead of the active unit
   const unit = user?.role === 'RECEPTIONIST' 
@@ -56,9 +60,13 @@ export function POSPage(): JSX.Element {
   const [selectedServiceForEmployee, setSelectedServiceForEmployee] = useState<ServiceOption | null>(null);
   const [isPackageSelection, setIsPackageSelection] = useState(false);
 
+  // Reset employee modal when closed
   useEffect(() => {
-    console.log('Modal state changed:', { showEmployeeModal, isPackageSelection, selectedService: selectedServiceForEmployee?.name });
-  }, [showEmployeeModal, isPackageSelection, selectedServiceForEmployee]);
+    if (!showEmployeeModal) {
+      setSelectedServiceForEmployee(null);
+      setIsPackageSelection(false);
+    }
+  }, [showEmployeeModal]);
   
   // Search for items
   const [itemSearch, setItemSearch] = useState('');
@@ -282,13 +290,11 @@ export function POSPage(): JSX.Element {
   };
 
   const addServiceToCart = (service: { id: string; name: string; price?: unknown; unit: string }) => {
-    console.log('addServiceToCart called with:', service);
     // Show employee selection modal for services
     setSelectedServiceForEmployee(service as ServiceOption);
     setShowEmployeeModal(true);
     setShowItemSearch(false);
     setItemSearch('');
-    console.log('Employee modal should show for service:', service.name);
   };
 
   const addServiceToCartWithEmployee = (service: ServiceOption, employeeId: string) => {
@@ -335,19 +341,16 @@ export function POSPage(): JSX.Element {
   };
 
   const addPackageToCart = (pkg: { id: string; name: string; fixedPrice: number }) => {
-    console.log('addPackageToCart called with:', pkg);
     // Show employee selection modal for packages
     setSelectedServiceForEmployee({
       id: pkg.id,
       name: pkg.name,
       price: pkg.fixedPrice,
-      unit: unit,
-    } as ServiceOption);
-    setIsPackageSelection(true);
+      unit: 'SPA' as BusinessUnit,
+    });
     setShowEmployeeModal(true);
     setShowItemSearch(false);
     setItemSearch('');
-    console.log('Employee modal should show for package:', pkg.name);
   };
 
   const removeFromCart = (index: number) => {
@@ -365,17 +368,17 @@ export function POSPage(): JSX.Element {
 
   const getServiceIcon = (serviceName: string) => {
     const name = serviceName.toLowerCase();
-    if (name.includes('corte') || name.includes('cabello')) return '✂️';
-    if (name.includes('tinte') || name.includes('color')) return '🎨';
-    if (name.includes('manicur') || name.includes('uña')) return '💅';
-    if (name.includes('pedicur') || name.includes('pie')) return '🦶';
-    if (name.includes('masaje') || name.includes('relaj')) return '💆';
-    if (name.includes('facial') || name.includes('cara')) return '😊';
-    if (name.includes('depil') || name.includes('cera')) return '🪒';
-    if (name.includes('tratamiento') || name.includes('terapia')) return '✨';
-    if (name.includes('peinado') || name.includes('estilo')) return '💇';
-    if (name.includes('barba') || name.includes('bigote')) return '🧔';
-    return '💈'; // Default barber icon
+    if (name.includes('corte') || name.includes('cabello')) return <Scissors className="h-4 w-4" />;
+    if (name.includes('tinte') || name.includes('color')) return <Palette className="h-4 w-4" />;
+    if (name.includes('manicur') || name.includes('uña')) return <Hand className="h-4 w-4" />;
+    if (name.includes('pedicur') || name.includes('pie')) return <Hand className="h-4 w-4" />;
+    if (name.includes('masaje') || name.includes('relaj')) return <Users className="h-4 w-4" />;
+    if (name.includes('facial') || name.includes('cara')) return <Smile className="h-4 w-4" />;
+    if (name.includes('depil') || name.includes('cera')) return <Scissors className="h-4 w-4" />;
+    if (name.includes('tratamiento') || name.includes('terapia')) return <Sparkles className="h-4 w-4" />;
+    if (name.includes('peinado') || name.includes('estilo')) return <Wind className="h-4 w-4" />;
+    if (name.includes('barba') || name.includes('bigote')) return <Wand2 className="h-4 w-4" />;
+    return <Scissors className="h-4 w-4" />; // Default barber icon
   };
 
   const getServicePrice = (s: { price?: unknown }) => (typeof s.price === 'number' ? s.price : Number(s.price));
@@ -481,6 +484,10 @@ const popularServices = useMemo(() => {
       setDiscountReason('');
       setSelectedCustomer(null); // ✅ Limpia el cliente seleccionado
       queryClient.invalidateQueries({ queryKey: ['pos-pending', unit] });
+      // Mostrar toast de éxito descriptivo
+      const total = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+      const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+      success(`Venta creada exitosamente: ${itemCount} producto(s) por S/ ${total.toFixed(2)}`);
     },
     onError: handleCreateSaleError,
   });
@@ -492,11 +499,9 @@ const popularServices = useMemo(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-pending', unit] });
-      // Mostrar toast de éxito
-      console.log('Venta cancelada exitosamente');
+      success('Venta cancelada exitosamente');
     },
     onError: (error: any) => {
-      console.error('Error al cancelar venta:', error);
       handleCreateSaleError(error);
     },
   });
@@ -537,6 +542,7 @@ const popularServices = useMemo(() => {
       setClosingSaleId(null);
       setShowSaleConfirmDialog(true);
       queryClient.invalidateQueries({ queryKey: ['pos-pending', unit] });
+      success(`Venta ${data.saleNumber} cerrada exitosamente: ${data.items.length} producto(s) por S/ ${data.total.toFixed(2)}`);
       setLastClosedSale({
         saleNumber: data.saleNumber,
         unit: data.unit,
@@ -616,7 +622,7 @@ const popularServices = useMemo(() => {
               </div>
             </div>
             {popularServices.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {popularServices.map((service: any) => (
                   <button
                     key={service.id}
@@ -662,21 +668,16 @@ const popularServices = useMemo(() => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-2"></div>
-                <p className="text-sm text-[var(--unit-text-muted)] mb-2">
-                  No hay servicios disponibles en {unit === 'SPA' ? 'SPA' : 'Barbería'}
-                </p>
-                <p className="text-xs text-[var(--unit-text-muted)]">
-                  Agrega servicios desde el catálogo para que aparezcan aquí
-                </p>
-              </div>
+              <EmptyStateData
+                title="No hay servicios populares"
+                description="No se encontraron servicios populares para mostrar. Los servicios más vendidos aparecerán aquí."
+              />
             )}
           </div>
         </div>
 
         {/* Customer bar */}
-        <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
           {selectedCustomer ? (
             <div className="inline-flex items-center gap-2 rounded-[var(--unit-border-radius)] border border-[var(--unit-border)] bg-[var(--unit-surface-elevated)] px-4 py-2.5">
               <UserCircle className="h-4 w-4 text-[var(--unit-accent)]" />
@@ -767,9 +768,9 @@ const popularServices = useMemo(() => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Item Selection */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="md:col-span-1 lg:col-span-2 space-y-4">
             {/* Item Search */}
             <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
@@ -1073,7 +1074,8 @@ const popularServices = useMemo(() => {
                   ))}
                 </ul>
 
-                    {/* Enhanced Discount Section */}
+                    {/* Enhanced Discount Section - Solo para ADMIN y RECEPTIONIST */}
+                    {user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' ? (
                     <div className="rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <DollarSign className="h-3 w-3 text-[var(--unit-accent)]" />
@@ -1103,6 +1105,7 @@ const popularServices = useMemo(() => {
                         )}
                       </div>
                     </div>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -1414,11 +1417,12 @@ const popularServices = useMemo(() => {
       <ConfirmDialog
         isOpen={showSaleConfirmDialog}
         onClose={() => setShowSaleConfirmDialog(false)}
+        onCancel={() => setShowSaleConfirmDialog(false)}
         onConfirm={() => setShowSaleConfirmDialog(false)}
         title="¡Venta Confirmada!"
         message={`Venta ${lastClosedSale?.saleNumber} procesada exitosamente por S/ ${lastClosedSale?.total.toFixed(2)}. Método de pago: ${lastClosedSale?.paymentMethod || 'Efectivo'}.`}
         type="success"
-        confirmText="Aceptar"
+        confirmText="Aceptar confirmación"
         cancelText=""
         isLoading={false}
       />

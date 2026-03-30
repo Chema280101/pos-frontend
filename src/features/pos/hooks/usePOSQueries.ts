@@ -47,10 +47,9 @@ export function useCreateSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-pending'] });
       queryClient.invalidateQueries({ queryKey: ['pos-stats'] });
-      console.log('Venta creada exitosamente');
     },
     onError: (error: any) => {
-      console.error('Error creating sale:', error);
+      // Error creating sale
       
       // Manejo específico de errores
       if (error?.response?.data?.error) {
@@ -58,21 +57,21 @@ export function useCreateSale() {
         
         // Errores de validación
         if (errorMessage.includes('requerido') || errorMessage.includes('inválido')) {
-          console.warn('Error de validación:', errorMessage);
+          // Error de validación
           // Mostrar toast de error de validación
         }
         // Errores de caja
         else if (errorMessage.includes('caja')) {
-          console.warn('Error de caja:', errorMessage);
+          // Error de caja
           // Mostrar toast específico de caja
         }
         // Otros errores
         else {
-          console.error('Error desconocido:', errorMessage);
+          // Error desconocido
           // Mostrar toast genérico
         }
       } else {
-        console.error('Error de red o servidor:', error);
+        // Error de red o servidor
         // Mostrar toast de error de conexión
       }
     }
@@ -105,25 +104,24 @@ export function useCloseSale() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['pos-pending'] });
       queryClient.invalidateQueries({ queryKey: ['pos-stats'] });
-      console.log('Venta cerrada exitosamente:', data);
     },
     onError: (error: any) => {
-      console.error('Error closing sale:', error);
+      // Error closing sale
       
       // Manejo específico de errores de concurrencia
       if (error?.response?.data?.error?.includes('modificada por otro usuario')) {
-        console.warn('Error de concurrencia:', error.response.data.error);
+        // Error de concurrencia
         // Mostrar toast para recargar
         queryClient.invalidateQueries({ queryKey: ['pos-pending'] });
       }
       // Errores de validación de pago
       else if (error?.response?.data?.error?.includes('monto pagado')) {
-        console.warn('Error de pago:', error.response.data.error);
+        // Error de pago
         // Mostrar toast de error de pago
       }
       // Otros errores
       else {
-        console.error('Error desconocido al cerrar venta:', error);
+        // Error desconocido al cerrar venta
         // Mostrar toast genérico
       }
     }
@@ -142,25 +140,24 @@ export function useCancelSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-pending'] });
       queryClient.invalidateQueries({ queryKey: ['pos-stats'] });
-      console.log('Venta cancelada exitosamente');
     },
     onError: (error: any) => {
-      console.error('Error cancelling sale:', error);
+      // Error cancelling sale
       
       // Manejo específico de errores de permisos
       if (error?.response?.status === 403) {
-        console.warn('Error de permisos:', 'No tienes permisos para cancelar ventas');
+        // Error de permisos
         // Mostrar toast de permisos
       }
       // Errores de concurrencia
       else if (error?.response?.data?.error?.includes('modificada')) {
-        console.warn('Error de concurrencia:', error.response.data.error);
+        // Error de concurrencia
         // Mostrar toast para recargar
         queryClient.invalidateQueries({ queryKey: ['pos-pending'] });
       }
       // Otros errores
       else {
-        console.error('Error desconocido al cancelar venta:', error);
+        // Error desconocido al cancelar venta
         // Mostrar toast genérico
       }
     }

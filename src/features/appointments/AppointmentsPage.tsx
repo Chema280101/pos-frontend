@@ -21,6 +21,7 @@ import { OptimizedScheduleView } from './OptimizedScheduleView';
 import { AppointmentsMetrics } from './AppointmentsMetrics';
 import { cn } from '@/lib/utils';
 import { STATUS_CONFIG, getStatusConfig, type Appointment } from '@/types/appointment';
+import { useToast } from '@/hooks/useToast';
 
 const DAY_QUEUE_ROW_HEIGHT = 120;
 
@@ -36,6 +37,8 @@ export function AppointmentsPage(): JSX.Element {
     queryClient.invalidateQueries({ queryKey: ['appointments'] });
   }, [queryClient]);
 
+  const { success } = useToast();
+  
   const [viewStart, setViewStart] = useState<Date>(() => startOfDay(subDays(new Date(), 30))); // Start 30 days ago
   const [viewEnd, setViewEnd] = useState<Date>(() => endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // End 30 days from now
   const [calendarView, setCalendarView] = useState<'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'>('timeGridDay');
@@ -44,7 +47,6 @@ export function AppointmentsPage(): JSX.Element {
   // Función para manejar cambio de fecha del calendario
   const handleCalendarDateChange = useCallback((date: Date) => {
     setCalendarDate(date);
-    console.log('📅 Calendar date changed to:', date);
   }, []);
   const [drawerAppointmentId, setDrawerAppointmentId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -75,14 +77,12 @@ export function AppointmentsPage(): JSX.Element {
     queryKey: ['users-employees'],
     queryFn: async () => {
       const { data } = await api.get('/api/users/employees');
-      console.log('👥 Frontend - Raw employees data:', data);
       const processedEmployees = data.map((emp: any) => ({
         id: emp.id,
         name: emp.name,
         unit: emp.unit || 'SPA',
         color: emp.unit === 'BARBERIA' ? '#3B82F6' : '#A855F7'
       }));
-      console.log('👥 Frontend - Processed employees:', processedEmployees);
       return processedEmployees;
     },
   });
@@ -100,27 +100,12 @@ export function AppointmentsPage(): JSX.Element {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments', unit, viewStart.toISOString(), viewEnd.toISOString(), unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, canFilterByEmployee ? employeeFilter : null, search],
     queryFn: async (): Promise<Appointment[]> => {
-      console.log('📅 Unified fetching appointments for unit:', unit);
-      console.log('📅 Date range:', { viewStart, viewEnd });
-      console.log('📅 Filters:', { unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, employeeFilter: canFilterByEmployee ? employeeFilter : null, search, userRole: user?.role });
+      const params = new URLSearchParams({
+        start: viewStart.toISOString(),
+        end: viewEnd.toISOString(),
+      });
       
-      const params = new URLSearchParams();
-      
-      // Basic params
-      params.set('unit', unit);
-      params.set('start', viewStart.toISOString());
-      params.set('end', viewEnd.toISOString());
-      params.set('include', 'service,employee,customer');
-      
-      // Filter appointments for RECEPTIONIST by unit, and for BARBER/SPA_SPECIALIST by user
-      if (user && (user.role === 'BARBER' || user.role === 'SPA_SPECIALIST')) {
-        params.set('employeeId', user.id);
-        console.log('🔒 Filtering appointments for user:', user.id, 'Role:', user.role);
-      } else if (user && user.role === 'RECEPTIONIST') {
-        // RECEPTIONIST can only see appointments from their assigned unit
-        params.set('unit', user.unit || unit);
-        console.log('🏢 Filtering appointments for RECEPTIONIST unit:', user.unit || unit);
-      }
+      if (unitFilter) params.set('unit', unitFilter);
       
       // Additional filters (solo para ADMIN y RECEPTIONIST)
       if (unitFilter) params.set('unitFilter', unitFilter);
@@ -136,15 +121,10 @@ export function AppointmentsPage(): JSX.Element {
       
       if (search) params.set('search', search);
       
-      console.log('📅 Unified API URL:', `/api/appointments?${params}`);
       const response = await api.get(`/api/appointments?${params}`);
-      console.log('📅 Unified Raw API response:', response);
-      console.log('📅 Unified Response data:', response.data);
       
       // Extract the array from paginated response
       const data = response.data?.data || [];
-      console.log('📅 Unified Extracted array data:', data);
-      console.log('� Unified Number of appointments:', data.length);
       
       return data;
     },
@@ -155,62 +135,27 @@ export function AppointmentsPage(): JSX.Element {
   // Transform appointments for OptimizedScheduleView (Appointment format)
   const scheduleAppointments = useMemo(() => {
     const transformed = appointments.map((apt: any) => {
-      console.log('📅 Transforming appointment for schedule:', {
-        id: apt.id,
-        hasEmployee: !!apt.employee,
-        employeeName: apt.employee?.name,
-        customerName: apt.customer?.name,
-        serviceName: apt.items?.[0]?.service?.name
-      });
-      
       return {
         id: apt.id,
-        startTime: apt.startTime,        // ✅ String from backend
-        endTime: apt.endTime,            // ✅ String from backend
+        customer: apt.customer,
+        employee: apt.employee,
+        service: apt.service,
+        date: apt.date,
+        startTime: apt.startTime,
+        endTime: apt.endTime,
+        duration: apt.duration,
         status: apt.status,
-        notes: apt.notes || null,
-        customer: apt.customer || { id: '', name: 'Sin cliente' },
-        employee: apt.employee || { id: '', name: 'Sin empleado' },
-        service: apt.items?.[0]?.service || { id: '', name: 'Sin servicio' },
-        unit: apt.unit as 'SPA' | 'BARBERIA',
-        sale: apt.sale
+        notes: apt.notes,
       };
-    });
-    
-    console.log('📅 Schedule appointments transformed:', {
-      total: transformed.length,
-      appointments: transformed.map(t => ({
-        id: t.id,
-        startTime: t.startTime,
-        endTime: t.endTime,
-        customerName: t.customer.name,
-        employeeName: t.employee.name,
-        serviceName: t.service.name,
-        unit: t.unit
-      }))
     });
     
     return transformed;
   }, [appointments]);
 
   // Debug: Ver empleados disponibles
-  console.log('👥 Employees available:', {
-    total: employees?.length || 0,
-    employees: employees?.map((emp: any) => ({ id: emp.id, name: emp.name, unit: emp.unit }))
-  });
 
   const normalizedAppointments = useMemo(() => {
     return appointments.map((apt: any) => {
-      console.log('📅 Normalizing appointment:', {
-        id: apt.id,
-        hasEmployee: !!apt.employee,
-        employeeName: apt.employee?.name,
-        hasItems: !!apt.items,
-        firstItemEmployee: apt.items?.[0]?.employee?.name,
-        customerName: apt.customer?.name,
-        serviceName: apt.items?.[0]?.service?.name
-      });
-      
       return {
         id: apt.id,
         title: `${apt.customer?.name || 'Sin cliente'} - ${apt.items?.[0]?.service?.name || 'Sin servicio'}`,
@@ -240,7 +185,6 @@ export function AppointmentsPage(): JSX.Element {
   }, [appointments]);
 
   const forceRefreshAppointments = useCallback(() => {
-    console.log('🔄 Forcing appointments refresh...');
     setLastUpdate(new Date()); // Update timestamp immediately for feedback
     queryClient.invalidateQueries({ queryKey: ['appointments'] });
   }, [queryClient]);
@@ -249,7 +193,6 @@ export function AppointmentsPage(): JSX.Element {
   
   // Handlers for OptimizedScheduleView
   const handleNewAppointment = useCallback((employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => {
-    console.log('🎯 Creating new appointment:', { employeeId, time, unit });
     const params = new URLSearchParams({
       employeeId,
       unit,
@@ -265,8 +208,6 @@ export function AppointmentsPage(): JSX.Element {
 
   const handleReschedule = useCallback(async (appointmentId: string, newEmployeeId: string, newTime: Date) => {
     try {
-      console.log('🔄 Rescheduling appointment:', { appointmentId, newEmployeeId, newTime });
-      
       // Find the appointment to get its duration from scheduleAppointments
       const appointment = scheduleAppointments.find((apt: any) => apt.id === appointmentId);
       const duration = appointment?.service?.durationMin || 30;
@@ -280,18 +221,17 @@ export function AppointmentsPage(): JSX.Element {
         status: 'RESCHEDULED', // ✅ Agregar status de reprogramación
       });
       
-      console.log('✅ Appointment rescheduled successfully');
       // ✅ Invalidar queries específicas para actualizar el drawer
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
+      success('Cita reprogramada exitosamente');
       
       // ✅ Si el drawer está abierto para esta cita, invalidar para que se actualice
       if (drawerAppointmentId === appointmentId) {
         queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       }
     } catch (error) {
-      console.error('❌ Failed to reschedule appointment:', error);
       throw error; // Re-throw to let OptimizedScheduleView handle the revert
     }
   }, [queryClient, scheduleAppointments, drawerAppointmentId]);
@@ -300,7 +240,6 @@ export function AppointmentsPage(): JSX.Element {
   useEffect(() => {
     const handleCalendarFilterChange = (event: CustomEvent) => {
       const { unit } = event.detail;
-      console.log('Calendar filter event received:', unit);
       setSelectedUnit(unit);
     };
 
@@ -532,31 +471,31 @@ export function AppointmentsPage(): JSX.Element {
           )}
 
           {/* Enhanced Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/appointments/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
+            <Link href="/appointments/new" className="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto">
               <Plus className="h-5 w-5" />
               Nueva Cita
             </Link>
             <button
               onClick={() => setShowCalendar(!showCalendar)}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98] w-full sm:w-auto"
             >
               <Calendar className="h-5 w-5" />
               {showCalendar ? 'Ocultar' : 'Mostrar'} Calendario
             </button>
             <button
               onClick={forceRefreshAppointments}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-text)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-text)] hover:text-[var(--unit-surface)] transition-all hover:shadow-lg active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-text)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-text)] hover:text-[var(--unit-surface)] transition-all hover:shadow-lg active:scale-[0.98] w-full sm:w-auto"
               title="Forzar actualización de citas"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <span className="text-lg">🔄</span>
+                <RefreshCw className="h-5 w-5" />
               )}
               Actualizar
             </button>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 w-full sm:w-auto">
               <span className="text-xs text-[var(--unit-text)]">Última:</span>
               <span className="text-xs font-bold text-[var(--unit-accent)]">{format(lastUpdate, 'HH:mm:ss')}</span>
             </div>
@@ -672,11 +611,6 @@ export function AppointmentsPage(): JSX.Element {
                       value={employeeFilter}
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
                       onChange={(e) => {
-                        console.log('👥 Frontend - Employee filter changed:', {
-                          oldValue: employeeFilter,
-                          newValue: e.target.value,
-                          employeeName: employees.find((emp: any) => emp.id === e.target.value)?.name
-                        });
                         setEmployeeFilter(e.target.value);
                       }}
                     >
@@ -702,7 +636,6 @@ export function AppointmentsPage(): JSX.Element {
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
-                    console.log('Search:', e.target.value);
                   }}
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-4 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                 />
@@ -924,7 +857,6 @@ export function AppointmentsPage(): JSX.Element {
                 <button
                   onClick={() => {
                     // TODO: Implement delete appointment mutation
-                    console.log('Delete appointment:', selectedAppointment.id);
                     setShowDeleteDialog(false);
                     setSelectedAppointment(null);
                   }}

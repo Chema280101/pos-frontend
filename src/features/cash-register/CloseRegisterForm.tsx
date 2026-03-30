@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Button, Input } from '@/components/ui';
+import { useToast } from '@/hooks/useToast';
 
 interface Props {
   registerId: string;
@@ -20,6 +21,7 @@ export function CloseRegisterForm({
   closingExpected,
   onSuccess,
 }: Props) {
+  const { success, error } = useToast();
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [signature, setSignature] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export function CloseRegisterForm({
 
   async function handleSubmit() {
     if (!signature.trim()) {
-      alert('La firma es obligatoria');
+      error('La firma es obligatoria');
       return;
     }
 
@@ -69,10 +71,10 @@ export function CloseRegisterForm({
         throw new Error(err.error || 'Error al cerrar caja');
       }
 
-      alert('Caja cerrada correctamente');
+      success('Caja cerrada correctamente');
       onSuccess?.();
     } catch (err: any) {
-      alert(err.message);
+      error(err.message);
     } finally {
       setLoading(false);
     }
