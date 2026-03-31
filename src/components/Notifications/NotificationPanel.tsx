@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { X, Calendar, Package, Wallet, Percent, Info, AlertTriangle } from 'lucide-react';
 import { useNotificationStore, type AppNotification } from '@/store/notificationStore';
@@ -12,6 +12,7 @@ const typeIcons: Record<AppNotification['type'], React.ReactNode> = {
   stock: <Package className="h-4 w-4" />,
   cash: <Wallet className="h-4 w-4" />,
   commission: <Percent className="h-4 w-4" />,
+  approval: <AlertTriangle className="h-4 w-4" />,
   info: <Info className="h-4 w-4" />,
 };
 
@@ -28,6 +29,42 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps): JS
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
+  // ✅ MEJORA: Marcar todas como leídas automáticamente al abrir el panel
+  useEffect(() => {
+    if (open && items.length > 0) {
+      // Marcar todas las notificaciones como leídas después de 2 segundos
+      const timer = setTimeout(() => {
+        markAllAsRead();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open, items.length, markAllAsRead]);
+
+  // ✅ MEJORA: Limpiar notificaciones leídas antiguas (más de 24 horas)
+  useEffect(() => {
+    const cleanupOldNotifications = () => {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      useNotificationStore.setState((state) => {
+        const activeNotifications = state.items.filter((n: AppNotification) => 
+          !n.read || new Date(n.createdAt) > twentyFourHoursAgo
+        );
+        
+        return {
+          ...state,
+          items: activeNotifications,
+          unreadCount: activeNotifications.filter((n: AppNotification) => !n.read).length
+        };
+      });
+    };
+
+    // Limpiar cada hora
+    const cleanupInterval = setInterval(cleanupOldNotifications, 60 * 60 * 1000);
+    
+    return () => clearInterval(cleanupInterval);
+  }, [markAllAsRead]);
+
   const grouped = items.reduce<Record<string, AppNotification[]>>((acc, n) => {
     const key = n.type;
     if (!acc[key]) acc[key] = [];
@@ -40,6 +77,7 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps): JS
     stock: 'Inventario',
     cash: 'Caja',
     commission: 'Comisiones',
+    approval: 'Aprobaciones',
     info: 'General',
   };
 
@@ -123,11 +161,17 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps): JS
                                   <li
                                     key={n.id}
                                     className={cn(
-                                      'border-b px-6 py-3 transition',
+                                      'border-b px-6 py-3 transition cursor-pointer hover:bg-[var(--unit-secondary)]/5',
                                       !n.read && 'bg-[var(--unit-primary)]/10',
                                       isCritical && 'border-l-2 border-l-red-500 bg-red-50/10'
                                     )}
                                     style={{ borderBottomColor: 'var(--unit-border)' }}
+                                    onClick={() => {
+                                      markAsRead(n.id);
+                                      if (!n.link) {
+                                        onClose();
+                                      }
+                                    }}
                                   >
                                     <div className="flex gap-3">
                                       <span className={cn('mt-0.5 shrink-0', isCritical ? 'text-red-500' : 'text-[var(--unit-text)]/60')}>

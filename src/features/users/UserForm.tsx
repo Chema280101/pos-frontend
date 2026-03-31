@@ -202,25 +202,25 @@ export function UserForm(): JSX.Element {
         }}></div>
       </div>
       
-      <div className="relative max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto p-4 md:p-6">
-        {/* Enhanced Header - Exacto ClientForm */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
+      <div className="relative max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto p-3 sm:p-4 md:p-6">
+        {/* Enhanced Header - Mobile Optimized */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-3 px-3 py-2 sm:px-4 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
             <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-            <span className="text-sm font-medium text-[var(--unit-text)]">
+            <span className="text-xs sm:text-sm font-medium text-[var(--unit-text)]">
               {isEdit ? 'Modo edición' : 'Nuevo registro'}
             </span>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
             {isEdit ? 'Editar usuario' : 'Nuevo usuario'}
           </h1>
-          <p className="text-[var(--unit-text-muted)]">
+          <p className="text-sm sm:text-base text-[var(--unit-text-muted)]">
             {isEdit ? 'Modifica la información del usuario' : 'Registra un nuevo usuario en el sistema'}
           </p>
         </div>
 
-        {/* Enhanced Form Container - Exacto ClientForm */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Enhanced Form Container - Mobile Optimized */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
           <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl">
             {/* Form Header - Exacto ClientForm */}
             <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">

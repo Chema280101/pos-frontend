@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export interface AppNotification {
   id: string;
-  type: 'appointment' | 'stock' | 'cash' | 'commission' | 'info';
+  type: 'appointment' | 'stock' | 'cash' | 'commission' | 'approval' | 'info';
   title: string;
   message: string;
   read: boolean;

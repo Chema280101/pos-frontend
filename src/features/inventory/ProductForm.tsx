@@ -345,7 +345,6 @@ export function ProductForm(): JSX.Element {
               <div>
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Tipo de producto *</label>
                 <Select
-                label="Tipo de producto *"
                 options={[
                   { value: 'INTERNAL_USE', label: 'Solo uso interno' },
                   { value: 'FOR_SALE', label: 'Solo venta' },
@@ -362,7 +361,7 @@ export function ProductForm(): JSX.Element {
                       {productType === 'BOTH' && <BarChart3 className="h-4 w-4" />}
                       {productType === 'INTERNAL_USE' && 'Producto para consumo interno del negocio'}
                       {productType === 'FOR_SALE' && 'Producto para venta a clientes'}
-                      {productType === 'BOTH' && 'Producto para both uso interno y venta'}
+                      {productType === 'BOTH' && 'Producto para uso interno y venta'}
                     </p>
                   </div>
                 )}
@@ -373,7 +372,6 @@ export function ProductForm(): JSX.Element {
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Categoría</label>
                 <div className="flex gap-2">
                   <Select
-                  label="Categoría"
                   options={[
                     { value: '', label: '— Seleccionar categoría —', disabled: true },
                     ...categoriesForUnit.map((c) => ({

@@ -2,20 +2,16 @@
 
 import React from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
-import { useToast } from '@/lib/toast';
+import { useToastStore } from '@/store/toastStore';
+import type { ToastVariant } from '@/components/ui';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface Toast {
   id: string;
-  type: ToastType;
-  title: string;
-  message?: string;
+  message: string;
+  variant?: ToastType;
   duration?: number;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
 }
 
 const ToastIcon = ({ type }: { type: ToastType }) => {
@@ -39,7 +35,8 @@ const ToastStyles = {
 };
 
 export const ToastContainer: React.FC = () => {
-  const { toasts, remove } = useToast();
+  const toastState = useToastStore();
+  const { toasts } = toastState;
 
   if (toasts.length === 0) return null;
 
@@ -48,36 +45,24 @@ export const ToastContainer: React.FC = () => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`max-w-sm w-full p-4 rounded-lg border shadow-lg transition-all duration-300 ease-in-out ${ToastStyles[toast.type]}`}
+          className={`max-w-sm w-full p-4 rounded-lg border shadow-lg transition-all duration-300 ease-in-out cursor-pointer ${ToastStyles[toast.variant || 'info']}`}
+          onClick={() => toastState.removeToast(toast.id)}
         >
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <ToastIcon type={toast.type} />
+              <ToastIcon type={toast.variant || 'info'} />
             </div>
             <div className="ml-3 flex-1">
-              <p className="text-sm font-medium">{toast.title}</p>
-              {toast.message && (
-                <p className="mt-1 text-sm opacity-90">{toast.message}</p>
-              )}
-              {toast.action && (
-                <div className="mt-2">
-                  <button
-                    onClick={toast.action.onClick}
-                    className="text-sm font-medium underline hover:no-underline"
-                  >
-                    {toast.action.label}
-                  </button>
-                </div>
-              )}
+              <p className="text-sm font-medium">{toast.message}</p>
             </div>
-            <div className="ml-4 flex-shrink-0">
-              <button
-                onClick={() => remove(toast.id)}
-                className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            <button
+              onClick={() => toastState.removeToast(toast.id)}
+              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       ))}

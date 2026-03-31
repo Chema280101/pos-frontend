@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -115,17 +115,35 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', phone: '', gender: null, howFoundUs: '', preferenceNotes: '', freeNotes: '', usualProducts: '' },
+    mode: 'onTouched',
   });
+
+  const watchedValues = watch();
+  const defaultValues = { name: '', phone: '', gender: null, howFoundUs: '', preferenceNotes: '', freeNotes: '', usualProducts: '' };
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [checkedState, setCheckedState] = useState<Record<string, boolean>>({});
   const [isInitialized, setIsInitialized] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingClose, setPendingClose] = useState<(() => void) | null>(null);
+
+  // ✅ Mejorar detección de cambios para manejar valores nulos/vacíos
+  const hasChanges = 
+    JSON.stringify(watchedValues) !== JSON.stringify(defaultValues) ||
+    selectedItems.length > 0 ||
+    Object.keys(checkedState).length > 0 ||
+    // Verificar si algún campo tiene un valor real
+    (watchedValues.name && watchedValues.name.trim() !== '') ||
+    (watchedValues.phone && watchedValues.phone.trim() !== '') ||
+    (watchedValues.gender !== null) ||
+    (watchedValues.howFoundUs && watchedValues.howFoundUs.trim() !== '') ||
+    (watchedValues.preferenceNotes && watchedValues.preferenceNotes.trim() !== '') ||
+    (watchedValues.freeNotes && watchedValues.freeNotes.trim() !== '') ||
+    (watchedValues.usualProducts && watchedValues.usualProducts.trim() !== '');
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
     // Extract name from value (format: type:id:name)
@@ -144,18 +162,36 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   };
 
   const handleDrawerClose = () => {
-    if (isDirty) {
+    console.log('handleDrawerClose - hasChanges:', hasChanges);
+    console.log('handleDrawerClose - watchedValues:', watchedValues);
+    console.log('handleDrawerClose - JSON.stringify(watchedValues):', JSON.stringify(watchedValues));
+    console.log('handleDrawerClose - JSON.stringify(defaultValues):', JSON.stringify(defaultValues));
+    console.log('handleDrawerClose - selectedItems:', selectedItems);
+    console.log('handleDrawerClose - checkedState:', checkedState);
+    console.log('handleDrawerClose - JSON.stringify(watchedValues) !== JSON.stringify(defaultValues):', JSON.stringify(watchedValues) !== JSON.stringify(defaultValues));
+    console.log('handleDrawerClose - selectedItems.length > 0:', selectedItems.length > 0);
+    console.log('handleDrawerClose - Object.keys(checkedState).length > 0:', Object.keys(checkedState).length > 0);
+    
+    if (hasChanges) {
+      console.log('handleDrawerClose - Mostrando modal de confirmación');
       setPendingClose(() => {
         reset();
         if (onClose) {
           onClose();
+        } else {
+          // ✅ Si onClose no está definida, navegar hacia atrás
+          router.back();
         }
       });
       setShowUnsavedModal(true);
     } else {
+      console.log('handleDrawerClose - Cerrando formulario directamente');
       reset();
       if (onClose) {
         onClose();
+      } else {
+        // ✅ Si onClose no está definida, navegar hacia atrás
+        router.back();
       }
     }
   };
@@ -171,6 +207,10 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   const handleCancelDiscard = () => {
     setShowUnsavedModal(false);
     setPendingClose(null);
+    reset(); // Resetear formulario a valores por defecto
+    if (onClose) {
+      onClose(); // ✅ Cerrar el formulario
+    }
   };
 
   useEffect(() => {
@@ -409,7 +449,6 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
               <div>
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Género</label>
                 <Select
-                  label="Género"
                   options={[
                     { value: '', label: '— Seleccionar —', disabled: true },
                     { value: 'M', label: 'Masculino' },

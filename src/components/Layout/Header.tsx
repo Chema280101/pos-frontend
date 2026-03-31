@@ -178,10 +178,10 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
             <button
               type="button"
               onClick={onMenuClick}
-              className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-2 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all lg:hidden"
+              className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all lg:hidden active:scale-95 touch-manipulation"
               aria-label="Abrir menú"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-7 w-7" />
             </button>
           )}
           <div className="font-heading text-lg font-semibold tracking-tight text-[var(--unit-text)]">

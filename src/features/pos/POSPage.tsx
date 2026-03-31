@@ -9,11 +9,14 @@ import { useAuthStore } from '@/store/authStore';
 import { printReceipt, type ReceiptSaleData } from '@/lib/receipt';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { useToast } from '@/hooks/useToast';
+import { useApprovalNotifications } from '@/hooks/useApprovalNotifications';
+import { useSocket } from '@/hooks/useSocket';
 import { Button } from '@/components/ui';
 import { EmptyStateData } from '@/components/ui/EmptyState';
 import { PaymentModal } from './PaymentModal';
 import { PendingSales } from './PendingSales';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { VariablePriceModal } from './VariablePriceModal';
 import { 
   type CartItem, 
   type PendingSale, 
@@ -43,6 +46,12 @@ export function POSPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const { success } = useToast();
   
+  // 🔔 Activar notificaciones de aprobaciones para Admin
+  useApprovalNotifications();
+  
+  // 🔌 Activar Socket.io para actualizaciones en tiempo real
+  useSocket();
+  
   // For RECEPTIONIST, use their assigned unit instead of the active unit
   const unit = user?.role === 'RECEPTIONIST' 
     ? (user.unit === 'BARBERIA' ? 'BARBERIA' : 'SPA') as BusinessUnit
@@ -59,6 +68,10 @@ export function POSPage(): JSX.Element {
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [selectedServiceForEmployee, setSelectedServiceForEmployee] = useState<ServiceOption | null>(null);
   const [isPackageSelection, setIsPackageSelection] = useState(false);
+
+  // Variable price modal state
+  const [showVariablePriceModal, setShowVariablePriceModal] = useState(false);
+  const [selectedServiceForPrice, setSelectedServiceForPrice] = useState<ServiceOption | null>(null);
 
   // Reset employee modal when closed
   useEffect(() => {
@@ -106,7 +119,15 @@ export function POSPage(): JSX.Element {
         unit: string;
         customer: { id: string; name: string; phone: string };
         items: Array<{
-          service: { id: string; name: string; price: number; unit?: string };
+          service: { 
+            id: string; 
+            name: string; 
+            price: number; 
+            unit?: string;
+            priceType?: string;
+            minPrice?: number;
+            maxPrice?: number;
+          };
           employee: { id: string; name: string };
         }>;
       }>(`/api/appointments/${appointmentIdFromUrl}`);
@@ -125,15 +146,52 @@ export function POSPage(): JSX.Element {
       name: appointmentForPreload.customer.name,
       phone: appointmentForPreload.customer.phone,
     });
-    const cartItems: CartItem[] = appointmentForPreload.items.map((item) => ({
-      itemType: 'SERVICE',
-      referenceId: item.service.id,
-      name: item.service.name,
-      unitPrice: typeof item.service.price === 'number' ? item.service.price : Number(item.service.price),
-      quantity: 1,
-      employeeId: item.employee.id,
-    }));
-    setCart(cartItems);
+
+    // ✅ Verificar si los servicios tienen precio variable
+    const servicesWithVariablePrice = appointmentForPreload.items.filter(item => 
+      item.service.priceType && item.service.priceType !== 'FIXED'
+    );
+
+    if (servicesWithVariablePrice.length > 0) {
+      // Si hay servicios con precio variable, mostrar modal para cada uno
+      // Por ahora, mostramos el primer servicio con precio variable
+      const firstVariableService = servicesWithVariablePrice[0].service;
+      setSelectedServiceForPrice({
+        id: firstVariableService.id,
+        name: firstVariableService.name,
+        price: firstVariableService.price,
+        unit: appointmentForPreload.unit,
+        priceType: firstVariableService.priceType as any,
+        minPrice: firstVariableService.minPrice,
+        maxPrice: firstVariableService.maxPrice,
+      });
+      setShowVariablePriceModal(true);
+      
+      // Agregar los demás servicios (sin precio variable) al carrito
+      const fixedPriceItems = appointmentForPreload.items.filter(item => 
+        !item.service.priceType || item.service.priceType === 'FIXED'
+      );
+      const cartItems: CartItem[] = fixedPriceItems.map((item) => ({
+        itemType: 'SERVICE',
+        referenceId: item.service.id,
+        name: item.service.name,
+        unitPrice: typeof item.service.price === 'number' ? item.service.price : Number(item.service.price),
+        quantity: 1,
+        employeeId: item.employee.id,
+      }));
+      setCart(cartItems);
+    } else {
+      // Si no hay precios variables, agregar todo al carrito como antes
+      const cartItems: CartItem[] = appointmentForPreload.items.map((item) => ({
+        itemType: 'SERVICE',
+        referenceId: item.service.id,
+        name: item.service.name,
+        unitPrice: typeof item.service.price === 'number' ? item.service.price : Number(item.service.price),
+        quantity: 1,
+        employeeId: item.employee.id,
+      }));
+      setCart(cartItems);
+    }
   }, [appointmentForPreload, setUnit]);
 
   const { data: servicesResponse } = useQuery({
@@ -289,8 +347,19 @@ export function POSPage(): JSX.Element {
     });
   };
 
-  const addServiceToCart = (service: { id: string; name: string; price?: unknown; unit: string }) => {
-    // Show employee selection modal for services
+  const addServiceToCart = (service: { id: string; name: string; price?: unknown; unit: string; priceType?: string; minPrice?: number; maxPrice?: number; requiresApproval?: boolean }) => {
+    // Check if service has variable pricing
+    const serviceOption = service as ServiceOption;
+    if (serviceOption.priceType && serviceOption.priceType !== 'FIXED') {
+      // Show variable price modal
+      setSelectedServiceForPrice(serviceOption);
+      setShowVariablePriceModal(true);
+      setShowItemSearch(false);
+      setItemSearch('');
+      return;
+    }
+    
+    // Show employee selection modal for fixed price services
     setSelectedServiceForEmployee(service as ServiceOption);
     setShowEmployeeModal(true);
     setShowItemSearch(false);
@@ -324,6 +393,81 @@ export function POSPage(): JSX.Element {
     setShowEmployeeModal(false);
     setSelectedServiceForEmployee(null);
     setIsPackageSelection(false);
+  };
+
+  const handleVariablePriceConfirm = (price: number) => {
+    if (!selectedServiceForPrice) return;
+    
+    // Add service with custom price to cart
+    addToCart({
+      itemType: 'SERVICE',
+      referenceId: selectedServiceForPrice.id,
+      name: selectedServiceForPrice.name,
+      unitPrice: price,
+      quantity: 1,
+      customPrice: price,
+      requiresApproval: selectedServiceForPrice.requiresApproval,
+    });
+    
+    // ✅ Si viene de una cita, no mostrar selección de empleado (ya está asignado)
+    if (appointmentIdFromUrl) {
+      setShowVariablePriceModal(false);
+      setSelectedServiceForPrice(null);
+      setShowItemSearch(false);
+      setItemSearch('');
+    } else {
+      // Show employee selection modal para POS normal
+      setSelectedServiceForEmployee(selectedServiceForPrice);
+      setShowEmployeeModal(true);
+      setShowVariablePriceModal(false);
+      setSelectedServiceForPrice(null);
+      setShowItemSearch(false);
+      setItemSearch('');
+    }
+  };
+
+  const handleApprovalRequest = async (approvalData: { serviceId: string; requestedPrice: number; reason: string }) => {
+    try {
+      // Generar un ID temporal para el saleItemId
+      const tempSaleItemId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const response = await api.post('/api/prices/approvals', {
+        ...approvalData,
+        saleItemId: tempSaleItemId
+      });
+
+      success('Solicitud de aprobación enviada correctamente');
+      // Add service with pending approval to cart
+      if (selectedServiceForPrice) {
+        addToCart({
+          itemType: 'SERVICE',
+          referenceId: selectedServiceForPrice.id,
+          name: selectedServiceForPrice.name,
+          unitPrice: approvalData.requestedPrice,
+          quantity: 1,
+          customPrice: approvalData.requestedPrice,
+          requiresApproval: true,
+          approvalId: response.data.approvalId, // Guardar el approvalId
+        });
+      }
+      setShowVariablePriceModal(false);
+      setSelectedServiceForPrice(null);
+      setShowItemSearch(false);
+      setItemSearch('');
+    } catch (error: any) {
+      console.error('Error requesting approval:', error);
+      
+      // Manejo específico de errores
+      if (error.response?.status === 401) {
+        error('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+      } else if (error.response?.status === 403) {
+        error('No tienes permisos para solicitar aprobaciones.');
+      } else if (error.response?.data?.error) {
+        error(error.response.data.error);
+      } else {
+        error('Error al enviar solicitud de aprobación');
+      }
+    }
   };
 
   const addProductToCart = (product: { id: string; name: string; salePrice: number | null }) => {
@@ -575,216 +719,219 @@ const popularServices = useMemo(() => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
+  <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
+    {/* Background Pattern */}
+    <div className="absolute inset-0 opacity-30">
+      <div className="h-full w-full bg-repeat" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+      }}></div>
+    </div>
+    
+    <div className="relative max-w-7xl mx-auto p-6">
+      {/* Enhanced Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
+          <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
+          <span className="text-sm font-medium text-[var(--unit-text)]">Punto de Venta</span>
+        </div>
+        <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">POS</h1>
+        <p className="text-[var(--unit-text-muted)]">Sistema de ventas profesional para {unit === 'SPA' ? 'SPA' : 'Barman Barbería'}</p>
       </div>
-      
-      <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-            <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-            <span className="text-sm font-medium text-[var(--unit-text)]">Punto de Venta</span>
-          </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">POS</h1>
-          <p className="text-[var(--unit-text-muted)]">Sistema de ventas profesional para {unit === 'SPA' ? 'SPA' : 'Barman Barbería'}</p>
-        </div>
 
-        {/* Enhanced Back Link */}
-        <div className="mb-6">
-          <Link
-            href="/appointments"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] font-medium bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Volver a Agenda
-          </Link>
-        </div>
+      {/* Enhanced Back Link */}
+      <div className="mb-6">
+        <Link
+          href="/appointments"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] font-medium bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Volver a Agenda
+        </Link>
+      </div>
 
-        {/* Premium Quick Access Bar */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 mb-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-          
-          <div className="relative">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Zap className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Servicios Populares</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Ordenados por popularidad en {unit === 'SPA' ? 'SPA' : 'Barbería'}</p>
-                </div>
+      {/* Premium Quick Access Bar */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
+        
+        <div className="relative">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                <Zap className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[var(--unit-text)]">Servicios Populares</h3>
+                <p className="text-sm text-[var(--unit-text-muted)]">Ordenados por popularidad en {unit === 'SPA' ? 'SPA' : 'Barbería'}</p>
               </div>
             </div>
-            {popularServices.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {popularServices.map((service: any) => (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => addServiceToCart({
-                      id: service.id,
-                      name: service.name,
-                      price: getServicePrice(service),
-                      unit: unit
-                    })}
-                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-xs font-medium transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] ${service.isPopular
-                        ? 'border-[var(--unit-accent)]/50 bg-gradient-to-br from-[var(--unit-accent)]/10 to-[var(--unit-accent)]/20 shadow-md'
-                        : 'border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 hover:border-[var(--unit-accent)]/50'
-                      }`}
-                  >
-                    {service.isPopular && (
-                      <div className="absolute -top-1 -right-1 z-10">
-                        {service.badgeText === 'Más Popular' ? (
-                          <div className="relative">
-                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 drop-shadow-sm" />
-                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-sm" />
-                            <div className="absolute -top-2 -right-2 w-3 h-3 bg-red-500/30 rounded-full animate-ping" />
-                          </div>
-                        ) : (
-                          <div className="relative">
-                            <Star className="h-3 w-3 text-amber-500 fill-amber-500 drop-shadow-sm" />
-                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse shadow-sm" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <span className="text-lg">{service.icon}</span>
-                    <span className="font-medium text-[var(--unit-text-muted)] text-center leading-tight line-clamp-2">
-                      {service.name}
-                    </span>
-                    <span className="text-[var(--unit-text-muted)] font-semibold">S/ {getServicePrice(service)}</span>
-                    {service.badgeText && (
-                      <span className="absolute top-1 left-1 text-[8px] font-bold text-white bg-gradient-to-r from-red-500 to-orange-500 px-1.5 rounded shadow-md border border-white/20">
-                        {service.badgeText}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyStateData
-                title="No hay servicios populares"
-                description="No se encontraron servicios populares para mostrar. Los servicios más vendidos aparecerán aquí."
-              />
-            )}
           </div>
-        </div>
-
-        {/* Customer bar */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
-          {selectedCustomer ? (
-            <div className="inline-flex items-center gap-2 rounded-[var(--unit-border-radius)] border border-[var(--unit-border)] bg-[var(--unit-surface-elevated)] px-4 py-2.5">
-              <UserCircle className="h-4 w-4 text-[var(--unit-accent)]" />
-              <span className="text-sm font-medium text-[var(--unit-text)] hover:text-[var(--unit-accent)]">{selectedCustomer.name}</span>
-              <button
-                type="button"
-                onClick={() => setSelectedCustomer(null)}
-                className="ml-1 rounded-full p-0.5 bg-[var(--unit-accent)] text-[var(--unit-text)] transition-colors hover:text-red-500"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+          {popularServices.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {popularServices.map((service: any) => (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => addServiceToCart({
+                    id: service.id,
+                    name: service.name,
+                    price: getServicePrice(service),
+                    unit: unit
+                  })}
+                  className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-xs font-medium transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] ${service.isPopular
+                      ? 'border-[var(--unit-accent)]/50 bg-gradient-to-br from-[var(--unit-accent)]/10 to-[var(--unit-accent)]/20 shadow-md'
+                      : 'border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 hover:border-[var(--unit-accent)]/50'
+                    }`}
+                >
+                  {service.isPopular && (
+                    <div className="absolute -top-1 -right-1 z-10">
+                      {service.badgeText === 'Más Popular' ? (
+                        <div className="relative">
+                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 drop-shadow-sm" />
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-sm" />
+                          <div className="absolute -top-2 -right-2 w-3 h-3 bg-red-500/30 rounded-full animate-ping" />
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <Star className="h-3 w-3 text-amber-500 fill-amber-500 drop-shadow-sm" />
+                          <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse shadow-sm" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-lg">{service.icon}</span>
+                  <span className="font-medium text-[var(--unit-text-muted)] text-center leading-tight line-clamp-2">
+                    {service.name}
+                  </span>
+                  <span className="text-[var(--unit-text-muted)] font-semibold">S/ {getServicePrice(service)}</span>
+                  {service.badgeText && (
+                    <span className="absolute top-1 left-1 text-[8px] font-bold text-white bg-gradient-to-r from-red-500 to-orange-500 px-1.5 rounded shadow-md border border-white/20">
+                      {service.badgeText}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
           ) : (
-            <div className="relative" ref={clientSearchRef}>
-              <button
-                type="button"
-                onClick={() => setShowClientSearch((s) => !s)}
-                className="inline-flex items-center gap-2 rounded-[var(--unit-border-radius)] border border-dashed border-[var(--unit-border)] bg-[var(--unit-surface)] px-4 py-2.5 text-sm text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
-              >
-                <UserCircle className="h-4 w-4" />
-                Asignar cliente
-              </button>
-              {showClientSearch && (
-                <div className="absolute left-0 top-full z-20 mt-2 w-80 rounded-[var(--unit-border-radius)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] p-3 shadow-[var(--unit-shadow-lg)]">
-                  <div className="relative mb-2">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--unit-text-muted)]" />
+            <EmptyStateData
+              title="No hay servicios populares"
+              description="No se encontraron servicios populares para mostrar. Los servicios más vendidos aparecerán aquí."
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Customer bar */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+        {selectedCustomer ? (
+          <div className="inline-flex items-center gap-2 rounded-[var(--unit-border-radius)] border border-[var(--unit-border)] bg-[var(--unit-surface-elevated)] px-4 py-2.5">
+            <UserCircle className="h-4 w-4 text-[var(--unit-accent)]" />
+            <span className="text-sm font-medium text-[var(--unit-text)] hover:text-[var(--unit-accent)]">{selectedCustomer.name}</span>
+            <button
+              type="button"
+              onClick={() => setSelectedCustomer(null)}
+              className="ml-1 rounded-full p-0.5 bg-[var(--unit-accent)] text-[var(--unit-text)] transition-colors hover:text-red-500"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative" ref={clientSearchRef}>
+            <button
+              type="button"
+              onClick={() => setShowClientSearch((s) => !s)}
+              className="inline-flex items-center gap-2 rounded-[var(--unit-border-radius)] border border-dashed border-[var(--unit-border)] bg-[var(--unit-surface)] px-4 py-2.5 text-sm text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
+            >
+              <UserCircle className="h-4 w-4" />
+              Asignar cliente
+            </button>
+            {showClientSearch && (
+              <div className="absolute left-0 top-full z-20 mt-2 w-80 rounded-[var(--unit-border-radius)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] p-3 shadow-[var(--unit-shadow-lg)]">
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--unit-text-muted)]" />
                   <input
                     type="text"
                     value={clientSearch}
                     onChange={(e) => setClientSearch(e.target.value)}
                     placeholder="Buscar por nombre o teléfono..."
-                      className="w-full rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)] bg-[var(--unit-surface)] pl-9 pr-3 py-2 text-sm text-[var(--unit-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
+                    className="w-full rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)] bg-[var(--unit-surface)] pl-9 pr-3 py-2 text-sm text-[var(--unit-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
                     autoFocus
                   />
-                  </div>
-                  <ul className="max-h-48 overflow-auto space-y-0.5">
-                    {clientSearchResults.length === 0 && debouncedClientSearch.length >= 2 ? (
-                      <>
-                        <li className="px-3 py-2 text-xs text-[var(--unit-text-muted)]">Sin resultados</li>
-                        <li>
-                          <button
-                            type="button"
-                            className="group w-full rounded-[var(--unit-radius-sm)] px-3 py-2 text-left text-sm text-[var(--unit-accent)] transition-colors hover:bg-[var(--unit-accent)] hover:text-white border border-[var(--unit-accent)]/30"
-                            onClick={() => {
-                              // Crear nuevo cliente con el nombre del buscador
-                              const newCustomer = {
-                                id: `new-${Date.now()}`, // ID temporal único
-                                name: clientSearch.trim(),
-                                phone: '',
-                                email: '',
-                                isNew: true
-                              };
-                              setSelectedCustomer(newCustomer);
-                              setShowClientSearch(false);
-                              setClientSearch('');
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Plus className="h-3.5 w-3.5" />
-                              <span className="font-medium">Crear nuevo cliente: "{clientSearch.trim()}"</span>
-                            </div>
-                          </button>
-                        </li>
-                      </>
-                    ) : (
-                      clientSearchResults.map((c) => (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            className="group w-full rounded-[var(--unit-radius-sm)] px-3 py-2 text-left text-sm text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
-                            onClick={() => { setSelectedCustomer(c); setShowClientSearch(false); setClientSearch(''); }}
-                          >
-                            <span className="font-medium">{c.name}</span>
-                            <span className="ml-2 text-xs text-[var(--unit-text-muted)] group-hover:text-[var(--unit-text)]">{c.phone}</span>
-                          </button>
-                        </li>
-                      ))
-                    )}
-                  </ul>
                 </div>
-              )}
-            </div>
-          )}
-          {appointmentIdFromUrl && cart.length > 0 && (
-            <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700">
-              Servicios de cita cargados
-            </span>
-          )}
-        </div>
+                <ul className="max-h-48 overflow-auto space-y-0.5">
+                  {clientSearchResults.length === 0 && debouncedClientSearch.length >= 2 ? (
+                    <>
+                      <li className="px-3 py-2 text-xs text-[var(--unit-text-muted)]">Sin resultados</li>
+                      <li>
+                        <button
+                          type="button"
+                          className="group w-full rounded-[var(--unit-radius-sm)] px-3 py-2 text-left text-sm text-[var(--unit-accent)] transition-colors hover:bg-[var(--unit-accent)] hover:text-white border border-[var(--unit-accent)]/30"
+                          onClick={() => {
+                            const newCustomer = {
+                              id: `new-${Date.now()}`,
+                              name: clientSearch.trim(),
+                              phone: '',
+                              email: '',
+                              isNew: true
+                            };
+                            setSelectedCustomer(newCustomer);
+                            setShowClientSearch(false);
+                            setClientSearch('');
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-3.5 w-3.5" />
+                            <span className="font-medium">Crear nuevo cliente: "{clientSearch.trim()}"</span>
+                          </div>
+                        </button>
+                      </li>
+                    </>
+                  ) : (
+                    clientSearchResults.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          className="group w-full rounded-[var(--unit-radius-sm)] px-3 py-2 text-left text-sm text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
+                          onClick={() => { setSelectedCustomer(c); setShowClientSearch(false); setClientSearch(''); }}
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="ml-2 text-xs text-[var(--unit-text-muted)] group-hover:text-[var(--unit-text)]">{c.phone}</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        {appointmentIdFromUrl && cart.length > 0 && (
+          <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700">
+            Servicios de cita cargados
+          </span>
+        )}
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Item Selection */}
-          <div className="md:col-span-1 lg:col-span-2 space-y-4">
-            {/* Item Search */}
-            <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Search className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-[var(--unit-text)]">Buscar Items</h2>
-                    <p className="text-sm text-[var(--unit-text-muted)]">Servicios, productos y paquetes</p>
-                  </div>
+      {/* --- INICIO DEL GRID PRINCIPAL --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        {/* COLUMNA IZQUIERDA: Buscador e Items */}
+        <div className="md:col-span-1 lg:col-span-2 space-y-4">
+          
+          {/* Item Search */}
+          <section className="relative rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-20">
+            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
+            
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <Search className="h-5 w-5 text-white" />
                 </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Buscar Items</h2>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Servicios, productos y paquetes</p>
+                </div>
+              </div>
+              
               <div className="relative z-20" ref={itemSearchRef}>
                 <Search className="absolute left-4 top-3.5 h-5 w-5 text-[var(--unit-text-muted)]" />
                 <input
@@ -798,14 +945,15 @@ const popularServices = useMemo(() => {
                   placeholder="Buscar servicios, productos o paquetes..."
                   className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] pl-12 pr-4 py-3 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                 />
+                
                 {showItemSearch && debouncedItemSearch.length >= 2 && (
-                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-white shadow-xl" style={{ maxHeight: '400px' }}>
+                  <div className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-white shadow-xl" style={{ maxHeight: '400px' }}>
                     <div className="max-h-80 overflow-y-auto">
                       {/* Services */}
                       {searchServices.length > 0 && (
                         <div>
                           <div className="px-4 py-3 text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider border-b border-[var(--unit-border)]/30">Servicios</div>
-                          {searchServices.map((s: { id: string; name: string; price?: unknown; unit: string }) => (
+                          {searchServices.map((s: { id: string; name: string; price?: unknown; unit: string; priceType?: string; minPrice?: number; maxPrice?: number; requiresApproval?: boolean }) => (
                             <button
                               key={s.id}
                               type="button"
@@ -866,25 +1014,25 @@ const popularServices = useMemo(() => {
                 )}
               </div>
             </div>
-            </section>
+          </section>
 
-            {/* Services */}
-            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Scissors className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-[var(--unit-text)]">Servicios</h2>
-                    <p className="text-sm text-[var(--unit-text-muted)]">Todos los servicios disponibles</p>
-                  </div>
+          {/* Services */}
+          <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
+            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
+            
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <Scissors className="h-5 w-5 text-white" />
                 </div>
-              
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Servicios</h2>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Todos los servicios disponibles</p>
+                </div>
+              </div>
+            
               <div className="flex flex-wrap gap-3">
-                {servicesForUnit.map((s: { id: string; name: string; price?: unknown; unit: string }) => (
+                {servicesForUnit.map((s: { id: string; name: string; price?: unknown; unit: string; priceType?: string; minPrice?: number; maxPrice?: number; requiresApproval?: boolean }) => (
                   <button
                     key={s.id}
                     type="button"
@@ -900,23 +1048,23 @@ const popularServices = useMemo(() => {
                 ))}
               </div>
             </div>
-            </section>
+          </section>
 
-            {/* Products */}
-            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Box className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-[var(--unit-text)]">Productos</h2>
-                    <p className="text-sm text-[var(--unit-text-muted)]">Productos disponibles para venta</p>
-                  </div>
+          {/* Products */}
+          <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
+            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
+            
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <Box className="h-5 w-5 text-white" />
                 </div>
-              
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Productos</h2>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Productos disponibles para venta</p>
+                </div>
+              </div>
+            
               <div className="flex flex-wrap gap-3">
                 {productsForSale.map((p: { id: string; name: string; salePrice: number }) => (
                   <button
@@ -934,23 +1082,23 @@ const popularServices = useMemo(() => {
                 ))}
               </div>
             </div>
-            </section>
+          </section>
 
-            {/* Packages */}
-            <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Package className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-[var(--unit-text)]">Paquetes</h2>
-                    <p className="text-sm text-[var(--unit-text-muted)]">Paquetes especiales y promociones</p>
-                  </div>
+          {/* Packages */}
+          <section className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 z-10">
+            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
+            
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                  <Package className="h-5 w-5 text-white" />
                 </div>
-              
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Paquetes</h2>
+                  <p className="text-sm text-[var(--unit-text-muted)]">Paquetes especiales y promociones</p>
+                </div>
+              </div>
+            
               <div className="flex flex-wrap gap-3">
                 {(packages ?? []).map((p: { id: string; name: string; fixedPrice: number }) => (
                   <button
@@ -968,227 +1116,223 @@ const popularServices = useMemo(() => {
                 ))}
               </div>
             </div>
-            </section>
-          </div>
+          </section>
 
-          {/* Enhanced Cart Section */}
-          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            {/* Cart Header */}
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl">
-              {/* Ticket header */}
-              <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <ShoppingBag className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-[var(--unit-text)]">Carrito</h2>
-                      <p className="text-sm text-[var(--unit-text-muted)]">Artículos seleccionados</p>
-                    </div>
+        </div> {/* CIERRE DE COLUMNA IZQUIERDA */}
+
+        {/* COLUMNA DERECHA: Carrito */}
+        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl">
+            {/* Ticket header */}
+            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                    <ShoppingBag className="h-5 w-5 text-white" />
                   </div>
-                  {cart.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[var(--unit-accent)] text-[10px] font-bold text-white">
-                        {cart.length}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setCart([])}
-                        className="rounded-xl p-2 text-[var(--unit-text)] transition-colors hover:bg-red-500/15 hover:text-red-500"
-                        title="Vaciar carrito"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--unit-text)]">Carrito</h2>
+                    <p className="text-sm text-[var(--unit-text-muted)]">Artículos seleccionados</p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Cart items */}
-              <div className="px-5 py-4">
-              {cart.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <ShoppingBag className="mx-auto mb-3 h-12 w-12 text-[var(--unit-text-muted)]/25" />
-                    <p className="text-sm text-[var(--unit-text)] mb-4">Carrito vacío</p>
-                    <div className="space-y-2 text-xs text-[var(--unit-text)]">
-                      <p> Usa los botones de acceso rápido</p>
-                      <p> O busca servicios en el catálogo</p>
-                    </div>
+                {cart.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[var(--unit-accent)] text-[10px] font-bold text-white">
+                      {cart.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCart([])}
+                      className="rounded-xl p-2 text-[var(--unit-text)] transition-colors hover:bg-red-500/15 hover:text-red-500"
+                      title="Vaciar carrito"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* Cart items */}
+            <div className="px-5 py-4">
+              {cart.length === 0 ? (
+                <div className="py-8 text-center">
+                  <ShoppingBag className="mx-auto mb-3 h-12 w-12 text-[var(--unit-text-muted)]/25" />
+                  <p className="text-sm text-[var(--unit-text)] mb-4">Carrito vacío</p>
+                  <div className="space-y-2 text-xs text-[var(--unit-text)]">
+                    <p> Usa los botones de acceso rápido</p>
+                    <p> O busca servicios en el catálogo</p>
+                  </div>
+                </div>
               ) : (
-                  <>
-                    <ul className="space-y-3 mb-4">
-                  {cart.map((i, idx) => (
-                        <li key={idx} className="group rounded-[var(--unit-radius-sm)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] p-3 transition-all hover:border-[var(--unit-accent)]">
-                          <div className="flex items-start gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium text-[var(--unit-text-muted)] leading-tight">{i.name}</p>
-                                  {(i.itemType === 'SERVICE' || i.itemType === 'PACKAGE') && i.employeeId && (
-                                    <p className="text-xs text-[var(--unit-text-muted)] mt-1">
-                                      Empleado: {employees.find((emp: any) => emp.id === i.employeeId)?.name || 'No asignado'}
-                                    </p>
-                                  )}
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => updateQuantity(idx, i.quantity - 1)}
-                                      className="rounded-full p-0.5 text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
-                                      disabled={i.quantity <= 1}
-                                    >
-                                      <Minus className="h-3 w-3" />
-                                    </button>
-                                    <span className="text-sm font-medium text-[var(--unit-text-muted)] min-w-[2rem] text-center">
-                                      {i.quantity}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => updateQuantity(idx, i.quantity + 1)}
-                                      className="rounded-full p-0.5 text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
-                                    >
-                                      <Plus className="h-3 w-3" />
-                                    </button>
-                                  </div>
+                <>
+                  <ul className="space-y-3 mb-4">
+                    {cart.map((i, idx) => (
+                      <li key={idx} className="group rounded-[var(--unit-radius-sm)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] p-3 transition-all hover:border-[var(--unit-accent)]">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium text-[var(--unit-text-muted)] leading-tight">{i.name}</p>
+                                {(i.itemType === 'SERVICE' || i.itemType === 'PACKAGE') && i.employeeId && (
                                   <p className="text-xs text-[var(--unit-text-muted)] mt-1">
-                                    S/ {i.unitPrice.toFixed(2)} c/u
+                                    Empleado: {employees.find((emp: any) => emp.id === i.employeeId)?.name || 'No asignado'}
                                   </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="shrink-0 font-semibold tabular-nums text-[var(--unit-text-muted)]">
-                                    S/ {(i.unitPrice * i.quantity).toFixed(2)}
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQuantity(idx, i.quantity - 1)}
+                                    className="rounded-full p-0.5 text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
+                                    disabled={i.quantity <= 1}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </button>
+                                  <span className="text-sm font-medium text-[var(--unit-text-muted)] min-w-[2rem] text-center">
+                                    {i.quantity}
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => removeFromCart(idx)}
-                                    className="opacity-0 group-hover:opacity-100 rounded-full p-1 text-[var(--unit-text-muted)] transition-all hover:bg-red-500/15 hover:text-red-500"
+                                    onClick={() => updateQuantity(idx, i.quantity + 1)}
+                                    className="rounded-full p-0.5 text-[var(--unit-text-muted)] transition-colors hover:bg-[var(--unit-accent)] hover:text-[var(--unit-text)]"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Plus className="h-3 w-3" />
                                   </button>
                                 </div>
+                                <p className="text-xs text-[var(--unit-text-muted)] mt-1">
+                                  S/ {i.unitPrice.toFixed(2)} c/u
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="shrink-0 font-semibold tabular-nums text-[var(--unit-text-muted)]">
+                                  S/ {(i.unitPrice * i.quantity).toFixed(2)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFromCart(idx)}
+                                  className="opacity-0 group-hover:opacity-100 rounded-full p-1 text-[var(--unit-text-muted)] transition-all hover:bg-red-500/15 hover:text-red-500"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
                               </div>
                             </div>
                           </div>
-                    </li>
-                  ))}
-                </ul>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
 
-                    {/* Enhanced Discount Section - Solo para ADMIN y RECEPTIONIST */}
-                    {user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' ? (
+                  {/* Enhanced Discount Section */}
+                  {user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' ? (
                     <div className="rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <DollarSign className="h-3 w-3 text-[var(--unit-accent)]" />
                         <span className="text-xs font-medium text-[var(--unit-text-muted)]">Descuento</span>
                       </div>
                       <div className="space-y-2">
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="number"
-                    min={0}
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="number"
+                            min={0}
                             step={0.10}
-                    value={discountAmount || ''}
-                    onChange={(e) => setDiscountAmount(Number(e.target.value) || 0)}
+                            value={discountAmount || ''}
+                            onChange={(e) => setDiscountAmount(Number(e.target.value) || 0)}
                             placeholder="Monto"
                             className="w-24 rounded-[var(--unit-radius-sm)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] px-2 py-1.5 text-xs text-[var(--unit-text-muted)] text-center focus:outline-none focus:ring-1 focus:ring-[var(--unit-accent)]"
-                  />
-                  <input
-                    type="text"
-                    value={discountReason}
-                    onChange={(e) => setDiscountReason(e.target.value)}
+                          />
+                          <input
+                            type="text"
+                            value={discountReason}
+                            onChange={(e) => setDiscountReason(e.target.value)}
                             placeholder="Motivo (requerido)"
                             className="min-w-0 flex-1 rounded-[var(--unit-radius-sm)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] px-2 py-1.5 text-xs text-[var(--unit-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--unit-accent)]"
-                  />
-                </div>
+                          />
+                        </div>
                         {discountAmount > 0 && !discountReason.trim() && (
                           <p className="text-xs text-red-500">⚠️ El motivo del descuento es requerido</p>
                         )}
                       </div>
                     </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-
-              {/* Enhanced Ticket footer */}
-              <div className="border-t border-dashed border-[var(--unit-border)] bg-[var(--unit-surface)] px-6 py-4 space-y-3">
-                {/* Business Unit */}
-                <div className="text-center">
-                  <span className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">
-                    {unit === 'BARBERIA' ? 'Barman Barbería' : 'SPA'}
-                  </span>
-                </div>
-                
-                {/* Customer Name */}
-                {selectedCustomer && (
-                  <div className="text-center">
-                    <span className="text-xs font-medium text-[var(--unit-text)]">
-                      Cliente: {selectedCustomer.name}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between text-xs text-[var(--unit-text-muted)]">
-                  <span>Subtotal</span>
-                  <span className="tabular-nums">S/ {subtotalCart.toFixed(2)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-xs text-red-500">
-                    <span>Descuentos</span>
-                    <span className="tabular-nums">-S/ {discountAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-baseline pt-2 border-t border-[var(--unit-border)]">
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Total</span>
-                  <span className="font-heading text-2xl font-bold tabular-nums text-[var(--unit-accent)]">S/ {totalCart.toFixed(2)}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => createSaleMutation.mutate()}
-                  disabled={cart.length === 0 || createSaleMutation.isPending || (discountAmount > 0 && !discountReason.trim())}
-                  className="mt-3 w-full min-h-[48px] touch-manipulation rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white py-3.5 text-sm font-bold uppercase tracking-wider shadow-lg transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {createSaleMutation.isPending ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Creando venta...
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="h-4 w-4" />
-                      Crear venta
-                    </>
-                  )}
-                </button>
-              </div>
+                  ) : null}
+                </>
+              )}
             </div>
 
-            <PendingSales
-              sales={pendingSales ?? []}
-              isLoading={loadingPending}
-              onCollect={(sale) => openCloseModal(sale as PendingSale)}
-              onCancel={handleCancelSale}
-              userRole={'ADMIN'} // TODO: Obtener del auth store
-            />
+            {/* Enhanced Ticket footer */}
+            <div className="border-t border-dashed border-[var(--unit-border)] bg-[var(--unit-surface)] px-6 py-4 space-y-3">
+              <div className="text-center">
+                <span className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">
+                  {unit === 'BARBERIA' ? 'Barman Barbería' : 'SPA'}
+                </span>
+              </div>
+              
+              {selectedCustomer && (
+                <div className="text-center">
+                  <span className="text-xs font-medium text-[var(--unit-text)]">
+                    Cliente: {selectedCustomer.name}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex justify-between text-xs text-[var(--unit-text-muted)]">
+                <span>Subtotal</span>
+                <span className="tabular-nums">S/ {subtotalCart.toFixed(2)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-xs text-red-500">
+                  <span>Descuentos</span>
+                  <span className="tabular-nums">-S/ {discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-baseline pt-2 border-t border-[var(--unit-border)]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Total</span>
+                <span className="font-heading text-2xl font-bold tabular-nums text-[var(--unit-accent)]">S/ {totalCart.toFixed(2)}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => createSaleMutation.mutate()}
+                disabled={cart.length === 0 || createSaleMutation.isPending || (discountAmount > 0 && !discountReason.trim())}
+                className="mt-3 w-full min-h-[48px] touch-manipulation rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white py-3.5 text-sm font-bold uppercase tracking-wider shadow-lg transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {createSaleMutation.isPending ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Creando venta...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4" />
+                    Crear venta
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+
+          <PendingSales
+            sales={pendingSales ?? []}
+            isLoading={loadingPending}
+            onCollect={(sale) => openCloseModal(sale as PendingSale)}
+            onCancel={handleCancelSale}
+            userRole={'ADMIN'} // TODO: Obtener del auth store
+          />
+        </div> {/* CIERRE DE COLUMNA DERECHA */}
+      </div> {/* CIERRE DEL GRID PRINCIPAL */}
+
+      {/* --- INICIO DE MODALES --- */}
 
       {/* Sale Closed Modal */}
       {lastClosedSale && (
         <div className="fixed inset-0 z-10 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4">
           <div className="w-full max-w-sm rounded-t-[calc(var(--unit-border-radius)*1.5)] sm:rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 sm:p-8 relative overflow-hidden">
-            {/* Background Pattern */}
             <div className="absolute inset-0 opacity-30">
               <div className="h-full w-full bg-repeat" style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
               }}></div>
             </div>
             
-            {/* Drag handle (mobile) */}
             <div className="relative z-10 mx-auto mb-6 h-1 w-10 rounded-full bg-[var(--unit-text)]/20 sm:hidden" />
             
-            {/* Success Animation Container */}
             <div className="relative z-10 mb-8 text-center">
               <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/30 shadow-lg">
                 <div className="absolute inset-0 rounded-2xl bg-emerald-500/10 animate-pulse"></div>
@@ -1202,25 +1346,26 @@ const popularServices = useMemo(() => {
               
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-[var(--unit-text)]">¡Venta cerrada!</h3>
-                <p className="text-sm font-medium text-[var(--unit-accent)]">{lastClosedSale.saleNumber}</p>
+                <p className="text-sm font-medium text-[var(--unit-accent)]">{lastClosedSale?.saleNumber || ''}</p>
                 <div className="relative inline-block">
-                  <p className="text-3xl font-bold text-emerald-600 tabular-nums">S/ {lastClosedSale.total.toFixed(2)}</p>
+                  <p className="text-3xl font-bold text-emerald-600 tabular-nums">S/ {lastClosedSale?.total?.toFixed(2) || '0.00'}</p>
                   <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
                 </div>
               </div>
             </div>
             
-            {/* Action Buttons */}
             <div className="relative z-10 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => {
                   const data: ReceiptSaleData = {
-                    ...lastClosedSale,
+                    ...lastClosedSale!,
+                    saleNumber: lastClosedSale?.saleNumber || '',
+                    unit: lastClosedSale?.unit || '',
                     businessName: businessConfig?.businessName || '',
                     businessAddress: businessConfig?.businessAddress || '',
                     businessPhone: businessConfig?.businessPhone || '',
-                    businessLogo: lastClosedSale.unit === 'BARBERIA' 
+                    businessLogo: lastClosedSale?.unit === 'BARBERIA' 
                       ? (businessConfig?.barberiaLogo || '/logo-barberia.png')
                       : (businessConfig?.spaLogo || '/logo-spa.png'),
                   };
@@ -1252,7 +1397,7 @@ const popularServices = useMemo(() => {
             <p className="mb-3 text-xs text-[var(--unit-text-muted)]">Vista previa del comprobante</p>
             <iframe
               ref={receiptIframeRef}
-              srcDoc={receiptHtmlToPrint}
+              srcDoc={receiptHtmlToPrint || ''}
               title="Comprobante"
               className="w-full h-96 rounded-[var(--unit-radius-sm)] border border-[var(--unit-border)] bg-white"
             />
@@ -1281,14 +1426,12 @@ const popularServices = useMemo(() => {
       {showEmployeeModal && selectedServiceForEmployee && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-6 max-w-md w-full">
-            {/* Background Pattern */}
             <div className="absolute inset-0 opacity-30">
               <div className="h-full w-full bg-repeat" style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
               }}></div>
             </div>
             
-            {/* Header */}
             <div className="relative z-10 flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
@@ -1311,7 +1454,6 @@ const popularServices = useMemo(() => {
               </button>
             </div>
             
-            {/* Service Info */}
             <div className="relative z-10 space-y-4">
               <div className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 p-4">
                 <div className="flex items-center gap-3 mb-3">
@@ -1326,16 +1468,15 @@ const popularServices = useMemo(() => {
                     <p className="text-sm font-medium text-[var(--unit-text-muted)]">
                       {isPackageSelection ? 'Paquete seleccionado' : 'Servicio seleccionado'}
                     </p>
-                    <p className="text-base font-bold text-[var(--unit-text)]">{selectedServiceForEmployee.name}</p>
+                    <p className="text-base font-bold text-[var(--unit-text)]">{selectedServiceForEmployee?.name || ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-[var(--unit-border)]/30">
                   <span className="text-sm text-[var(--unit-text-muted)]">Precio:</span>
-                  <span className="text-lg font-bold text-[var(--unit-accent)]">S/ {typeof selectedServiceForEmployee.price === 'number' ? selectedServiceForEmployee.price : Number(selectedServiceForEmployee.price)}</span>
+                  <span className="text-lg font-bold text-[var(--unit-accent)]">S/ {selectedServiceForEmployee ? (typeof selectedServiceForEmployee.price === 'number' ? selectedServiceForEmployee.price : Number(selectedServiceForEmployee.price)) : '0.00'}</span>
                 </div>
               </div>
               
-              {/* Employee Selection */}
               <div>
                 <label className="block text-sm font-bold text-[var(--unit-text)] mb-3">
                   Empleado que realizará {isPackageSelection ? 'el paquete' : 'el servicio'}:
@@ -1358,10 +1499,12 @@ const popularServices = useMemo(() => {
                     employees.map((employee: any) => (
                       <button
                         key={employee.id}
-                        onClick={() => isPackageSelection 
-                          ? addPackageToCartWithEmployee(selectedServiceForEmployee, employee.id)
-                          : addServiceToCartWithEmployee(selectedServiceForEmployee, employee.id)
-                        }
+                        onClick={() => {
+                          if (!selectedServiceForEmployee) return;
+                          isPackageSelection 
+                            ? addPackageToCartWithEmployee(selectedServiceForEmployee, employee.id)
+                            : addServiceToCartWithEmployee(selectedServiceForEmployee, employee.id);
+                        }}
                         className="relative w-full text-left p-4 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 transition-all hover:shadow-lg hover:scale-[1.02] hover:border-[var(--unit-accent)]/50 group"
                       >
                         <div className="flex items-center gap-3">
@@ -1385,7 +1528,6 @@ const popularServices = useMemo(() => {
               </div>
             </div>
             
-            {/* Cancel Button */}
             <div className="relative z-10 mt-6">
               <button
                 onClick={() => {
@@ -1420,7 +1562,7 @@ const popularServices = useMemo(() => {
         onCancel={() => setShowSaleConfirmDialog(false)}
         onConfirm={() => setShowSaleConfirmDialog(false)}
         title="¡Venta Confirmada!"
-        message={`Venta ${lastClosedSale?.saleNumber} procesada exitosamente por S/ ${lastClosedSale?.total.toFixed(2)}. Método de pago: ${lastClosedSale?.paymentMethod || 'Efectivo'}.`}
+        message={`Venta ${lastClosedSale?.saleNumber || ''} procesada exitosamente por S/ ${lastClosedSale?.total?.toFixed(2) || '0.00'}. Método de pago: ${lastClosedSale?.paymentMethod || 'Efectivo'}.`}
         type="success"
         confirmText="Aceptar confirmación"
         cancelText=""
@@ -1458,6 +1600,21 @@ const popularServices = useMemo(() => {
           </div>
         </div>
       )}
-      </div>
-  );
-}
+
+      {/* Variable Price Modal */}
+      {showVariablePriceModal && selectedServiceForPrice && (
+        <VariablePriceModal
+          service={selectedServiceForPrice!}
+          isOpen={showVariablePriceModal}
+          onClose={() => {
+            setShowVariablePriceModal(false);
+            setSelectedServiceForPrice(null);
+          }}
+          onPriceConfirm={handleVariablePriceConfirm}
+          onApprovalRequest={handleApprovalRequest}
+        />
+      )}
+
+    </div>
+  </div>
+);}

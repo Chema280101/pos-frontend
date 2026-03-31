@@ -51,13 +51,22 @@ export function Footer(): JSX.Element {
             {/* Links */}
             <div className="flex items-center gap-4 text-sm">
               <a 
-                href="/docs/Guia-Usuario-Barberia-Spa-POS.html"
+                href="/docs/manual-de-usuario.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors group"
               >
                 <HelpCircle className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                <span>Ayuda</span>
+                <span>Manual PDF</span>
+              </a>
+              <a 
+                href="/docs/Guia-Usuario-VersatPOS.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors group"
+              >
+                <HelpCircle className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <span>Ayuda Web</span>
               </a>
               <a 
                 href="https://wa.me/51951171534?text=Hola%2C%20necesito%20soporte%20con%20el%20sistema%20Barber%C3%ADa%20y%20Spa%20POS"

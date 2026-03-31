@@ -20,7 +20,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { OptimizedScheduleView } from './OptimizedScheduleView';
 import { AppointmentsMetrics } from './AppointmentsMetrics';
 import { cn } from '@/lib/utils';
-import { STATUS_CONFIG, getStatusConfig, type Appointment } from '@/types/appointment';
+import { STATUS_CONFIG, getStatusConfig, type Appointment, type CalendarAppointmentWithProps } from '@/types/appointment';
 import { useToast } from '@/hooks/useToast';
 
 const DAY_QUEUE_ROW_HEIGHT = 120;
@@ -38,7 +38,7 @@ export function AppointmentsPage(): JSX.Element {
   }, [queryClient]);
 
   const { success } = useToast();
-  
+
   const [viewStart, setViewStart] = useState<Date>(() => startOfDay(subDays(new Date(), 30))); // Start 30 days ago
   const [viewEnd, setViewEnd] = useState<Date>(() => endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // End 30 days from now
   const [calendarView, setCalendarView] = useState<'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'>('timeGridDay');
@@ -54,12 +54,12 @@ export function AppointmentsPage(): JSX.Element {
   const [showFilters, setShowFilters] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<'SPA' | 'BARBERIA' | null>(null);
   const [search, setSearch] = useState('');
-  
+
   // Date range filter states
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 30))); // 30 días atrás
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // 30 días en el futuro
   const [unitFilter, setUnitFilter] = useState<string>('');
-  
+
   // Additional filter states
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [serviceFilter, setServiceFilter] = useState<string>('');
@@ -67,10 +67,10 @@ export function AppointmentsPage(): JSX.Element {
 
   // Hide employee filter for BARBER and SPA_SPECIALIST roles
   const canFilterByEmployee = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
-  
+
   // State for delete confirmation dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<CalendarAppointmentWithProps | null>(null);
 
   // Get real employees from API
   const { data: employees = [] } = useQuery({
@@ -104,28 +104,28 @@ export function AppointmentsPage(): JSX.Element {
         start: viewStart.toISOString(),
         end: viewEnd.toISOString(),
       });
-      
+
       if (unitFilter) params.set('unit', unitFilter);
-      
+
       // Additional filters (solo para ADMIN y RECEPTIONIST)
       if (unitFilter) params.set('unitFilter', unitFilter);
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
       if (statusFilter) params.set('status', statusFilter);
       if (serviceFilter) params.set('serviceId', serviceFilter);
-      
+
       // Employee filter solo para ADMIN y RECEPTIONIST
       if (employeeFilter && (user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST')) {
         params.set('employeeId', employeeFilter);
       }
-      
+
       if (search) params.set('search', search);
-      
+
       const response = await api.get(`/api/appointments?${params}`);
-      
+
       // Extract the array from paginated response
       const data = response.data?.data || [];
-      
+
       return data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutos
@@ -148,14 +148,14 @@ export function AppointmentsPage(): JSX.Element {
         notes: apt.notes,
       };
     });
-    
+
     return transformed;
   }, [appointments]);
 
   // Debug: Ver empleados disponibles
 
   const normalizedAppointments = useMemo(() => {
-    return appointments.map((apt: any) => {
+    return appointments.map((apt: any): CalendarAppointmentWithProps => {
       return {
         id: apt.id,
         title: `${apt.customer?.name || 'Sin cliente'} - ${apt.items?.[0]?.service?.name || 'Sin servicio'}`,
@@ -189,8 +189,8 @@ export function AppointmentsPage(): JSX.Element {
     queryClient.invalidateQueries({ queryKey: ['appointments'] });
   }, [queryClient]);
 
-  
-  
+
+
   // Handlers for OptimizedScheduleView
   const handleNewAppointment = useCallback((employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => {
     const params = new URLSearchParams({
@@ -211,22 +211,22 @@ export function AppointmentsPage(): JSX.Element {
       // Find the appointment to get its duration from scheduleAppointments
       const appointment = scheduleAppointments.find((apt: any) => apt.id === appointmentId);
       const duration = appointment?.service?.durationMin || 30;
-      
+
       const endTime = new Date(newTime.getTime() + duration * 60 * 1000);
-      
+
       await api.patch(`/api/appointments/${appointmentId}`, {
         employeeId: newEmployeeId,
         startTime: newTime.toISOString(),
         endTime: endTime.toISOString(),
         status: 'RESCHEDULED', // ✅ Agregar status de reprogramación
       });
-      
+
       // ✅ Invalidar queries específicas para actualizar el drawer
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
       success('Cita reprogramada exitosamente');
-      
+
       // ✅ Si el drawer está abierto para esta cita, invalidar para que se actualice
       if (drawerAppointmentId === appointmentId) {
         queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
@@ -244,7 +244,7 @@ export function AppointmentsPage(): JSX.Element {
     };
 
     window.addEventListener('calendarFilterChange', handleCalendarFilterChange as EventListener);
-    
+
     return () => {
       window.removeEventListener('calendarFilterChange', handleCalendarFilterChange as EventListener);
     };
@@ -262,14 +262,14 @@ export function AppointmentsPage(): JSX.Element {
       key: 'startTime',
       header: 'Fecha y Hora',
       sortable: true,
-      render: (row: any) => {
+      render: (row: CalendarAppointmentWithProps) => {
         const date = new Date(row.start);
         // Custom formatting for "2 mar. 2026" and "1:00 p. m."
         const day = format(date, 'd');
         const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         const month = monthNames[date.getMonth()];
         const year = format(date, 'yyyy');
-        
+
         const hours = date.getHours();
         const minutes = date.getMinutes();
         const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
@@ -291,7 +291,7 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'customer',
       header: 'Cliente',
-      render: (row: any) => (
+      render: (row: CalendarAppointmentWithProps) => (
         <div className="flex flex-col gap-1">
           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
             {row.extendedProps.customer?.name || 'Sin cliente'}
@@ -307,7 +307,7 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'service',
       header: 'Servicio',
-      render: (row: any) => {
+      render: (row: CalendarAppointmentWithProps) => {
         const serviceName = row.extendedProps.service?.name;
         const serviceId = row.extendedProps.appointmentId;
         return (
@@ -331,9 +331,9 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'employee',
       header: 'Empleado',
-      render: (row: any) => {
-        const employeeName = row.employee?.name;
-        const employeeId = (row as any).employeeId;
+      render: (row: CalendarAppointmentWithProps) => {
+        const employeeName = row.extendedProps.employee?.name;
+        const employeeId = row.extendedProps.employee?.id;
         return (
           <div className="flex flex-col gap-1">
             <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
@@ -345,7 +345,7 @@ export function AppointmentsPage(): JSX.Element {
               </span>
             )}
             <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
-              {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+              {row.extendedProps.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
             </span>
           </div>
         );
@@ -354,22 +354,22 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'unit',
       header: 'Unidad',
-      render: (row: Appointment) => (
+      render: (row: CalendarAppointmentWithProps) => (
         <span className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.unit === 'SPA'
+          row.extendedProps.unit === 'SPA'
             ? 'bg-purple-100 text-purple-800'
             : 'bg-red-100 text-red-800'
         )}>
-          {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+          {row.extendedProps.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
       ),
     },
     {
       key: 'status',
       header: 'Estado',
-      render: (row: Appointment) => {
-        const status = getStatusConfig(row.status);
+      render: (row: CalendarAppointmentWithProps) => {
+        const status = getStatusConfig(row.extendedProps.status);
         return (
           <span className={cn('px-2 py-1 rounded-full text-xs font-medium', status.bg, status.text)}>
             {status.label}
@@ -380,9 +380,10 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'sale',
       header: 'Venta',
-      render: (row: Appointment) => (
+      render: (row: CalendarAppointmentWithProps) => (
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-          {row.sale?.saleNumber ? `#${row.sale.saleNumber}` : 'Sin venta'}
+          {/* TODO: Add sale info from extendedProps when available */}
+          Sin venta
         </span>
       ),
     },
@@ -418,7 +419,7 @@ export function AppointmentsPage(): JSX.Element {
     {
       label: 'Ver',
       icon: <Eye className="h-4 w-4" />,
-      onClick: (row: Appointment) => {
+      onClick: (row: CalendarAppointmentWithProps) => {
         setDrawerAppointmentId(row.id);
         setDrawerOpen(true);
       },
@@ -427,7 +428,7 @@ export function AppointmentsPage(): JSX.Element {
     {
       label: 'Eliminar',
       icon: <Trash2 className="h-4 w-4" />,
-      onClick: (row: Appointment) => {
+      onClick: (row: CalendarAppointmentWithProps) => {
         setSelectedAppointment(row);
         setShowDeleteDialog(true);
       },
@@ -443,7 +444,7 @@ export function AppointmentsPage(): JSX.Element {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
       </div>
-      
+
       <div className="relative max-w-7xl mx-auto p-6">
         {/* Enhanced Header */}
         <div className="mb-8">
@@ -661,10 +662,10 @@ export function AppointmentsPage(): JSX.Element {
                       <div className="flex flex-wrap gap-2">
                         {statusFilter && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
-                            Estado: {statusFilter === 'SCHEDULED' ? 'Programadas' : 
-                                    statusFilter === 'IN_PROGRESS' ? 'En curso' :
-                                    statusFilter === 'COMPLETED' ? 'Completadas' :
-                                    statusFilter === 'CANCELLED' ? 'Canceladas' :
+                            Estado: {statusFilter === 'SCHEDULED' ? 'Programadas' :
+                              statusFilter === 'IN_PROGRESS' ? 'En curso' :
+                                statusFilter === 'COMPLETED' ? 'Completadas' :
+                                  statusFilter === 'CANCELLED' ? 'Canceladas' :
                                     statusFilter === 'NO_SHOW' ? 'No asistió' : statusFilter}
                           </span>
                         )}
@@ -796,7 +797,7 @@ export function AppointmentsPage(): JSX.Element {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-red-900">
-                        ¿Estás seguro de que deseas eliminar la cita de "{selectedAppointment.customer?.name}"?
+                        ¿Estás seguro de que deseas eliminar la cita de "{selectedAppointment.extendedProps.customer?.name}"?
                       </p>
                       <p className="text-sm text-red-700 mt-1">
                         Esta acción no se puede deshacer y se perderá toda la información de la cita.
@@ -811,62 +812,62 @@ export function AppointmentsPage(): JSX.Element {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Cliente</span>
                       <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                        {selectedAppointment.customer?.name}
+                        {selectedAppointment.extendedProps.customer?.name}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {new Date(selectedAppointment.startTime).toLocaleDateString()}
+                        {new Date(selectedAppointment.start).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Hora</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {new Date(selectedAppointment.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(selectedAppointment.start).toLocaleTimeString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Estado</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedAppointment.status === 'SCHEDULED' ? 'Programada' : selectedAppointment.status}
+                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium', getStatusConfig(selectedAppointment.extendedProps.status).bg, getStatusConfig(selectedAppointment.extendedProps.status).text)}>
+                        {getStatusConfig(selectedAppointment.extendedProps.status).label}
                       </span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-4 mt-6">
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedAppointment(null);
-                  }}
-                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={refreshAppointments}
-                  className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-green-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <RefreshCw className="h-5 w-5" />
-                  Actualizar Citas
-                </button>
-                <button
-                  onClick={() => {
-                    // TODO: Implement delete appointment mutation
-                    setShowDeleteDialog(false);
-                    setSelectedAppointment(null);
-                  }}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <Trash2 className="h-4 w-4" />
-                    Eliminar Cita
-                  </span>
-                </button>
+                {/* Actions */}
+                <div className="flex gap-4 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowDeleteDialog(false);
+                      setSelectedAppointment(null);
+                    }}
+                    className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={refreshAppointments}
+                    className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-green-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <RefreshCw className="h-5 w-5" />
+                    Actualizar Citas
+                  </button>
+                  <button
+                    onClick={() => {
+                      // TODO: Implement delete appointment mutation
+                      setShowDeleteDialog(false);
+                      setSelectedAppointment(null);
+                    }}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Cita
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

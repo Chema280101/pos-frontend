@@ -57,6 +57,9 @@ export interface Appointment extends BaseAppointment {
       name: string;
       durationMin: number;
       price?: number;
+      priceType?: string;
+      minPrice?: number;
+      maxPrice?: number;
     };
     employee?: {
       id: string;
@@ -176,3 +179,35 @@ export const isValidStatus = (status: string): status is AppointmentStatus => {
 export const isValidUnit = (unit: string): unit is BusinessUnit => {
   return Object.values(BUSINESS_UNIT).includes(unit as BusinessUnit);
 };
+
+// Interfaz para calendario con extendedProps (usada en tabla)
+export interface CalendarAppointmentWithProps {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  extendedProps: {
+    appointmentId: string;
+    customer?: {
+      id: string;
+      name: string;
+      phone?: string;
+    };
+    service?: {
+      id: string;
+      name: string;
+      durationMin?: number;
+      priceType?: string;
+      minPrice?: number;
+      maxPrice?: number;
+    };
+    employee?: {
+      id: string;
+      name: string;
+      unit?: BusinessUnit;
+    };
+    unit: BusinessUnit;
+    status: AppointmentStatus;
+    notes?: string;
+  };
+}

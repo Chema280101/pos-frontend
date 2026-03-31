@@ -5,7 +5,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'success';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'success' | 'warning';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -24,6 +24,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   danger: 'border-2 border-[var(--unit-error)]/50 bg-gradient-to-r from-[var(--unit-error)] to-red-600 text-white shadow-lg shadow-[var(--unit-error)]/25 hover:shadow-xl hover:shadow-[var(--unit-error)]/30 focus:ring-[var(--unit-error)]/50',
   outline: 'border-2 border-[var(--unit-accent)]/50 bg-transparent text-[var(--unit-accent)] hover:bg-gradient-to-r hover:from-[var(--unit-accent)]/10 hover:to-[var(--unit-primary)]/10 focus:ring-[var(--unit-accent)]/50',
   success: 'border-2 border-[var(--unit-success)]/50 bg-gradient-to-r from-[var(--unit-success)] to-green-600 text-white shadow-lg shadow-[var(--unit-success)]/25 hover:shadow-xl hover:shadow-[var(--unit-success)]/30 focus:ring-[var(--unit-success)]/50',
+  warning: 'border-2 border-[var(--unit-warning)]/50 bg-gradient-to-r from-[var(--unit-warning)] to-amber-600 text-white shadow-lg shadow-[var(--unit-warning)]/25 hover:shadow-xl hover:shadow-[var(--unit-warning)]/30 focus:ring-[var(--unit-warning)]/50',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

@@ -42,6 +42,8 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   maxHeight?: string;
   customFilterLogic?: (data: T[], filterValues: Record<string, any>) => T[];
+  // ✅ MOBILE: Nueva prop para vista cards
+  mobileCards?: boolean;
 }
 
 export function DataTable<T>({
@@ -59,6 +61,7 @@ export function DataTable<T>({
   emptyMessage = 'No hay datos para mostrar.',
   maxHeight = '600px',
   customFilterLogic,
+  mobileCards = false,
 }: DataTableProps<T>): JSX.Element {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -101,11 +104,11 @@ export function DataTable<T>({
       if (search) {
         const s = search.toLowerCase();
         result = result.filter((row) =>
-      columns.some((col) => {
-        const val = (row as Record<string, unknown>)[col.key];
-        return val != null && String(val).toLowerCase().includes(s);
-      })
-    );
+          columns.some((col) => {
+            const val = (row as Record<string, unknown>)[col.key];
+            return val != null && String(val).toLowerCase().includes(s);
+          })
+        );
       }
       // Filters
       filters.forEach(f => {
@@ -279,8 +282,8 @@ export function DataTable<T>({
                 <div key={index} className="space-y-3">
                   <div className="flex gap-4 items-center">
                     {columns.map((col, colIndex) => (
-                      <div 
-                        key={col.key} 
+                      <div
+                        key={col.key}
                         className={`flex-1 ${colIndex === 0 ? 'w-1/3' : 'w-1/4'}`}
                       >
                         <div className="h-4 bg-[var(--unit-surface)] rounded animate-pulse mb-2"></div>
@@ -299,70 +302,48 @@ export function DataTable<T>({
               ))}
             </div>
           ) : (
-            <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
-            <thead className="sticky top-0 z-10 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)]">
-              <tr>
-                {columns.map((col, index) => (
-                  <th
-                    key={col.key}
-                    onClick={() => col.sortable && handleSort(col.key)}
-                    className={cn(
-                      `px-6 py-4 ${index === 0 ? 'text-left' : 'text-center'} text-sm font-bold text-[var(--unit-text)] border-b border-[var(--unit-border)]/30`,
-                      col.sortable && 'cursor-pointer hover:bg-[var(--unit-accent)]/10 transition-colors',
-                      col.className
-                    )}
-                    style={{ minWidth: index === 0 ? '200px' : index === columns.length - 1 ? '120px' : '150px' }}
-                  >
-                    <div className={`flex items-center ${index === 0 ? 'justify-start' : 'justify-center'} gap-2`}>
-                      {col.header}
-                      {col.sortable && sortKey === col.key && (
-                        sortDir === 'asc' ? <ChevronUp className="h-4 w-4 text-[var(--unit-accent)]" /> : <ChevronDown className="h-4 w-4 text-[var(--unit-accent)]" />
-                      )}
+            // ✅ MOBILE: Vista cards para pantallas pequeñas
+            mobileCards ? (
+              <div className="space-y-4">
+                {paginatedData.map((row) => (
+                  <div key={keyExtractor(row)} className="bg-white border-2 border-[var(--unit-border)]/30 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                    {/* Card Header - Primera columna como título */}
+                    <div className="mb-3 pb-3 border-b border-[var(--unit-border)]/20">
+                      <div className="font-bold text-lg text-[var(--unit-text)]">
+                        {columns[0].render ? columns[0].render(row) : String(row[columns[0].key as keyof T] || '')}
+                      </div>
                     </div>
-                  </th>
-                ))}
-                {actions.length > 0 && (
-                  <th className="px-6 py-4 text-center text-sm font-bold text-[var(--unit-text)] border-b border-[var(--unit-border)]/30" style={{ minWidth: '200px' }}>
-                    Acciones
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((row, index) => (
-                <tr
-                  key={keyExtractor(row)}
-                  className={cn(
-                    'border-b border-[var(--unit-border)]/20 transition-all duration-200 group',
-                    zebra && index % 2 === 0 ? 'bg-white/30' : 'bg-white/50',
-                    'hover:bg-gradient-to-r hover:from-[var(--unit-accent)]/5 hover:to-[var(--unit-primary)]/5 hover:shadow-sm'
-                  )}
-                >
-                  {columns.map((col, index) => (
-                    <td key={col.key} className={`px-6 py-4 text-sm text-[var(--unit-text)] ${index === 0 ? 'text-left' : 'text-center'} group-hover:text-[var(--unit-accent)] transition-colors`} style={{ minWidth: index === 0 ? '200px' : index === columns.length - 1 ? '120px' : '150px' }}>
-                      {col.render
-                        ? col.render(row)
-                        : String((row as Record<string, unknown>)[col.key] ?? '')}
-                    </td>
-                  ))}
-                  {actions.length > 0 && (
-                    <td className="px-6 py-4 text-center" style={{ minWidth: '200px' }}>
-                      <div className="flex items-center justify-center gap-2">
-                        {actions.map((action, i) => {
-                          const disabled = action.disabled?.(row);
+
+                    {/* Card Body - Resto de columnas */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      {columns.slice(1).map((col) => (
+                        <div key={col.key} className="flex flex-col">
+                          <span className="text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider mb-1">
+                            {col.header}
+                          </span>
+                          <span className="text-sm text-[var(--unit-text)]">
+                            {col.render ? col.render(row) : String(row[col.key as keyof T] || '—')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Card Actions */}
+                    {actions.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-3 border-t border-[var(--unit-border)]/20">
+                        {actions.map((action, actionIndex) => {
+                          const disabled = action.disabled ? action.disabled(row) : false;
                           return (
                             <button
-                              key={i}
-                              type="button"
-                              disabled={disabled}
+                              key={actionIndex}
                               onClick={() => action.onClick(row)}
+                              disabled={disabled}
                               className={cn(
-                                'p-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-md',
-                                action.className || 'text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)]',
-                                disabled && 'opacity-50 cursor-not-allowed'
+                                'inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+                                disabled
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : action.className || 'bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/20'
                               )}
-                              title={action.label}
-                              aria-label={`${action.label} para ${(row as any).name || (row as any).id || 'este elemento'}`}
                             >
                               <span className={cn(
                                 'transition-all duration-200',
@@ -370,16 +351,99 @@ export function DataTable<T>({
                               )}>
                                 {action.icon}
                               </span>
+                              <span className="hidden sm:inline">{action.label}</span>
                             </button>
                           );
                         })}
                       </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Vista tabla normal para desktop
+              <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
+                <thead className="sticky top-0 z-10 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)]">
+                  <tr>
+                    {columns.map((col, index) => (
+                      <th
+                        key={col.key}
+                        onClick={() => col.sortable && handleSort(col.key)}
+                        className={cn(
+                          `px-6 py-4 ${index === 0 ? 'text-left' : 'text-center'} text-sm font-bold text-[var(--unit-text)] border-b border-[var(--unit-border)]/30`,
+                          col.sortable && 'cursor-pointer hover:bg-[var(--unit-accent)]/10 transition-colors',
+                          col.className
+                        )}
+                        style={{ minWidth: index === 0 ? '200px' : index === columns.length - 1 ? '120px' : '150px' }}
+                      >
+                        <div className={`flex items-center ${index === 0 ? 'justify-start' : 'justify-center'} gap-2`}>
+                          {col.header}
+                          {col.sortable && sortKey === col.key && (
+                            sortDir === 'asc' ? <ChevronUp className="h-4 w-4 text-[var(--unit-accent)]" /> : <ChevronDown className="h-4 w-4 text-[var(--unit-accent)]" />
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                    {actions.length > 0 && (
+                      <th className="px-6 py-4 text-center text-sm font-bold text-[var(--unit-text)] border-b border-[var(--unit-border)]/30" style={{ minWidth: '200px' }}>
+                        Acciones
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedData.map((row, index) => (
+                    <tr
+                      key={keyExtractor(row)}
+                      className={cn(
+                        'border-b border-[var(--unit-border)]/20 transition-all duration-200 group',
+                        zebra && index % 2 === 0 ? 'bg-white/30' : 'bg-white/50',
+                        'hover:bg-gradient-to-r hover:from-[var(--unit-accent)]/5 hover:to-[var(--unit-primary)]/5 hover:shadow-sm'
+                      )}
+                    >
+                      {columns.map((col, index) => (
+                        <td key={col.key} className={`px-6 py-4 text-sm text-[var(--unit-text)] ${index === 0 ? 'text-left' : 'text-center'} group-hover:text-[var(--unit-accent)] transition-colors`} style={{ minWidth: index === 0 ? '200px' : index === columns.length - 1 ? '120px' : '150px' }}>
+                          {col.render
+                            ? col.render(row)
+                            : String((row as Record<string, unknown>)[col.key] ?? '')}
+                        </td>
+                      ))}
+                      {actions.length > 0 && (
+                        <td className="px-6 py-4 text-center" style={{ minWidth: '200px' }}>
+                          <div className="flex items-center justify-center gap-2">
+                            {actions.map((action, i) => {
+                              const disabled = action.disabled?.(row);
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() => action.onClick(row)}
+                                  className={cn(
+                                    'p-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-md',
+                                    action.className || 'text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)]',
+                                    disabled && 'opacity-50 cursor-not-allowed'
+                                  )}
+                                  title={action.label}
+                                  aria-label={`${action.label} para ${(row as any).name || (row as any).id || 'este elemento'}`}
+                                >
+                                  <span className={cn(
+                                    'transition-all duration-200',
+                                    disabled && 'grayscale opacity-60'
+                                  )}>
+                                    {action.icon}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
           )}
           {filteredData.length === 0 && !loading && (
             <div className="px-6 py-12 text-center">
@@ -411,7 +475,7 @@ export function DataTable<T>({
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm font-medium text-[var(--unit-text)]">
               Filas:
@@ -430,7 +494,7 @@ export function DataTable<T>({
                 ))}
               </select>
             </label>
-            
+
             <div className="flex gap-2">
               <button
                 type="button"

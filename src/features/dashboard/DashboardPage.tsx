@@ -17,38 +17,11 @@ type DashboardView = 'SPA' | 'BARBERIA' | 'CONSOLIDADO';
 export function DashboardPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   
-  // Redirigir barberos y especialistas a sus dashboards específicos
-  if (user?.role === 'BARBER') {
-    return <DashboardRedirector targetRole="barber" />;
-  }
-  
-  if (user?.role === 'SPA_SPECIALIST') {
-    return <DashboardRedirector targetRole="specialist" />;
-  }
-  
   // Solo ADMIN puede acceder al dashboard financiero
   return (
     <RoleGuard minRole="ADMIN">
       <DashboardContent />
     </RoleGuard>
-  );
-}
-
-function DashboardRedirector({ targetRole }: { targetRole: string }): JSX.Element {
-  const router = useRouter();
-  
-  useEffect(() => {
-    const targetPath = targetRole === 'barber' ? '/dashboard/barber' : '/dashboard/specialist';
-    router.replace(targetPath);
-  }, [router, targetRole]);
-  
-  return (
-    <div className="min-h-screen bg-[var(--unit-surface)] flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--unit-accent)] mx-auto mb-4"></div>
-        <p className="text-[var(--unit-text)]">Redirigiendo a tu dashboard...</p>
-      </div>
-    </div>
   );
 }
 

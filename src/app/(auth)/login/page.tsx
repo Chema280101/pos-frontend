@@ -72,7 +72,23 @@ export default function LoginPage(): JSX.Element {
         router.push('/change-password');
         return;
       }
-      router.push('/dashboard');
+      
+      // Redirigir según el rol del usuario
+      switch (res.user.role) {
+        case 'ADMIN':
+          router.push('/dashboard');
+          break;
+        case 'RECEPTIONIST':
+          router.push('/pos');
+          break;
+        case 'SPA_SPECIALIST':
+        case 'BARBER':
+          router.push('/appointments');
+          break;
+        default:
+          router.push('/appointments');
+          break;
+      }
     } catch (err: unknown) {
       const ax = err as { response?: { data?: unknown; status?: number }; message?: string; code?: string };
       const responseData = ax.response?.data;

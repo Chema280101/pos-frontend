@@ -34,6 +34,9 @@ const schema = z.object({
   name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
   description: z.string().max(2000).optional().nullable(),
   price: z.number().positive({ message: "Precio debe ser positivo" }),
+  priceType: z.enum(['FIXED', 'VARIABLE', 'RANGE', 'QUOTE']).default('FIXED'),
+  minPrice: z.number().positive().optional().nullable(),
+  maxPrice: z.number().positive().optional().nullable(),
   durationMin: z.number().int().positive({ message: "Duración en minutos requerida" }),
   unit: z.enum(['SPA', 'BARBERIA']),
   categoryId: z.string().uuid().optional().nullable(),
@@ -48,6 +51,9 @@ interface ServiceResponse {
   name: string;
   description: string | null;
   price: number;
+  priceType: string;
+  minPrice: number | null;
+  maxPrice: number | null;
   durationMin: number;
   unit: string;
   categoryId: string | null;
@@ -150,6 +156,9 @@ export function ServiceForm(): JSX.Element {
         name: service.name,
         description: service.description || '',
         price: service.price,
+        priceType: (service.priceType as any) || 'FIXED',
+        minPrice: service.minPrice || null,
+        maxPrice: service.maxPrice || null,
         durationMin: service.durationMin,
         unit: service.unit as 'SPA' | 'BARBERIA',
         categoryId: service.categoryId || null,
@@ -397,11 +406,94 @@ export function ServiceForm(): JSX.Element {
                 </div>
               </div>
 
+              {/* Pricing Type Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="h-4 w-4 text-[var(--unit-accent)]" />
+                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Tipo de precio</h4>
+                </div>
+
+                {/* Price Type Field */}
+                <div>
+                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Tipo de precio *</label>
+                  <select 
+                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    {...register('priceType')}
+                  >
+                    <option value="FIXED">Precio Fijo</option>
+                    <option value="VARIABLE">Precio Variable</option>
+                    <option value="RANGE">Precio con Aprobación</option>
+                    <option value="QUOTE">Precio por Cotización</option>
+                  </select>
+                  {errors.priceType && (
+                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {errors.priceType.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Conditional Price Range Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Min Price Field */}
+                  <div>
+                    <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio mínimo (S/)</label>
+                    <input
+                      type="number"
+                      step="0.10"
+                      min="0"
+                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                      placeholder="0.00"
+                      {...register('minPrice', { valueAsNumber: true })}
+                    />
+                    {errors.minPrice && (
+                      <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {errors.minPrice.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Max Price Field */}
+                  <div>
+                    <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio máximo (S/)</label>
+                    <input
+                      type="number"
+                      step="0.10"
+                      min="0"
+                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                      placeholder="0.00"
+                      {...register('maxPrice', { valueAsNumber: true })}
+                    />
+                    {errors.maxPrice && (
+                      <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {errors.maxPrice.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Price Type Info */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-blue-800 mb-2">
+                    <Info className="h-4 w-4" />
+                    <span className="text-sm font-medium">Información sobre tipos de precio</span>
+                  </div>
+                  <div className="space-y-2 text-sm text-blue-700">
+                    <div><strong>Fijo:</strong> Precio único que no puede cambiar</div>
+                    <div><strong>Variable:</strong> Puede cambiar dentro de un rango sin aprobación</div>
+                    <div><strong>Rango:</strong> Siempre requiere aprobación administrativa</div>
+                    <div><strong>Cotización:</strong> Requiere cotización previa al cliente</div>
+                  </div>
+                </div>
+              </div>
+
               {/* Pricing and Duration Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precio y duración</h4>
+                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precio base y duración</h4>
                 </div>
 
                 {/* Enhanced Price and Duration Fields */}

@@ -4,10 +4,11 @@ import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useUnitStore } from '@/store/unitStore';
+import { useAuthStore } from '@/store/authStore';
 import { api } from '@/lib/api';
 
 /**
- * Hook para prefetch inteligente de queries basado en navegación
+ * Hook para prefetch inteligente de queries basado en navegación y rol
  * Optimiza la primera carga de páginas eliminando el fetch bloqueante
  */
 type PrefetchRoute = (route: string) => void;
@@ -16,7 +17,9 @@ export function usePrefetchQueries(): PrefetchRoute {
   const queryClient = useQueryClient();
   const router = useRouter();
   const activeUnit = useUnitStore((s) => s.activeUnit);
+  const user = useAuthStore((s) => s.user);
   const unit = activeUnit ?? 'SPA';
+  const userRole = user?.role ?? 'BARBER';
 
   const prefetchAppointments = useCallback(() => {
     const viewStart = new Date();
@@ -40,6 +43,12 @@ export function usePrefetchQueries(): PrefetchRoute {
   }, [queryClient, unit]);
 
   const prefetchDashboard = useCallback(() => {
+    // Solo hacer prefetch de dashboard si es ADMIN o RECEPTIONIST
+    if (userRole !== 'ADMIN' && userRole !== 'RECEPTIONIST') {
+      console.log('🚫 Skip dashboard prefetch - Usuario no tiene permisos:', userRole);
+      return;
+    }
+
     queryClient.prefetchQuery({
       queryKey: ['dashboard', 'kpis', unit],
       queryFn: async () => {
@@ -48,9 +57,15 @@ export function usePrefetchQueries(): PrefetchRoute {
       },
       staleTime: 30 * 1000,
     });
-  }, [queryClient, unit]);
+  }, [queryClient, unit, userRole]);
 
   const prefetchClients = useCallback(() => {
+    // Solo hacer prefetch de clientes si es ADMIN o RECEPTIONIST
+    if (userRole !== 'ADMIN' && userRole !== 'RECEPTIONIST') {
+      console.log('🚫 Skip clients prefetch - Usuario no tiene permisos:', userRole);
+      return;
+    }
+
     queryClient.prefetchQuery({
       queryKey: ['clients', unit],
       queryFn: async () => {
@@ -59,9 +74,15 @@ export function usePrefetchQueries(): PrefetchRoute {
       },
       staleTime: 60 * 1000,
     });
-  }, [queryClient, unit]);
+  }, [queryClient, unit, userRole]);
 
   const prefetchCash = useCallback(() => {
+    // Solo hacer prefetch de caja si es ADMIN o RECEPTIONIST
+    if (userRole !== 'ADMIN' && userRole !== 'RECEPTIONIST') {
+      console.log('🚫 Skip cash prefetch - Usuario no tiene permisos:', userRole);
+      return;
+    }
+
     queryClient.prefetchQuery({
       queryKey: ['cash-register', unit],
       queryFn: async () => {
@@ -70,16 +91,27 @@ export function usePrefetchQueries(): PrefetchRoute {
       },
       staleTime: 60 * 1000,
     });
-  }, [queryClient, unit]);
+  }, [queryClient, unit, userRole]);
 
   useEffect(() => {
-    const routesToPrefetch = ['/dashboard', '/appointments', '/clients', '/cash-register'];
+    // Prefetch rutas según el rol
+    const routesToPrefetch = [];
+    
+    if (userRole === 'ADMIN' || userRole === 'RECEPTIONIST') {
+      routesToPrefetch.push('/dashboard', '/clients', '/cash-register');
+    }
+    
+    // Todos los roles pueden ver appointments
+    routesToPrefetch.push('/appointments');
+    
     routesToPrefetch.forEach((route) => router.prefetch(route));
 
-    prefetchDashboard();
+    // Prefetch de datos según rol
     prefetchAppointments();
+    prefetchDashboard();
     prefetchClients();
-  }, [router, prefetchDashboard, prefetchAppointments, prefetchClients]);
+    prefetchCash();
+  }, [router, prefetchDashboard, prefetchAppointments, prefetchClients, prefetchCash, userRole]);
 
   const prefetchRoute = useCallback<PrefetchRoute>((route) => {
     if (!route) return;

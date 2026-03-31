@@ -102,7 +102,23 @@ export default function ChangePasswordPage(): JSX.Element {
         newPassword: data.newPassword,
       });
       setSuccess(true);
-      setTimeout(() => router.push('/dashboard'), 2000);
+      // Redirigir según el rol del usuario
+      const user = useAuthStore.getState().user;
+      switch (user?.role) {
+        case 'ADMIN':
+          router.push('/dashboard');
+          break;
+        case 'RECEPTIONIST':
+          router.push('/pos');
+          break;
+        case 'SPA_SPECIALIST':
+        case 'BARBER':
+          router.push('/appointments');
+          break;
+        default:
+          router.push('/appointments');
+          break;
+      }
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'response' in err

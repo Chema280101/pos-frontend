@@ -217,7 +217,7 @@ export function DateRangeFilter({
       <div className="relative">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="h-4 w-4 text-[var(--unit-accent)]" />
-          <h4 className="text-sm font-bold text-[var(--unit-text)]">Rápidos</h4>
+          <div className="text-sm font-bold text-[var(--unit-text)]">Rápidos</div>
         </div>
         <div className="flex flex-wrap gap-2">
           {quickDateRanges.map((range, index) => (

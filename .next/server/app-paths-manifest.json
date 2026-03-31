@@ -1,13 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/(app)/inventory/movements/page": "app/(app)/inventory/movements/page.js",
-  "/(app)/inventory/alerts/page": "app/(app)/inventory/alerts/page.js",
-  "/(app)/inventory/suppliers/page": "app/(app)/inventory/suppliers/page.js",
-  "/(app)/inventory/suppliers/new/page": "app/(app)/inventory/suppliers/new/page.js",
-  "/(app)/suppliers/page": "app/(app)/suppliers/page.js",
-  "/(app)/services/page": "app/(app)/services/page.js",
-  "/(app)/packages/page": "app/(app)/packages/page.js",
-  "/(app)/commissions/page": "app/(app)/commissions/page.js",
-  "/(app)/commissions/admin/page": "app/(app)/commissions/admin/page.js",
-  "/(app)/admin/audit/page": "app/(app)/admin/audit/page.js"
+  "/(app)/clients/page": "app/(app)/clients/page.js",
+  "/(app)/appointments/page": "app/(app)/appointments/page.js",
+  "/(app)/appointments/new/page": "app/(app)/appointments/new/page.js",
+  "/(app)/pos/page": "app/(app)/pos/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js"
 }

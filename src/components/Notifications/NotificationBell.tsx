@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Bell, Calendar, Package, Wallet, Percent, Info } from 'lucide-react';
+import { Bell, Calendar, Package, Wallet, Percent, Info, CheckCircle } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/store/notificationStore';
@@ -12,6 +12,7 @@ const typeIcons: Record<AppNotification['type'], React.ReactNode> = {
   stock: <Package className="h-4 w-4" />,
   cash: <Wallet className="h-4 w-4" />,
   commission: <Percent className="h-4 w-4" />,
+  approval: <CheckCircle className="h-4 w-4" />,
   info: <Info className="h-4 w-4" />,
 };
 

@@ -14,17 +14,29 @@ function roleLevel(r: UserRole): number {
 
 export interface RoleGuardProps {
   children: ReactNode;
-  minRole: UserRole;
+  minRole?: UserRole;
+  allowedRoles?: UserRole[];
 }
 
-export function RoleGuard({ children, minRole }: RoleGuardProps): React.ReactNode {
+export function RoleGuard({ children, minRole, allowedRoles }: RoleGuardProps): React.ReactNode {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
   if (!user) {
     return <>{children}</>;
   }
-  if (roleLevel(user.role) < roleLevel(minRole)) {
+
+  // Si se especifican allowedRoles, usar esa lógica
+  if (allowedRoles) {
+    if (!allowedRoles.includes(user.role)) {
+      if (typeof window !== 'undefined') {
+        router.replace('/error/403');
+      }
+      return null;
+    }
+  } 
+  // Si no hay allowedRoles, usar minRole
+  else if (minRole && roleLevel(user.role) < roleLevel(minRole)) {
     if (typeof window !== 'undefined') {
       router.replace('/error/403');
     }
