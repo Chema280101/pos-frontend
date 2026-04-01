@@ -56,7 +56,6 @@ export function POSPage(): JSX.Element {
   useEffect(() => {
     const handleApprovalUpdate = (event: CustomEvent) => {
       const { approval } = event.detail;
-      console.log('🔄 Actualizando carrito por aprobación:', approval);
 
       // Actualizar el carrito cuando se aprueba/rechaza
       setCart(prevCart =>
@@ -108,7 +107,6 @@ export function POSPage(): JSX.Element {
   useEffect(() => {
     const handleApprovalUpdate = (event: CustomEvent) => {
       const { approval } = event.detail;
-      console.log('🔄 Actualizando carrito por aprobación:', approval);
 
       // Actualizar el carrito cuando se aprueba/rechaza
       setCart(prevCart =>
@@ -418,16 +416,6 @@ export function POSPage(): JSX.Element {
   });
 
   const addToCart = (item: CartItem) => {
-    // 🔍 DEBUG: Log cuando se agrega algo al carrito
-    console.log('🔍 DEBUG - Agregando al carrito:', {
-      name: item.name,
-      hasEmployeeId: !!item.employeeId,
-      employeeId: item.employeeId,
-      requiresApproval: item.requiresApproval,
-      customPrice: item.customPrice,
-      callStack: new Error().stack?.split('\n').slice(1, 4).join('\n')
-    });
-
     setCart((prev) => {
       const i = prev.findIndex((p) => p.referenceId === item.referenceId && p.itemType === item.itemType && p.employeeId === item.employeeId);
       if (i >= 0) {
@@ -508,9 +496,6 @@ export function POSPage(): JSX.Element {
   const handleVariablePriceConfirm = (price: number) => {
     if (!selectedServiceForPrice) return;
 
-    // 🔍 DEBUG: Log de la cita
-    console.log('🔍 DEBUG - Cita para obtener employeeId:', appointmentForPreload);
-
     // ✅ Obtener employeeId de la cita si viene de una cita
     const getEmployeeIdFromAppointment = () => {
       if (appointmentIdFromUrl && appointmentForPreload) {
@@ -518,14 +503,12 @@ export function POSPage(): JSX.Element {
         const serviceItem = appointmentForPreload.items?.find((item: any) =>
           item.serviceId === selectedServiceForPrice.id
         );
-        console.log('🔍 DEBUG - ServiceItem encontrado:', serviceItem);
         return serviceItem?.employee?.id; // ✅ Corregido: employee.id
       }
       return null;
     };
 
     const employeeId = getEmployeeIdFromAppointment();
-    console.log('🔍 DEBUG - EmployeeId obtenido de cita:', employeeId);
 
     // Add service with custom price to cart
     addToCart({
@@ -538,8 +521,6 @@ export function POSPage(): JSX.Element {
       requiresApproval: selectedServiceForPrice.requiresApproval,
       employeeId: employeeId || undefined, // ✅ Convertir null a undefined
     });
-
-    console.log('🔍 DEBUG - Servicio agregado al carrito con employeeId:', employeeId);
 
     // ✅ Si viene de una cita, no mostrar selección de empleado (ya está asignado)
     if (appointmentIdFromUrl) {
@@ -739,19 +720,6 @@ export function POSPage(): JSX.Element {
         throw new Error('CAJA_CERRADA');
       }
 
-      // 🔍 DEBUG: Log del carrito antes de crear venta
-      console.log('🔍 DEBUG - Carrito antes de crear venta:', JSON.stringify(cart, null, 2));
-
-      // 🔍 DEBUG: Verificar si los items tienen employeeId
-      cart.forEach((item, index) => {
-        console.log(`🔍 DEBUG - Item ${index}:`, {
-          name: item.name,
-          hasEmployeeId: !!item.employeeId,
-          employeeId: item.employeeId,
-          requiresApproval: item.requiresApproval
-        });
-      });
-
       const payload = {
         unit,
         customerId: selectedCustomer?.id,
@@ -768,9 +736,6 @@ export function POSPage(): JSX.Element {
         discountAmount: discountAmount || undefined,
         discountReason: discountReason.trim() || undefined,
       };
-
-      // 🔍 DEBUG: Log del payload que se enviará
-      console.log('🔍 DEBUG - Payload a enviar:', JSON.stringify(payload, null, 2));
 
       const { data } = await api.post('/api/pos', payload);
       return data;
