@@ -76,18 +76,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }): 
               mobileOpen={sidebarOpen}
               onMobileClose={() => setSidebarOpen(false)}
             />
-            <main className="min-w-0 flex-1 overflow-auto md:ml-56 lg:pt-0 bg-[var(--unit-surface)]">
-              {/* Enhanced mobile spacing */}
-              <div className="px-3 sm:px-4 md:px-6 py-4 md:py-6">
-                <AppBreadcrumbs />
-                <div className="mt-4 md:mt-6">
-                  {children}
+            <div className="min-w-0 flex-1 overflow-auto md:ml-56 lg:pt-0 bg-[var(--unit-surface)] flex flex-col">
+              <main className="flex-1">
+                {/* Enhanced mobile spacing */}
+                <div className="px-3 sm:px-4 md:px-6 py-4 md:py-6">
+                  <AppBreadcrumbs />
+                  <div className="mt-4 md:mt-6">
+                    {children}
+                  </div>
                 </div>
-              </div>
-            </main>
+              </main>
+              <Footer />
+            </div>
           </div>
         </div>
-        <Footer />
       </AuthGuard>
     </SecurityProvider>
   );
