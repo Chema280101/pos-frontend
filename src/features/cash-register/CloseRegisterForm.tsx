@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Button, Input } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
+import { printCashCloseReceipt, type CashCloseData } from '@/lib/cashCloseReceipt';
 
 interface Props {
   registerId: string;
@@ -71,12 +72,63 @@ export function CloseRegisterForm({
         throw new Error(err.error || 'Error al cerrar caja');
       }
 
+      const closeData = await res.json();
+      
       success('Caja cerrada correctamente');
       onSuccess?.();
+      
+      // Generar PDF de cierre de caja
+      setTimeout(() => {
+        generateCashClosePDF(closeData);
+      }, 1000);
+      
     } catch (err: any) {
       error(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function generateCashClosePDF(closeData: any) {
+    try {
+      console.log('🔍 DEBUG - Datos del cierre recibidos:', closeData);
+      
+      const cashCloseData: CashCloseData = {
+        unit: closeData.unit || 'BARBERIA',
+        registerId: closeData.id || registerId,
+        openedAt: closeData.openedAt || new Date().toISOString(),
+        closedAt: closeData.closedAt || new Date().toISOString(),
+        openedBy: closeData.openedByName || 'Usuario',
+        closedBy: closeData.closedByName || 'Usuario',
+        openingAmount: Number(closeData.openingAmount) || 0,
+        cashFromSales: Number(closeData.cashFromSales) || 0,
+        cardSales: Number(closeData.cardSales) || 0,
+        transferSales: Number(closeData.transferSales) || 0,
+        walletSales: Number(closeData.walletSales) || 0,
+        totalSales: Number(closeData.totalSales) || 0,
+        manualIncome: Number(closeData.manualIncome) || 0,
+        expenses: Number(closeData.totalExpenses) || 0,
+        expectedCash: Number(closeData.closingExpected) || 0,
+        closingDeclared: Number(closeData.closingDeclared) || 0,
+        difference: Number(closeData.difference) || 0,
+        denominations: closeData.denominations || [],
+        closingNotes: closeData.closingNotes || '',
+        businessName: 'Barbería y Spa POS',
+        businessAddress: 'Dirección del negocio',
+        businessPhone: 'Teléfono de contacto',
+      };
+
+      console.log('🔍 DEBUG - Datos para PDF:', cashCloseData);
+
+      const html = printCashCloseReceipt(cashCloseData);
+      if (html) {
+        // Si el popup está bloqueado, mostrar en un modal
+        console.log('El popup está bloqueado. Mostrando PDF en modal...');
+        // TODO: Implementar modal para mostrar el PDF si el popup está bloqueado
+      }
+    } catch (error: any) {
+      console.error('Error al generar PDF de cierre de caja:', error);
+      error(error?.message || 'Error al generar PDF de cierre de caja');
     }
   }
 

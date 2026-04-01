@@ -18,8 +18,16 @@ export function CashRegisterMetrics({ cashRegisters }: CashRegisterMetricsProps)
   });
   
   // Financial calculations
-  const totalOpeningAmount = cashRegisters.reduce((sum, cr) => sum + cr.openingAmount, 0);
-  const totalClosingDeclared = cashRegisters.reduce((sum, cr) => sum + (cr.closingDeclared || 0), 0);
+  const totalOpeningAmount = cashRegisters.reduce((sum, cr) => {
+    const amount = Number(cr.openingAmount) || 0;
+    return sum + amount;
+  }, 0);
+  
+  const totalClosingDeclared = cashRegisters.reduce((sum, cr) => {
+    const amount = Number(cr.closingDeclared) || 0;
+    return sum + amount;
+  }, 0);
+  
   const totalExpenses = cashRegisters.reduce((sum, cr) => {
     const expenses = cr.expenses || [];
     const expensesSum = expenses.reduce((eSum, e) => eSum + (e.amount || 0), 0);
@@ -37,10 +45,13 @@ export function CashRegisterMetrics({ cashRegisters }: CashRegisterMetricsProps)
   
   // Best performing register (by opening amount)
   const bestRegister = cashRegisters.length > 0 ? 
-    cashRegisters.reduce((max, cr) => cr.openingAmount > max.openingAmount ? cr : max, cashRegisters[0]) : null;
+    cashRegisters.reduce((max, cr) => Number(cr.openingAmount) > Number(max.openingAmount) ? cr : max, cashRegisters[0]) : null;
   
   // Today's performance
-  const todayOpening = todayRegisters.reduce((sum, cr) => sum + cr.openingAmount, 0);
+  const todayOpening = todayRegisters.reduce((sum, cr) => {
+    const amount = Number(cr.openingAmount) || 0;
+    return sum + amount;
+  }, 0);
   
   // Calculate sales from register data (simplified)
   const totalSales = totalClosingDeclared; // Simplified for now

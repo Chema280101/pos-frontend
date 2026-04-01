@@ -1,9 +1,7 @@
 {
-  "/approvals/page": "app/approvals/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/(app)/pos/page": "app/(app)/pos/page.js",
-  "/(app)/appointments/page": "app/(app)/appointments/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(app)/appointments/new/page": "app/(app)/appointments/new/page.js",
-  "/(app)/clients/page": "app/(app)/clients/page.js"
+  "/(app)/cash-register/page": "app/(app)/cash-register/page.js",
+  "/(app)/reports/page": "app/(app)/reports/page.js",
+  "/(app)/reports/detailed/page": "app/(app)/reports/detailed/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js"
 }

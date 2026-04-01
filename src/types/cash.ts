@@ -59,6 +59,7 @@ export interface CashRegisterSummary {
   card: number;
   transfer: number;
   wallet: number;
+  cashEntries: number;
   totalSales: number;
   expenses: number;
   expectedCash: number;

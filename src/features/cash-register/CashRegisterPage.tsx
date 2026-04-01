@@ -395,36 +395,42 @@ export function CashRegisterPage(): JSX.Element {
     closeSignature: string,
     closeNotes: string
   ) {
-    // Usar la función profesional unificada
-    generateProfessionalPdf({
-      filename: `cierre-caja-${registerId}-${format(new Date(), 'yyyy-MM-dd')}`,
-      title: 'CIERRE DE CAJA',
-      subtitle: `Unidad: ${unit} | ID: ${registerId}`,
-      headers: ['Concepto', 'Monto (S/)', 'Cantidad'],
-      rows: [
-        ...Object.entries(summary).map(([key, value]) => [
-          key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
-          typeof value === 'number' ? value.toFixed(2) : String(value),
-          ''
-        ]),
-        ...Object.entries(denominations).map(([denom, qty]) => [
-          `Denominación S/ ${denom}`,
-          (Number(denom) * Number(qty)).toFixed(2),
-          qty.toString()
-        ])
-      ],
-      totals: {
-        label: 'TOTAL CIERRE',
-        amount: Object.values(summary).reduce((sum: number, val: any) => sum + (typeof val === 'number' ? val : 0), 0),
-        currency: 'S/'
-      },
-      businessInfo: {
-        name: 'Barbería & Spa POS',
-        address: 'Dirección del negocio',
-        phone: 'Teléfono de contacto',
-        email: 'email@negocio.com'
-      },
-      includeLogo: true
+    // Usar el nuevo PDF de cierre de caja profesional
+    import('@/lib/cashCloseReceipt').then((module: any) => {
+      const { printCashCloseReceipt } = module;
+      // @ts-ignore - El tipo se importa dinámicamente
+      const cashCloseData = {
+        unit: unit as 'BARBERIA' | 'SPA',
+        registerId,
+        openedAt: new Date().toISOString(), // Debería venir del backend
+        closedAt: new Date().toISOString(),
+        openedBy: 'Usuario', // Debería venir del backend
+        closedBy: closeSignature,
+        openingAmount: summary.opening || 0,
+        cashFromSales: summary.cash || 0,
+        cardSales: summary.card || 0,
+        transferSales: summary.transfer || 0,
+        walletSales: summary.wallet || 0,
+        totalSales: (summary.cash || 0) + (summary.card || 0) + (summary.transfer || 0) + (summary.wallet || 0),
+        manualIncome: summary.cashEntries || 0,
+        expenses: summary.expenses || 0,
+        expectedCash: summary.expectedCash || 0,
+        closingDeclared: Object.entries(denominations).reduce((sum, [denom, qty]) => sum + (Number(denom) * Number(qty)), 0),
+        difference: 0, // Debería calcularse
+        denominations: Object.entries(denominations).map(([denom, qty]) => ({
+          denomination: Number(denom),
+          quantity: Number(qty)
+        })),
+        closingNotes: closeNotes,
+        businessName: 'Barbería y Spa POS',
+        businessAddress: 'Dirección del negocio',
+        businessPhone: 'Teléfono de contacto',
+      };
+
+      console.log('🔍 DEBUG - Datos para nuevo PDF:', cashCloseData);
+      printCashCloseReceipt(cashCloseData);
+    }).catch(error => {
+      console.error('Error al cargar el módulo del PDF:', error);
     });
   }
 
@@ -434,6 +440,7 @@ export function CashRegisterPage(): JSX.Element {
         { label: 'Tarjeta', value: summary.card, icon: CreditCard, color: 'text-blue-600' },
         { label: 'Transferencia', value: summary.transfer, icon: ArrowRightLeft, color: 'text-violet-600' },
         { label: 'Billetera', value: summary.wallet, icon: Smartphone, color: 'text-orange-600' },
+        { label: 'Ingresos Manuales', value: summary.cashEntries || 0, icon: PlusCircle, color: 'text-purple-600' },
         { label: 'Gastos', value: summary.expenses, icon: TrendingDown, color: 'text-red-500' },
         { label: 'Esperado', value: summary.expectedCash, icon: Vault, color: 'text-[var(--unit-accent)]' },
       ]
