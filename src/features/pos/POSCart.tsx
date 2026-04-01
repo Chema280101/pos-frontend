@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Trash2, Plus, Minus, Package, Scissors, Box, ShoppingBag, UserCircle } from 'lucide-react';
+import { Trash2, Plus, Minus, Package, Scissors, Box, ShoppingBag, UserCircle, Clock, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type CartItem, type BusinessUnit } from '@/types/pos';
 
@@ -53,6 +53,19 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
       
       {/* Cart Items */}
       <div className="relative z-10 max-h-96 overflow-y-auto">
+        {/* Mensaje de aprobaciones pendientes */}
+        {cart.some(item => item.requiresApproval) && (
+          <div className="mx-4 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200/50">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800">Servicios pendientes de aprobación</p>
+                <p className="text-amber-700 mt-1">Los servicios marcados como "Pendiente" deben ser aprobados por un administrador antes de poder crear la venta.</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {cart.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 flex items-center justify-center">
@@ -75,6 +88,14 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
                         {getItemIcon(item.itemType)}
                       </div>
                       <h4 className="font-medium text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] transition-colors">{item.name}</h4>
+                      
+                      {/* Indicador de aprobación pendiente */}
+                      {item.requiresApproval && (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100/80 border border-amber-200/50">
+                          <Clock className="h-3 w-3 text-amber-600" />
+                          <span className="text-xs font-medium text-amber-700">Pendiente</span>
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm text-[var(--unit-text-muted)] mb-1">
                       S/ {item.unitPrice.toFixed(2)} × {item.quantity} = <span className="font-semibold text-[var(--unit-accent)]">S/ {(item.unitPrice * item.quantity).toFixed(2)}</span>

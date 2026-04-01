@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
+import { useSocket } from '@/hooks/useSocket';
+import { useApprovalNotifications } from '@/hooks/useApprovalNotifications';
 import { cn } from '@/lib/utils';
 import { RoleGuard } from '@/guards/RoleGuard';
 // ✅ OPTIMIZACIÓN: Lazy loading para componentes pesados
@@ -30,6 +32,12 @@ function DashboardContent(): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const isAdmin = user?.role === 'ADMIN';
   const userUnit = user?.unit ?? null;
+
+  // 🔌 Activar Socket.io para actualizaciones en tiempo real
+  useSocket();
+  
+  // 🔔 Activar notificaciones de aprobaciones para Admin
+  useApprovalNotifications();
 
   // ✅ OPTIMIZACIÓN: Memoizar logo para evitar re-calculos
   const logoConfig = useMemo(() => ({

@@ -1,8 +1,9 @@
 {
-  "/(app)/cash-register/page": "app/(app)/cash-register/page.js",
+  "/approvals/page": "app/approvals/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/(app)/pos/page": "app/(app)/pos/page.js",
-  "/(app)/income/page": "app/(app)/income/page.js",
-  "/(app)/commissions/page": "app/(app)/commissions/page.js",
-  "/(app)/expenses/page": "app/(app)/expenses/page.js",
-  "/(app)/commissions/admin/page": "app/(app)/commissions/admin/page.js"
+  "/(app)/appointments/page": "app/(app)/appointments/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(app)/appointments/new/page": "app/(app)/appointments/new/page.js",
+  "/(app)/clients/page": "app/(app)/clients/page.js"
 }

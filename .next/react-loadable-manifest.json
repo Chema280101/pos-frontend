@@ -41,6 +41,24 @@
       "static/chunks/_app-pages-browser_src_components_Charts_PieChart_tsx.js"
     ]
   },
+  "features\\dashboard\\DashboardPage.tsx -> ./DashboardBarberia": {
+    "id": "features\\dashboard\\DashboardPage.tsx -> ./DashboardBarberia",
+    "files": [
+      "static/chunks/_app-pages-browser_src_features_dashboard_DashboardBarberia_tsx.js"
+    ]
+  },
+  "features\\dashboard\\DashboardPage.tsx -> ./DashboardConsolidado": {
+    "id": "features\\dashboard\\DashboardPage.tsx -> ./DashboardConsolidado",
+    "files": [
+      "static/chunks/_app-pages-browser_src_features_dashboard_DashboardConsolidado_tsx.js"
+    ]
+  },
+  "features\\dashboard\\DashboardPage.tsx -> ./DashboardSPA": {
+    "id": "features\\dashboard\\DashboardPage.tsx -> ./DashboardSPA",
+    "files": [
+      "static/chunks/_app-pages-browser_src_features_dashboard_DashboardSPA_tsx.js"
+    ]
+  },
   "hooks\\useSocket.ts -> socket.io-client": {
     "id": "hooks\\useSocket.ts -> socket.io-client",
     "files": [

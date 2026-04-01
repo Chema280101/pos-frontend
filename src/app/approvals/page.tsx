@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { PriceApprovalsPanel } from '@/components/PriceApprovals/PriceApprovalsPanel';
 import { useSocket } from '@/hooks/useSocket';
+import { useApprovalNotifications } from '@/hooks/useApprovalNotifications';
 import { Button } from '@/components/ui';
 
 export default function PriceApprovalsPage() {
@@ -14,6 +15,9 @@ export default function PriceApprovalsPage() {
 
   // 🔌 Activar Socket.io para actualizaciones en tiempo real
   useSocket();
+  
+  // 🔔 Activar notificaciones de aprobaciones para Admin
+  useApprovalNotifications();
 
   // Convertir tab a status para el componente
   const getStatusFromTab = (tab: typeof activeTab): 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL' => {

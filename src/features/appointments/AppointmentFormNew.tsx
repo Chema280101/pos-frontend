@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, User, X, Search, Plus, Calendar, Clock, Scissors } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
+import { useAuthStore } from '@/store/authStore';
 import { Select } from '@/components/ui';
 import { useCrossTabSync } from '@/hooks';
 import { useToast } from '@/hooks/useToast';
@@ -33,12 +34,24 @@ export function AppointmentFormNew(): JSX.Element {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const activeUnit = useUnitStore((s) => s.activeUnit);
+  const { user } = useAuthStore(); // ✅ Obtener usuario autenticado
 
   const today = new Date();
   const defaultDate = today.toISOString().slice(0, 10);
   const defaultTime = '10:00';
 
-  const [unit, setUnit] = useState<'SPA' | 'BARBERIA'>(activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA');
+  // ✅ Para RECEPTIONIST, usar su unidad asignada. Para ADMIN, usar activeUnit o URL.
+  const getUnitForEmployeeQuery = () => {
+    if (user?.role === 'RECEPTIONIST') {
+      return user.unit || 'SPA'; // Unidad asignada al cajero
+    }
+    // Para ADMIN, usar la unidad de la URL o la unidad activa
+    return activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA';
+  };
+
+  const unitForEmployees = getUnitForEmployeeQuery();
+  
+  const [unit, setUnit] = useState<'SPA' | 'BARBERIA'>(unitForEmployees);
   const [customerId, setCustomerId] = useState('');
   const [customerDisplay, setCustomerDisplay] = useState('');
   const [clientSearch, setClientSearch] = useState('');
@@ -68,8 +81,17 @@ export function AppointmentFormNew(): JSX.Element {
     const urlUnit = searchParams.get('unit') as 'SPA' | 'BARBERIA' | null;
     const urlStart = searchParams.get('start');
 
+    // 🔍 DEBUG: Log de parámetros URL
+    console.log('🔍 DEBUG - Parámetros URL:', {
+      urlEmployeeId,
+      urlUnit,
+      urlStart,
+      allParams: Object.fromEntries(searchParams.entries())
+    });
+
     if (urlEmployeeId) {
       setEmployeeId(urlEmployeeId);
+      console.log('✅ EmployeeId establecido desde URL:', urlEmployeeId);
     }
 
     if (urlUnit) {
@@ -111,20 +133,44 @@ export function AppointmentFormNew(): JSX.Element {
   });
   const servicesForUnit = servicesResponse?.data ?? [];
 
-  const { data: employeesResponse } = useQuery({
-    queryKey: ['users', 'employees', unit],
+  const { data: employeesResponse, isLoading: employeesLoading } = useQuery({
+    queryKey: ['users', 'employees', unitForEmployees],
     queryFn: async () => {
-      const { data } = await api.get(`/api/users?unit=${unit}`);
-      return data;
+      try {
+        // 🔍 DEBUG: Log de la petición
+        console.log('🔍 DEBUG - Haciendo petición a:', `/api/users/employees?unit=${unitForEmployees}`);
+        
+        // ✅ Usar endpoint específico para empleados que no requiere rol ADMIN
+        const { data } = await api.get(`/api/users/employees?unit=${unitForEmployees}`);
+        
+        // 🔍 DEBUG: Log de la respuesta
+        console.log('🔍 DEBUG - Respuesta recibida:', data);
+        
+        return data;
+      } catch (error) {
+        console.error('❌ Error cargando empleados:', error);
+        throw error;
+      }
     },
   });
-  const allEmployees = employeesResponse?.data ?? [];
+  const allEmployees = employeesResponse ?? [];  // ✅ Acceder directamente a la respuesta
   
   // Hook para sincronización entre pestañas
   const { invalidateAcrossTabs } = useCrossTabSync();
   const employees = allEmployees.filter((u: any) => 
     u.role === 'BARBER' || u.role === 'SPA_SPECIALIST'
   );
+
+  // 🔍 DEBUG: Log de empleados disponibles
+  console.log('🔍 DEBUG - Empleados disponibles:', {
+    userUnit: user?.unit,
+    userRole: user?.role,
+    unitForEmployees,
+    totalEmployees: allEmployees.length,
+    filteredEmployees: employees.length,
+    allEmployees: allEmployees.map((e: any) => ({ id: e.id, name: e.name, role: e.role, unit: e.unit })),
+    filteredEmployeesList: employees.map((e: any) => ({ id: e.id, name: e.name, role: e.role, unit: e.unit }))
+  });
 
   const handleSelectCustomer = useCallback((c: any) => {
     setCustomerId(c.id);

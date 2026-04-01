@@ -69,20 +69,22 @@ export function useSocket() {
 
         // Eventos de conexión
         socket.on('connect', () => {
-          // Conectado a Socket.io
+          console.log('🔌 Socket.io conectado:', socket.id);
+          console.log('👤 Usuario:', user?.email, 'Rol:', user?.role);
         });
 
         socket.on('authenticated', (data: any) => {
-          // Autenticado en Socket.io
+          console.log('✅ Socket.io autenticado:', data);
         });
 
         socket.on('disconnect', (reason: any) => {
-          // Desconectado de Socket.io
+          console.log('❌ Socket.io desconectado:', reason);
         });
 
         // Eventos de aprobaciones
         socket.on('new_approval_request', (data: SocketApprovalData) => {
           // Nueva solicitud de aprobación
+          console.log('🔔 Nueva solicitud de aprobación recibida:', data);
           
           // Invalidar query de aprobaciones para refrescar
           queryClient.invalidateQueries({ queryKey: ['price-approvals'] });
@@ -103,13 +105,39 @@ export function useSocket() {
 
         socket.on('my_approval_updated', (data: SocketApprovalData) => {
           // Mi aprobación fue actualizada
+          console.log('🔔 Mi aprobación actualizada:', data);
           
           // Mostrar notificación al usuario que solicitó
-          // Aquí podrías usar un toast o notificación local
           if (data.approval.status === 'APPROVED') {
             // Tu solicitud fue aprobada
+            console.log('✅ Solicitud aprobada:', data.approval);
+            
+            // Invalidar queries para actualizar el carrito
+            queryClient.invalidateQueries({ queryKey: ['cart'] });
+            queryClient.invalidateQueries({ queryKey: ['price-approvals'] });
+            
+            // Emitir evento personalizado para actualizar el carrito
+            window.dispatchEvent(new CustomEvent('approval_updated', { 
+              detail: { approval: data.approval } 
+            }));
+            
+            // Mostrar toast de éxito (opcional - necesitarías useToast)
+            // success('¡Tu solicitud de precio fue aprobada!');
           } else if (data.approval.status === 'REJECTED') {
             // Tu solicitud fue rechazada
+            console.log('❌ Solicitud rechazada:', data.approval);
+            
+            // Invalidar queries para actualizar el carrito
+            queryClient.invalidateQueries({ queryKey: ['cart'] });
+            queryClient.invalidateQueries({ queryKey: ['price-approvals'] });
+            
+            // Emitir evento personalizado para actualizar el carrito
+            window.dispatchEvent(new CustomEvent('approval_updated', { 
+              detail: { approval: data.approval } 
+            }));
+            
+            // Mostrar toast de rechazo (opcional - necesitarías useToast)
+            // error('Tu solicitud de precio fue rechazada');
           }
         });
 
