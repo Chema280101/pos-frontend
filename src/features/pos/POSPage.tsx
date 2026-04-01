@@ -563,6 +563,10 @@ export function POSPage(): JSX.Element {
           approvalId: response.data.approvalId, // Guardar el approvalId
           // ✅ EmployeeId se agregará después en el EmployeeModal
         });
+        
+        // ✅ Abrir modal de empleado para seleccionar el barbero
+        setSelectedServiceForEmployee(selectedServiceForPrice);
+        setShowEmployeeModal(true);
       }
       setShowVariablePriceModal(false);
       setSelectedServiceForPrice(null);
