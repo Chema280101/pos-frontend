@@ -45,7 +45,6 @@ export function usePrefetchQueries(): PrefetchRoute {
   const prefetchDashboard = useCallback(() => {
     // Solo hacer prefetch de dashboard si es ADMIN o RECEPTIONIST
     if (userRole !== 'ADMIN' && userRole !== 'RECEPTIONIST') {
-      console.log('🚫 Skip dashboard prefetch - Usuario no tiene permisos:', userRole);
       return;
     }
 
@@ -62,7 +61,6 @@ export function usePrefetchQueries(): PrefetchRoute {
   const prefetchClients = useCallback(() => {
     // Solo hacer prefetch de clientes si es ADMIN o RECEPTIONIST
     if (userRole !== 'ADMIN' && userRole !== 'RECEPTIONIST') {
-      console.log('🚫 Skip clients prefetch - Usuario no tiene permisos:', userRole);
       return;
     }
 
@@ -79,7 +77,6 @@ export function usePrefetchQueries(): PrefetchRoute {
   const prefetchCash = useCallback(() => {
     // Solo hacer prefetch de caja si es ADMIN o RECEPTIONIST
     if (userRole !== 'ADMIN' && userRole !== 'RECEPTIONIST') {
-      console.log('🚫 Skip cash prefetch - Usuario no tiene permisos:', userRole);
       return;
     }
 

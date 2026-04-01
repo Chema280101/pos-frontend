@@ -183,7 +183,17 @@ export function UserForm(): JSX.Element {
           : null, 
         password: data.password || '',
       };
-      createMutation.mutate(createData);
+      // Solo enviar campos que el backend espera
+      const backendData = {
+        name: createData.name,
+        email: createData.email,
+        password: createData.password,
+        role: createData.role,
+        ...(createData.unit && { unit: createData.unit }),
+        ...(createData.phone && { phone: createData.phone }),
+        ...(createData.commissionPct !== null && { commissionPct: createData.commissionPct }),
+      };
+      createMutation.mutate(backendData);
     }
   };
 

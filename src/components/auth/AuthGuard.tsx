@@ -135,7 +135,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         await store.logout();
       } else {
         // Fallback: llamamos al backend directamente si no está en el store
-        await axios.post('/api/auth/logout').catch(() => console.error("Error al cerrar sesión"));
+        await axios.post('/api/auth/logout').catch(() => {});
       }
       
       router.replace('/login');

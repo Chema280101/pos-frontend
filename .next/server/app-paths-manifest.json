@@ -1,7 +1,5 @@
 {
-  "/(app)/clients/page": "app/(app)/clients/page.js",
-  "/(app)/appointments/page": "app/(app)/appointments/page.js",
-  "/(app)/appointments/new/page": "app/(app)/appointments/new/page.js",
-  "/(app)/pos/page": "app/(app)/pos/page.js",
+  "/(app)/users/new/page": "app/(app)/users/new/page.js",
+  "/(app)/admin/users/page": "app/(app)/admin/users/page.js",
   "/(app)/dashboard/page": "app/(app)/dashboard/page.js"
 }

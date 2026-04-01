@@ -1,22 +1,4 @@
 {
-  "..\\node_modules\\jspdf\\dist\\jspdf.es.min.js -> canvg": {
-    "id": "..\\node_modules\\jspdf\\dist\\jspdf.es.min.js -> canvg",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_canvg_lib_index_es_js.js"
-    ]
-  },
-  "..\\node_modules\\jspdf\\dist\\jspdf.es.min.js -> dompurify": {
-    "id": "..\\node_modules\\jspdf\\dist\\jspdf.es.min.js -> dompurify",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_dompurify_dist_purify_js.js"
-    ]
-  },
-  "..\\node_modules\\jspdf\\dist\\jspdf.es.min.js -> html2canvas": {
-    "id": "..\\node_modules\\jspdf\\dist\\jspdf.es.min.js -> html2canvas",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_html2canvas_dist_html2canvas_js.js"
-    ]
-  },
   "components\\Charts\\LazyCharts.tsx -> ./BarChart": {
     "id": "components\\Charts\\LazyCharts.tsx -> ./BarChart",
     "files": [
@@ -57,12 +39,6 @@
     "id": "features\\dashboard\\DashboardPage.tsx -> ./DashboardSPA",
     "files": [
       "static/chunks/_app-pages-browser_src_features_dashboard_DashboardSPA_tsx.js"
-    ]
-  },
-  "hooks\\useSocket.ts -> socket.io-client": {
-    "id": "hooks\\useSocket.ts -> socket.io-client",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_socket_io-client_build_esm_index_js.js"
     ]
   }
 }

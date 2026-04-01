@@ -162,18 +162,7 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   };
 
   const handleDrawerClose = () => {
-    console.log('handleDrawerClose - hasChanges:', hasChanges);
-    console.log('handleDrawerClose - watchedValues:', watchedValues);
-    console.log('handleDrawerClose - JSON.stringify(watchedValues):', JSON.stringify(watchedValues));
-    console.log('handleDrawerClose - JSON.stringify(defaultValues):', JSON.stringify(defaultValues));
-    console.log('handleDrawerClose - selectedItems:', selectedItems);
-    console.log('handleDrawerClose - checkedState:', checkedState);
-    console.log('handleDrawerClose - JSON.stringify(watchedValues) !== JSON.stringify(defaultValues):', JSON.stringify(watchedValues) !== JSON.stringify(defaultValues));
-    console.log('handleDrawerClose - selectedItems.length > 0:', selectedItems.length > 0);
-    console.log('handleDrawerClose - Object.keys(checkedState).length > 0:', Object.keys(checkedState).length > 0);
-    
     if (hasChanges) {
-      console.log('handleDrawerClose - Mostrando modal de confirmación');
       setPendingClose(() => {
         reset();
         if (onClose) {
@@ -185,7 +174,6 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
       });
       setShowUnsavedModal(true);
     } else {
-      console.log('handleDrawerClose - Cerrando formulario directamente');
       reset();
       if (onClose) {
         onClose();

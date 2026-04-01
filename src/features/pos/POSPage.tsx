@@ -455,7 +455,7 @@ export function POSPage(): JSX.Element {
       setShowItemSearch(false);
       setItemSearch('');
     } catch (error: any) {
-      console.error('Error requesting approval:', error);
+      // Error requesting approval
       
       // Manejo específico de errores
       if (error.response?.status === 401) {

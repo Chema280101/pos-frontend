@@ -47,31 +47,21 @@ export function UsersPage(): JSX.Element {
   
   const debouncedSearchFilter = useDebouncedValue(searchFilter.trim(), 300);
 
-// Debug: Override setSearchFilter to track calls
-const originalSetSearchFilter = setSearchFilter;
-const debugSetSearchFilter = (value: string) => {
-  // 🔥 SOLUCIÓN: Ignorar valores sospechosos de fuentes externas
-  if (value === 'admin@barberiaspa.com') {
-    // Ignorar valor sospechoso sin mostrar en console
-    return; // No ejecutar setSearchFilter
-  }
-  
-  return originalSetSearchFilter(value);
-};
   const [showFilters, setShowFilters] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   
-  // Reset page when search changes
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearchFilter]);
   const [unlockUser, setUnlockUser] = useState<UserRow | null>(null);
   const [resetUser, setResetUser] = useState<UserRow | null>(null);
   const [viewUser, setViewUser] = useState<UserRow | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [forceTemp, setForceTemp] = useState(false);
+
+  // Reset page when filters change (except searchFilter to avoid unwanted behavior)
+  useEffect(() => {
+    setPage(1);
+  }, [roleFilter, isActiveFilter, unitFilter]); // Removed searchFilter dependency
 
   // ✅ MEJORADO: Build query parameters for backend
   const queryParams = useMemo(() => {
@@ -700,7 +690,7 @@ const debugSetSearchFilter = (value: string) => {
     return;
   }
   
-  debugSetSearchFilter(value);
+  setSearchFilter(value);
 }}
                       autoComplete="off"
                       className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
@@ -708,7 +698,7 @@ const debugSetSearchFilter = (value: string) => {
                     {searchFilter && (
                       <button
                         type="button"
-                        onClick={() => debugSetSearchFilter('')}
+                        onClick={() => setSearchFilter('')}
                         className="absolute inset-y-0 right-0 pr-4 flex items-center"
                       >
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
@@ -753,7 +743,7 @@ const debugSetSearchFilter = (value: string) => {
                           setRoleFilter('');
                           setIsActiveFilter('');
                           setUnitFilter('');
-                          debugSetSearchFilter('');
+                          setSearchFilter('');
                           setPage(1);
                         }}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"

@@ -88,7 +88,7 @@ export function StockMovementsPage(): JSX.Element {
         ])
       );
     } catch (error) {
-      console.error('Error exporting Excel:', error);
+      // Error exporting Excel:
     }
   };
 
@@ -124,7 +124,7 @@ export function StockMovementsPage(): JSX.Element {
         businessConfig || undefined
       );
     } catch (error) {
-      console.error('Error exporting PDF:', error);
+      // Error exporting PDF:
     }
   };
 

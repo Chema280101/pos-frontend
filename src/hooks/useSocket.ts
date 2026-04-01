@@ -69,20 +69,20 @@ export function useSocket() {
 
         // Eventos de conexión
         socket.on('connect', () => {
-          console.log('🔌 Conectado a Socket.io:', socket.id);
+          // Conectado a Socket.io
         });
 
         socket.on('authenticated', (data: any) => {
-          console.log('✅ Autenticado en Socket.io:', data);
+          // Autenticado en Socket.io
         });
 
         socket.on('disconnect', (reason: any) => {
-          console.log('🔌 Desconectado de Socket.io:', reason);
+          // Desconectado de Socket.io
         });
 
         // Eventos de aprobaciones
         socket.on('new_approval_request', (data: SocketApprovalData) => {
-          console.log('🔔 Nueva solicitud de aprobación:', data);
+          // Nueva solicitud de aprobación
           
           // Invalidar query de aprobaciones para refrescar
           queryClient.invalidateQueries({ queryKey: ['price-approvals'] });
@@ -92,7 +92,7 @@ export function useSocket() {
         });
 
         socket.on('approval_updated', (data: SocketApprovalData) => {
-          console.log('🔔 Aprobación actualizada:', data);
+          // Aprobación actualizada
           
           // Invalidar query de aprobaciones para refrescar
           queryClient.invalidateQueries({ queryKey: ['price-approvals'] });
@@ -102,24 +102,24 @@ export function useSocket() {
         });
 
         socket.on('my_approval_updated', (data: SocketApprovalData) => {
-          console.log('🔔 Mi aprobación fue actualizada:', data);
+          // Mi aprobación fue actualizada
           
           // Mostrar notificación al usuario que solicitó
           // Aquí podrías usar un toast o notificación local
           if (data.approval.status === 'APPROVED') {
-            console.log('✅ Tu solicitud fue aprobada');
+            // Tu solicitud fue aprobada
           } else if (data.approval.status === 'REJECTED') {
-            console.log('❌ Tu solicitud fue rechazada');
+            // Tu solicitud fue rechazada
           }
         });
 
         // Manejar errores
         socket.on('error', (error: any) => {
-          console.error('❌ Error en Socket.io:', error);
+          // Error en Socket.io
         });
 
       } catch (error) {
-        console.error('❌ Error inicializando Socket.io:', error);
+        // Error inicializando Socket.io
       }
     };
 

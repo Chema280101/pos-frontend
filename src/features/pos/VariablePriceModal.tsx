@@ -72,7 +72,7 @@ export function VariablePriceModal({
 
       setValidation(response.data.validation);
     } catch (error: any) {
-      console.error('Error validando precio:', error);
+      // Error validando precio
       
       // Manejo específico de errores de autenticación
       if (error.response?.status === 401) {
@@ -129,7 +129,7 @@ export function VariablePriceModal({
         setValidation(null);
       }
     } catch (error) {
-      console.error('Error al procesar precio:', error);
+      // Error al procesar precio
     } finally {
       setIsLoading(false);
     }
