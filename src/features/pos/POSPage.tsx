@@ -44,7 +44,7 @@ export function POSPage(): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const setUnit = useUnitStore((s) => s.setUnit);
   const user = useAuthStore((s) => s.user);
-  const { success } = useToast();
+  const { success, error: showError } = useToast();
 
   // � Activar Socket.io para actualizaciones en tiempo real
   useSocket();
@@ -63,12 +63,14 @@ export function POSPage(): JSX.Element {
           // Si este item tiene el approvalId que fue actualizado
           if (item.approvalId === approval.id) {
             if (approval.status === 'APPROVED') {
-              // Aprobado: eliminar requiresApproval y approvalId
+              // Aprobado: eliminar requiresApproval y approvalId, PERO MANTENER employeeId
               return {
                 ...item,
                 requiresApproval: false,
                 approvalId: undefined,
-                employeeId: (() => {
+                // ✅ MANTENER el employeeId existente si ya estaba asignado
+                // Solo usar employeeId de cita precargada si no hay uno asignado
+                employeeId: item.employeeId || (() => {
                   if (appointmentIdFromUrl && appointmentForPreload) {
                     const serviceItem = appointmentForPreload.items?.find((item: any) =>
                       item.serviceId === approval.serviceId
@@ -257,7 +259,7 @@ export function POSPage(): JSX.Element {
         name: item.service.name,
         unitPrice: typeof item.service.price === 'number' ? item.service.price : Number(item.service.price),
         quantity: 1,
-        employeeId: item.employee.id,
+        employeeId: item.employee?.id || '', // ✅ Asegurar que siempre tenga un valor
       }));
       setCart(cartItems);
     } else {
@@ -268,7 +270,7 @@ export function POSPage(): JSX.Element {
         name: item.service.name,
         unitPrice: typeof item.service.price === 'number' ? item.service.price : Number(item.service.price),
         quantity: 1,
-        employeeId: item.employee.id,
+        employeeId: item.employee?.id || '', // ✅ Asegurar que siempre tenga un valor
       }));
       setCart(cartItems);
     }
@@ -462,9 +464,11 @@ export function POSPage(): JSX.Element {
 
   // ✅ Nueva función para actualizar item existente con employeeId
   const updateCartItemWithEmployee = (serviceId: string, employeeId: string) => {
+    console.log('🔍 Update Cart Item Called:', { serviceId, employeeId });
     setCart(prevCart =>
       prevCart.map(item => {
         if (item.referenceId === serviceId && item.requiresApproval) {
+          console.log('🔍 Found item to update:', { item, newEmployeeId: employeeId });
           return {
             ...item,
             employeeId
@@ -711,6 +715,8 @@ export function POSPage(): JSX.Element {
   const handleCreateSaleError = (error: any) => {
     if (error.message === 'CAJA_CERRADA') {
       setShowCashRegisterWarning(true);
+    } else if (error.message === 'SERVICES_SIN_EMPLEADO') {
+      showError('Todos los servicios deben tener un empleado asignado. Por favor, verifica los items en el carrito.');
     }
   };
 
@@ -722,6 +728,15 @@ export function POSPage(): JSX.Element {
       // Check if cash register is open before creating sale
       if (!openRegister) {
         throw new Error('CAJA_CERRADA');
+      }
+
+      // ✅ Validar que todos los servicios tengan empleado asignado
+      const servicesWithoutEmployee = cart.filter(item => 
+        item.itemType === 'SERVICE' && (!item.employeeId || item.employeeId.trim() === '')
+      );
+
+      if (servicesWithoutEmployee.length > 0) {
+        throw new Error('SERVICES_SIN_EMPLEADO');
       }
 
       const payload = {
@@ -1595,7 +1610,22 @@ export function POSPage(): JSX.Element {
                   </div>
                   <div className="flex items-center justify-between pt-3 border-t border-[var(--unit-border)]/30">
                     <span className="text-sm text-[var(--unit-text-muted)]">Precio:</span>
-                    <span className="text-lg font-bold text-[var(--unit-accent)]">S/ {selectedServiceForEmployee ? (typeof selectedServiceForEmployee.price === 'number' ? selectedServiceForEmployee.price : Number(selectedServiceForEmployee.price)) : '0.00'}</span>
+                    <span className="text-lg font-bold text-[var(--unit-accent)]">
+                      S/ {(() => {
+                        if (!selectedServiceForEmployee) return '0.00';
+                        
+                        // Si tiene customPrice (aprobación solicitada), mostrar ese precio
+                        if (selectedServiceForEmployee.customPrice) {
+                          return Number(selectedServiceForEmployee.customPrice).toFixed(2);
+                        }
+                        
+                        // Si no, mostrar el precio base
+                        const price = typeof selectedServiceForEmployee.price === 'number' 
+                          ? selectedServiceForEmployee.price 
+                          : Number(selectedServiceForEmployee.price || 0);
+                        return price.toFixed(2);
+                      })()}
+                    </span>
                   </div>
                 </div>
 
@@ -1628,6 +1658,13 @@ export function POSPage(): JSX.Element {
                               item.referenceId === selectedServiceForEmployee.id &&
                               item.requiresApproval
                             );
+
+                            console.log('🔍 Employee Modal Debug:', {
+                              selectedServiceId: selectedServiceForEmployee.id,
+                              cartItems: cart,
+                              existingItem,
+                              requiresApproval: selectedServiceForEmployee.requiresApproval
+                            });
 
                             if (existingItem) {
                               // ✅ Actualizar item existente con employeeId

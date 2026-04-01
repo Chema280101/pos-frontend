@@ -50,6 +50,7 @@ export interface ServiceOption {
   minPrice?: number;
   maxPrice?: number;
   requiresApproval?: boolean;
+  customPrice?: number; // ✅ Agregado para servicios con aprobación
 }
 
 export interface ProductOption {
