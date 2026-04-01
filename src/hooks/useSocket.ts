@@ -69,16 +69,15 @@ export function useSocket() {
 
         // Eventos de conexión
         socket.on('connect', () => {
-          console.log('🔌 Socket.io conectado:', socket.id);
-          console.log('👤 Usuario:', user?.email, 'Rol:', user?.role);
+          // Conexión establecida
         });
 
         socket.on('authenticated', (data: any) => {
-          console.log('✅ Socket.io autenticado:', data);
+          // Autenticación exitosa
         });
 
         socket.on('disconnect', (reason: any) => {
-          console.log('❌ Socket.io desconectado:', reason);
+          // Desconexión
         });
 
         // Eventos de aprobaciones
