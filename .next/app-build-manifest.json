@@ -16,30 +16,40 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/(app)/admin/users/page": [
+    "/(app)/cash-register/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/admin/users/page.js"
+      "static/chunks/app/(app)/cash-register/page.js"
     ],
     "/(app)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/layout.js"
     ],
-    "/(app)/users/new/page": [
+    "/(app)/pos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/users/new/page.js"
+      "static/chunks/app/(app)/pos/page.js"
     ],
-    "/page": [
+    "/(app)/income/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/chunks/app/(app)/income/page.js"
     ],
-    "/(app)/dashboard/page": [
+    "/(app)/commissions/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/dashboard/page.js"
+      "static/chunks/app/(app)/commissions/page.js"
+    ],
+    "/(app)/commissions/admin/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/commissions/admin/page.js"
+    ],
+    "/(app)/expenses/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/expenses/page.js"
     ]
   }
 }

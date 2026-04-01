@@ -37,36 +37,36 @@
 
 /* ========== Dark Mode ========== */
 .dark {
-  /* Colores principales invertidos para modo oscuro */
-  --unit-primary: #F8F5FF; /* Color secundario claro como primario */
-  --unit-primary-dark: #FFFFFF;
-  --unit-secondary: #1a1a1a; /* Color primario oscuro como secundario */
-  --unit-accent: #7C3AED; /* Acento más brillante para modo oscuro */
+  /* Colores principales mejorados para modo oscuro */
+  --unit-primary: #F8F5FF; /* Lavanda suave como primario */
+  --unit-primary-dark: #E9D5FF;
+  --unit-secondary: #0F172A; /* Azul marino profundo */
+  --unit-accent: #8B5CF6; /* Violeta más suave y elegante */
   --unit-accent-hover: #A78BFA;
   
-  /* Texto: Alto contraste para modo oscuro */
-  --unit-text: #FFFFFF; /* Blanco puro para texto principal */
-  --unit-text-muted: #D1D5DB; /* Gris claro para texto secundario */
+  /* Texto: Máximo contraste para legibilidad */
+  --unit-text: #FFFFFF; /* Blanco puro para máximo contraste */
+  --unit-text-muted: #E2E8F0; /* Gris claro para texto secundario */
   
-  /* Superficies: Oscuras pero con contraste */
-  --unit-surface: #111827; /* Gris muy oscuro */
-  --unit-surface-elevated: #1F2937; /* Gris oscuro para elementos elevados */
+  /* Superficies: Gradientes suaves en lugar de planos */
+  --unit-surface: #1E293B; /* Azul marino oscuro */
+  --unit-surface-elevated: #334155; /* Azul marino medio */
   
-  /* Bordes: Más visibles en modo oscuro */
-  --unit-border: rgba(255, 255, 255, 0.1);
+  /* Bordes: Más visibles para mejor definición */
+  --unit-border: rgba(226, 232, 240, 0.3);
   
-  /* Sombras: Más profundas para modo oscuro */
-  --unit-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  /* Sombras: Más profundas pero con color */
+  --unit-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
   --unit-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
   
-  /* Estados del sistema en modo oscuro */
-  --unit-error: #EF4444;
-  --unit-warning: #F59E0B;
-  --unit-success: #10B981;
-  --unit-info: #3B82F6;
+  /* Estados del sistema con colores más brillantes */
+  --unit-error: #F87171; /* Rojo brillante */
+  --unit-warning: #FCD34D; /* Amarillo brillante */
+  --unit-success: #34D399; /* Verde brillante */
+  --unit-info: #60A5FA; /* Azul brillante */
   
-  /* Gradiente hero invertido */
-  --unit-gradient-hero: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+  /* Gradiente hero más elegante */
+  --unit-gradient-hero: linear-gradient(135deg, #1E293B 0%, #334155 50%, #475569 100%);
 }
 
 /* ========== Dark theme para panel izquierdo ========== */
@@ -112,27 +112,27 @@
   /* Colores principales para SPA en modo oscuro */
   --unit-primary: #E9D5FF; /* Lavanda brillante */
   --unit-primary-dark: #DDD6FE;
-  --unit-secondary: #4C1D95; /* Púrpura muy oscuro */
-  --unit-accent: #A78BFA; /* Púrpura brillante */
+  --unit-secondary: #2E1065; /* Púrpura profundo */
+  --unit-accent: #A78BFA; /* Púrpura brillante suave */
   --unit-accent-hover: #C4B5FD;
   
-  /* Texto para SPA dark */
-  --unit-text: #FFFFFF;
-  --unit-text-muted: #E9D5FF;
+  /* Texto para SPA dark con máximo contraste */
+  --unit-text: #FFFFFF; /* Blanco puro para máxima legibilidad */
+  --unit-text-muted: #E2E8F0; /* Gris claro para texto secundario */
   
-  /* Superficies para SPA dark */
+  /* Superficies para SPA dark con gradientes */
   --unit-surface: #1E1B4B; /* Púrpura muy oscuro */
   --unit-surface-elevated: #312E81; /* Púrpura oscuro medio */
   
-  /* Bordes para SPA dark */
-  --unit-border: rgba(167, 139, 250, 0.2);
+  /* Bordes para SPA dark más visibles */
+  --unit-border: rgba(226, 232, 240, 0.35);
   
-  /* Sombras para SPA dark */
-  --unit-shadow: 0 4px 20px rgba(147, 51, 234, 0.25);
-  --unit-shadow-lg: 0 12px 40px rgba(147, 51, 234, 0.35);
+  /* Sombras para SPA dark con más profundidad */
+  --unit-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+  --unit-shadow-lg: 0 12px 40px rgba(139, 92, 246, 0.4);
   
-  /* Gradiente hero para SPA dark */
-  --unit-gradient-hero: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+  /* Gradiente hero para SPA dark más elegante */
+  --unit-gradient-hero: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4C1D95 100%);
 }
 
 /* ========== Barbería — Urbana y masculina ========== */
@@ -170,27 +170,27 @@
   /* Colores principales para Barbería en modo oscuro */
   --unit-primary: #FFFFFF; /* Blanco brillante */
   --unit-primary-dark: #F8F8F8;
-  --unit-secondary: #1A0000; /* Rojo muy oscuro */
-  --unit-accent: #EF4444; /* Rojo brillante */
-  --unit-accent-hover: #F87171;
+  --unit-secondary: #450A0A; /* Rojo oscuro profundo */
+  --unit-accent: #F87171; /* Rojo coral brillante */
+  --unit-accent-hover: #FCA5A5;
   
-  /* Texto para Barbería dark */
-  --unit-text: #FFFFFF;
-  --unit-text-muted: #FCA5A5; /* Rojo claro */
+  /* Texto para Barbería dark con máximo contraste */
+  --unit-text: #FFFFFF; /* Blanco puro para máxima legibilidad */
+  --unit-text-muted: #E2E8F0; /* Gris claro para texto secundario */
   
-  /* Superficies para Barbería dark */
-  --unit-surface: #1A0000; /* Rojo muy oscuro */
-  --unit-surface-elevated: #450A0A; /* Rojo oscuro medio */
+  /* Superficies para Barbería dark con gradientes */
+  --unit-surface: #450A0A; /* Rojo oscuro profundo */
+  --unit-surface-elevated: #7F1D1D; /* Rojo oscuro medio */
   
-  /* Bordes para Barbería dark */
-  --unit-border: rgba(239, 68, 68, 0.2);
+  /* Bordes para Barbería dark más visibles */
+  --unit-border: rgba(248, 113, 113, 0.35);
   
-  /* Sombras para Barbería dark */
-  --unit-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
-  --unit-shadow-lg: 0 15px 50px rgba(239, 68, 68, 0.35);
+  /* Sombras para Barbería dark con más profundidad */
+  --unit-shadow: 0 4px 20px rgba(248, 113, 113, 0.3);
+  --unit-shadow-lg: 0 15px 50px rgba(248, 113, 113, 0.4);
   
-  /* Gradiente hero para Barbería dark */
-  --unit-gradient-hero: linear-gradient(135deg, #1A0000 0%, #450A0A 100%);
+  /* Gradiente hero para Barbería dark más elegante */
+  --unit-gradient-hero: linear-gradient(135deg, #450A0A 0%, #7F1D1D 50%, #991B1B 100%);
 }
 
 /* ========== Tailwind Dark Mode Utilities ========== */
