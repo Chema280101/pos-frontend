@@ -17,11 +17,17 @@ const SpanishTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
         <p className="font-semibold text-gray-800 mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: {typeof entry.value === 'number' ? `S/ ${entry.value.toFixed(2)}` : entry.value}
-          </p>
-        ))}
+        {payload.map((entry: any, index: number) => {
+          const isMonetary = entry.name === 'ventas' || entry.name === 'total' || entry.name === 'revenue' || entry.name === 'ingresos' || entry.name === 'income' || entry.name === 'ticketPromedio';
+          return (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: {typeof entry.value === 'number' ? 
+                (isMonetary ? `S/ ${entry.value.toFixed(2)}` : entry.value.toString()) : 
+                entry.value
+              }
+            </p>
+          );
+        })}
       </div>
     );
   }

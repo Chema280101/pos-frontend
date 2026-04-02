@@ -175,8 +175,8 @@ export function DashboardSPA(): JSX.Element {
         <LazyInteractiveChart title="Ventas últimos 7 días" description="Ingresos diarios SPA">
           {salesTrend?.data ? (
             <LazyBarChart
-              data={salesTrend.data.map(d => ({ ...d, name: d.date, ventas: d.totalSales }))}
-              series={[{ dataKey: "ventas", color: "#10b981" }]}
+              data={salesTrend.data.map(d => ({ ...d, name: d.date, ventas: d.ventas }))}
+              series={[{ dataKey: "ventas", color: "#10b981", label: "Ventas" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -201,7 +201,7 @@ export function DashboardSPA(): JSX.Element {
           {salesTrend?.data ? (
             <LazyBarChart
               data={salesTrend.data.map(d => ({ ...d, name: d.date }))}
-              series={[{ dataKey: "totalSales", color: "#10b981" }]}
+              series={[{ dataKey: "ventas", color: "#10b981", label: "Ventas" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -211,8 +211,8 @@ export function DashboardSPA(): JSX.Element {
         <LazyInteractiveChart title="Servicios más rentables" description="Top 10 por ingresos">
           {topServices?.data ? (
             <LazyBarChart
-              data={topServices.data.map(s => ({ ...s, name: s.serviceName }))}
-              series={[{ dataKey: "revenue", color: "#f59e0b" }]}
+              data={topServices.data.map(s => ({ ...s, name: s.serviceName, ingresos: s.revenue }))}
+              series={[{ dataKey: "ingresos", color: "#f59e0b", label: "Ingresos" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -224,8 +224,11 @@ export function DashboardSPA(): JSX.Element {
         <LazyInteractiveChart title="Productividad por empleado" description="Servicios y ticket promedio">
           {productivity?.data ? (
             <LazyBarChart
-              data={productivity.data.map(p => ({ ...p, name: p.employee }))}
-              series={[{ dataKey: "services", color: "#8b5cf6" }]}
+              data={productivity.data.map(p => ({ ...p, name: p.employee, servicios: p.servicesCount, ticketPromedio: p.avgTicket }))}
+              series={[
+                { dataKey: "servicios", color: "#8b5cf6", label: "Servicios" },
+                { dataKey: "ticketPromedio", color: "#f59e0b", label: "Ticket Promedio" }
+              ]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -236,7 +239,7 @@ export function DashboardSPA(): JSX.Element {
           {funnel?.data ? (
             <LazyBarChart
               data={funnel.data.map(f => ({ ...f, name: f.stage }))}
-              series={[{ dataKey: "count", color: "#ef4444" }]}
+              series={[{ dataKey: "count", color: "#ef4444", label: "Cantidad" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -249,7 +252,7 @@ export function DashboardSPA(): JSX.Element {
           {cashFlow?.data ? (
             <LazyBarChart
               data={cashFlow.data.map(c => ({ ...c, name: c.date }))}
-              series={[{ dataKey: "income", color: "#10b981" }]}
+              series={[{ dataKey: "income", color: "#10b981", label: "Ingresos" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />

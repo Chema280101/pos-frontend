@@ -13,8 +13,10 @@ export interface UnitKpis {
 
 export interface SalesTrendItem {
   date: string;
-  totalSales: number;
-  ticketAvg: number;
+  day: string;
+  ventas: number;
+  cantidad: number;
+  ticketPromedio: number;
 }
 
 export interface TopServiceItem {

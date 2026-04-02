@@ -174,7 +174,7 @@ export function DashboardConsolidado(): JSX.Element {
           {consolidatedData?.salesTrend ? (
             <LazyBarChart
               data={[...consolidatedData.salesTrend.spa, ...consolidatedData.salesTrend.barberia].map(d => ({ ...d, name: d.date }))}
-              series={[{ dataKey: "totalSales", color: "#10b981" }]}
+              series={[{ dataKey: "ventas", color: "#10b981", label: "Ventas" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -184,8 +184,8 @@ export function DashboardConsolidado(): JSX.Element {
         <LazyInteractiveChart title="Servicios más rentables" description="Top 10 por ingresos (consolidado)">
           {consolidatedData?.topServices ? (
             <LazyBarChart
-              data={[...consolidatedData.topServices.spa, ...consolidatedData.topServices.barberia].map(s => ({ ...s, name: s.serviceName }))}
-              series={[{ dataKey: "revenue", color: "#f59e0b" }]}
+              data={[...consolidatedData.topServices.spa, ...consolidatedData.topServices.barberia].map(s => ({ ...s, name: s.serviceName, ingresos: s.revenue }))}
+              series={[{ dataKey: "ingresos", color: "#f59e0b", label: "Ingresos" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -197,8 +197,11 @@ export function DashboardConsolidado(): JSX.Element {
         <LazyInteractiveChart title="Productividad de empleados" description="Servicios realizados y ticket promedio (consolidado)">
           {consolidatedData?.productivity ? (
             <LazyBarChart
-              data={[...consolidatedData.productivity.spa, ...consolidatedData.productivity.barberia].map((p: any) => ({ ...p, name: p.employee }))}
-              series={[{ dataKey: "services", color: "#8b5cf6" }]}
+              data={[...consolidatedData.productivity.spa, ...consolidatedData.productivity.barberia].map((p: any) => ({ ...p, name: p.employee, servicios: p.servicesCount, ticketPromedio: p.avgTicket }))}
+              series={[
+                { dataKey: "servicios", color: "#8b5cf6", label: "Servicios" },
+                { dataKey: "ticketPromedio", color: "#f59e0b", label: "Ticket Promedio" }
+              ]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -209,7 +212,7 @@ export function DashboardConsolidado(): JSX.Element {
           {consolidatedData?.funnel ? (
             <LazyBarChart
               data={[...consolidatedData.funnel.spa, ...consolidatedData.funnel.barberia].map((f: any) => ({ ...f, name: f.stage }))}
-              series={[{ dataKey: "count", color: "#ef4444" }]}
+              series={[{ dataKey: "count", color: "#ef4444", label: "Cantidad" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
@@ -222,7 +225,7 @@ export function DashboardConsolidado(): JSX.Element {
           {consolidatedData?.cashFlow ? (
             <LazyBarChart
               data={[...consolidatedData.cashFlow.spa, ...consolidatedData.cashFlow.barberia].map((c: any) => ({ ...c, name: c.date }))}
-              series={[{ dataKey: "income", color: "#10b981" }]}
+              series={[{ dataKey: "income", color: "#10b981", label: "Ingresos" }]}
             />
           ) : (
             <Skeleton className="h-[260px] w-full" />
