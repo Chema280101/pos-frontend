@@ -185,7 +185,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
             </button>
           )}
           <div className="font-heading text-lg font-semibold tracking-tight text-[var(--unit-text)]">
-            {activeUnit === 'SPA' && 'SPA'}
+            {activeUnit === 'SPA' && 'GLOW SPA'}
               {activeUnit === 'BARBERIA' && 'BARMAN BARBERIA'}
             {!activeUnit && 'Barbería y Spa POS'}
           </div>
