@@ -6,11 +6,11 @@ const PERU_OFFSET = -5; // UTC-5 para Perú (sin DST)
 
 /**
  * Convierte una fecha a zona horaria de Perú (UTC-5)
- * IMPORTANTE: La BD ahora está en America/Lima, así que las fechas ya vienen en Perú
+ * IMPORTANTE: La BD está en America/Lima, así que usamos directamente la hora de la BD
  */
 export function toPeruTime(date?: Date | string): Date {
   if (!date) {
-    // Si no hay fecha, usar hora actual del cliente y convertirla a Perú
+    // Si no hay fecha, usar hora actual del cliente
     const inputDate = new Date();
     const utcTime = inputDate.getTime() + (inputDate.getTimezoneOffset() * 60000);
     return new Date(utcTime + (PERU_OFFSET * 3600000));
@@ -25,7 +25,16 @@ export function toPeruTime(date?: Date | string): Date {
  * Obtiene la hora actual en zona horaria de Perú
  */
 export function getPeruTime(date?: Date | string): Date {
-  return toPeruTime(date);
+  if (!date) {
+    // Hora actual del cliente convertida a Perú
+    const inputDate = new Date();
+    const utcTime = inputDate.getTime() + (inputDate.getTimezoneOffset() * 60000);
+    return new Date(utcTime + (PERU_OFFSET * 3600000));
+  }
+  
+  // Si viene de la BD, retornar directo
+  const inputDate = typeof date === 'string' ? new Date(date) : date;
+  return inputDate;
 }
 
 /**
