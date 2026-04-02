@@ -824,12 +824,12 @@ export function AdminCommissions(): JSX.Element {
       ),
     },
     {
-      key: 'date',
+      key: 'createdAt',
       header: 'Fecha',
       sortable: true,
       render: (row: any) => (
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-          {format(new Date(row.date), 'd MMM yyyy', { locale: es })}
+          {format(new Date(row.createdAt), 'd MMM yyyy', { locale: es })}
         </span>
       ),
     },
@@ -867,25 +867,7 @@ export function AdminCommissions(): JSX.Element {
         </span>
       ),
     },
-    {
-      key: 'createdAt',
-      header: 'Fecha Creación',
-      sortable: true,
-      render: (row: any) => {
-        const date = new Date(row.createdAt);
-        return (
-          <div className="flex flex-col gap-1">
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-              {format(date, "d MMM yyyy", { locale: es })}
-            </span>
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
-              {format(date, "h:mm a", { locale: es })}
-            </span>
-          </div>
-        );
-      },
-    },
-  ];
+      ];
 
   const actions = [
     {
