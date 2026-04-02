@@ -22,10 +22,11 @@ export function DashboardBarberia(): JSX.Element {
   const { data: kpis, isLoading } = useQuery({
     queryKey: ['dashboard', 'kpis', 'BARBERIA'],
     queryFn: async (): Promise<UnitKpis> => {
-      const { data } = await api.get<UnitKpis>('/api/dashboard/kpis?unit=BARBERIA');
+      // 🔥 USAR KPI DIRECTO - Sin中间层 ni cache
+      const { data } = await api.get<UnitKpis>('/api/kpi/direct?unit=BARBERIA');
       return data;
     },
-    staleTime: 30 * 1000,
+    staleTime: 0, // 🚫 Sin cache - siempre datos frescos
   });
 
   const { data: salesTrend } = useQuery({

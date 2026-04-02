@@ -51,10 +51,11 @@ export function usePrefetchQueries(): PrefetchRoute {
     queryClient.prefetchQuery({
       queryKey: ['dashboard', 'kpis', unit],
       queryFn: async () => {
-        const { data } = await api.get(`/api/dashboard/kpis?unit=${unit}`);
+        // 🔥 USAR KPI DIRECTO - Sin中间层 ni cache
+        const { data } = await api.get(`/api/kpi/direct?unit=${unit}`);
         return data;
       },
-      staleTime: 30 * 1000,
+      staleTime: 0, // 🚫 Sin cache - siempre datos frescos
     });
   }, [queryClient, unit, userRole]);
 

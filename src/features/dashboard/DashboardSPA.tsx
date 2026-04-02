@@ -23,10 +23,11 @@ export function DashboardSPA(): JSX.Element {
   const { data: kpis, isLoading, error: kpisError } = useQuery({
     queryKey: ['dashboard', 'kpis', 'SPA'],
     queryFn: async (): Promise<UnitKpis> => {
-      const { data } = await api.get<UnitKpis>('/api/dashboard/kpis?unit=SPA');
+      // 🔥 USAR KPI DIRECTO - Sin中间层 ni cache
+      const { data } = await api.get<UnitKpis>('/api/kpi/direct?unit=SPA');
       return data;
     },
-    staleTime: 30 * 1000,
+    staleTime: 0, // 🚫 Sin cache - siempre datos frescos
     retry: 3,
     refetchOnWindowFocus: false,
   });
