@@ -1,104 +1,61 @@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const PERU_TIMEZONE = 'America/Lima';
-const PERU_OFFSET = -5; // UTC-5 para Perú (sin DST)
-
 /**
- * Convierte una fecha a zona horaria de Perú (UTC-5)
- * IMPORTANTE: La BD está en America/Lima, así que usamos directamente la hora de la BD
+ * 🌍 Utilidades de Formato de Fecha
+ * 
+ * IMPORTANTE: La base de datos está en America/Lima
+ * No se necesita conversión de zona horaria.
  */
-export function toPeruTime(date?: Date | string): Date {
-  if (!date) {
-    // Si no hay fecha, usar hora actual del cliente
-    const inputDate = new Date();
-    const utcTime = inputDate.getTime() + (inputDate.getTimezoneOffset() * 60000);
-    return new Date(utcTime + (PERU_OFFSET * 3600000));
-  }
-  
-  // Si ya viene de la BD (ya está en Perú), retornarla directamente
-  const inputDate = typeof date === 'string' ? new Date(date) : date;
-  return inputDate;
-}
 
-/**
- * Obtiene la hora actual en zona horaria de Perú
- */
+// ✅ TEMPORAL: Compatibilidad mientras se actualiza todo el sistema
 export function getPeruTime(date?: Date | string): Date {
-  if (!date) {
-    // Hora actual del cliente convertida a Perú
-    const inputDate = new Date();
-    const utcTime = inputDate.getTime() + (inputDate.getTimezoneOffset() * 60000);
-    return new Date(utcTime + (PERU_OFFSET * 3600000));
-  }
-  
-  // Si viene de la BD, retornar directo
-  const inputDate = typeof date === 'string' ? new Date(date) : date;
-  return inputDate;
+  return date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
 }
 
-/**
- * Obtiene el inicio del día en zona horaria de Perú
- */
+export function toPeruTime(date?: Date | string): Date {
+  return date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
+}
+
 export function startOfPeruDay(date?: Date | string): Date {
-  const peruTime = getPeruTime(date);
-  peruTime.setHours(0, 0, 0, 0);
-  return peruTime;
+  const inputDate = typeof date === 'string' ? new Date(date) : (date || new Date());
+  const result = new Date(inputDate);
+  result.setHours(0, 0, 0, 0);
+  return result;
 }
 
-/**
- * Obtiene el fin del día en zona horaria de Perú
- */
 export function endOfPeruDay(date?: Date | string): Date {
-  const peruTime = getPeruTime(date);
-  peruTime.setHours(23, 59, 59, 999);
-  return peruTime;
+  const inputDate = typeof date === 'string' ? new Date(date) : (date || new Date());
+  const result = new Date(inputDate);
+  result.setHours(23, 59, 59, 999);
+  return result;
 }
 
-/**
- * Formatea fecha en zona horaria de Perú
- */
 export function formatPeruDate(date: Date | string): string {
-  const peruTime = getPeruTime(date);
-  return format(peruTime, "d 'de' MMMM 'de' yyyy, h:mm a", { locale: es });
+  const inputDate = typeof date === 'string' ? new Date(date) : date;
+  return format(inputDate, "d 'de' MMMM 'de' yyyy, h:mm a", { locale: es });
 }
 
-
-/**
- * Formatea fecha y hora en zona horaria de Perú
- */
 export function formatPeruDateTime(date: Date | string): string {
   return formatPeruDate(date);
 }
 
-/**
- * Obtiene el inicio del día en zona horaria de Perú
- */
 export function getStartOfPeruDay(date?: Date | string): Date {
   return startOfPeruDay(date);
 }
 
-/**
- * Obtiene el fin del día en zona horaria de Perú
- */
 export function getEndOfPeruDay(date?: Date | string): Date {
   return endOfPeruDay(date);
 }
 
-/**
- * Verifica si una fecha es hoy en zona horaria de Perú
- */
 export function isPeruToday(date: Date | string): boolean {
-  const target = getPeruTime(date);
-  const today = getPeruTime();
+  const target = typeof date === 'string' ? new Date(date) : date;
+  const today = new Date();
   return target.toDateString() === today.toDateString();
 }
 
-/**
- * Obtiene el rango del día actual en zona horaria de Perú
- */
 export function getPeruTodayRange(): { start: Date; end: Date } {
-  const today = getPeruTime();
+  const today = new Date();
   return {
     start: startOfPeruDay(today),
     end: endOfPeruDay(today)
@@ -106,12 +63,81 @@ export function getPeruTodayRange(): { start: Date; end: Date } {
 }
 
 /**
- * Convierte timestamp de notificación a formato legible en Perú
+ * Obtiene el inicio del día (00:00:00)
+ */
+export function startOfDay(date?: Date | string): Date {
+  const inputDate = typeof date === 'string' ? new Date(date) : (date || new Date());
+  const result = new Date(inputDate);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
+ * Obtiene el fin del día (23:59:59.999)
+ */
+export function endOfDay(date?: Date | string): Date {
+  const inputDate = typeof date === 'string' ? new Date(date) : (date || new Date());
+  const result = new Date(inputDate);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+/**
+ * Formatea fecha
+ */
+export function formatDate(date: Date | string): string {
+  const inputDate = typeof date === 'string' ? new Date(date) : date;
+  return format(inputDate, "d 'de' MMMM 'de' yyyy, h:mm a", { locale: es });
+}
+
+/**
+ * Formatea fecha y hora
+ */
+export function formatDateTime(date: Date | string): string {
+  return formatDate(date);
+}
+
+/**
+ * Obtiene el inicio del día
+ */
+export function getStartOfDay(date?: Date | string): Date {
+  return startOfDay(date);
+}
+
+/**
+ * Obtiene el fin del día
+ */
+export function getEndOfDay(date?: Date | string): Date {
+  return endOfDay(date);
+}
+
+/**
+ * Verifica si una fecha es hoy
+ */
+export function isToday(date: Date | string): boolean {
+  const target = typeof date === 'string' ? new Date(date) : date;
+  const today = new Date();
+  return target.toDateString() === today.toDateString();
+}
+
+/**
+ * Obtiene el rango del día actual
+ */
+export function getTodayRange(): { start: Date; end: Date } {
+  const today = new Date();
+  return {
+    start: startOfDay(today),
+    end: endOfDay(today)
+  };
+}
+
+/**
+ * Convierte timestamp de notificación a formato legible
  */
 export function formatNotificationTime(date: Date | string): string {
-  const peruTime = getPeruTime(date);
-  const now = getPeruTime();
-  const diffMs = now.getTime() - peruTime.getTime();
+  const inputDate = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diffMs = now.getTime() - inputDate.getTime();
   const diffMins = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
@@ -121,5 +147,5 @@ export function formatNotificationTime(date: Date | string): string {
   if (diffHours < 24) return `Hace ${diffHours} h`;
   if (diffDays < 7) return `Hace ${diffDays} d`;
   
-  return formatPeruDate(peruTime);
+  return formatDate(inputDate);
 }
