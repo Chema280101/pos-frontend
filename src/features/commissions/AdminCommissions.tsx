@@ -37,7 +37,7 @@ export function AdminCommissions(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [unitFilter, setUnitFilter] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
+  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -100,7 +100,10 @@ export function AdminCommissions(): JSX.Element {
     commissions.forEach(commission => {
       // Create group key: employeeId_date
       const commissionDate = new Date(commission.createdAt);
-      const dateKey = commissionDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      // ✅ CORRECCIÓN: Usar fecha local sin conversión UTC
+      const dateKey = commissionDate.getFullYear() + '-' + 
+                    String(commissionDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(commissionDate.getDate()).padStart(2, '0');
       const groupKey = `${commission.user.id}_${dateKey}`;
       
       if (!groups[groupKey]) {
@@ -498,7 +501,10 @@ export function AdminCommissions(): JSX.Element {
     
     commissionsToGroup.forEach(commission => {
       const commissionDate = new Date(commission.createdAt);
-      const dateKey = commissionDate.toISOString().split('T')[0];
+      // ✅ CORRECCIÓN: Usar fecha local sin conversión UTC
+      const dateKey = commissionDate.getFullYear() + '-' + 
+                    String(commissionDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(commissionDate.getDate()).padStart(2, '0');
       const groupKey = `${commission.user.id}_${dateKey}`;
       
       if (!groups[groupKey]) {
@@ -827,11 +833,28 @@ export function AdminCommissions(): JSX.Element {
       key: 'createdAt',
       header: 'Fecha',
       sortable: true,
-      render: (row: any) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-          {format(new Date(row.createdAt), 'd MMM yyyy', { locale: es })}
-        </span>
-      ),
+      render: (row: any) => {
+        const commissionDate = new Date(row.createdAt);
+        const today = new Date();
+        const isToday = commissionDate.toDateString() === today.toDateString();
+        
+        return (
+          <div className="flex flex-col gap-1">
+            <span className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+              isToday 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-indigo-100 text-indigo-800'
+            )}>
+              {format(commissionDate, 'd MMM yyyy', { locale: es })}
+              {isToday && ' (Hoy)'}
+            </span>
+            <span className="text-xs text-[var(--unit-text-muted)]">
+              {format(commissionDate, 'HH:mm', { locale: es })}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'totalSales',
