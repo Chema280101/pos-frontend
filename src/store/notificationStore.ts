@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toPeruTime } from '@/utils/peruTime';
 
 export interface AppNotification {
   id: string;
@@ -45,7 +46,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
         ...n,
         id: `n-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         read: false,
-        createdAt: new Date().toISOString(),
+        createdAt: toPeruTime(new Date()).toISOString(),
       };
       const items = [item, ...state.items].slice(0, 50);
       return { items, unreadCount: items.filter((i) => !i.read).length };

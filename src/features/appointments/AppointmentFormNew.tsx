@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { format, addDays, setHours, setMinutes, isBefore } from 'date-fns';
+import { toPeruTime, getStartOfPeruDay } from '@/utils/peruTime';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui';
@@ -36,7 +38,7 @@ export function AppointmentFormNew(): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const { user } = useAuthStore(); // ✅ Obtener usuario autenticado
 
-  const today = new Date();
+  const today = toPeruTime(new Date());
   const defaultDate = today.toISOString().slice(0, 10);
   const defaultTime = '10:00';
 
@@ -99,7 +101,7 @@ export function AppointmentFormNew(): JSX.Element {
     }
 
     if (urlStart) {
-      const startDate = new Date(urlStart);
+      const startDate = toPeruTime(new Date(urlStart));
       const dateStr = startDate.toISOString().slice(0, 10);
       const timeStr = startDate.toTimeString().slice(0, 5);
       setDate(dateStr);
@@ -200,8 +202,8 @@ export function AppointmentFormNew(): JSX.Element {
     const selectedService = servicesForUnit.find((s: any) => s.id === serviceId);
     const duration = selectedService?.durationMin ?? 30;
     
-    const startTime = new Date(`${date}T${time}`);
-    const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+    const startTime = toPeruTime(new Date(`${date}T${time}`));
+    const endTime = toPeruTime(new Date(startTime.getTime() + duration * 60 * 1000));
     
     // Verificar si la cita cruza medianoche (diferente día)
     const crosses = endTime.getDate() !== startTime.getDate() || 

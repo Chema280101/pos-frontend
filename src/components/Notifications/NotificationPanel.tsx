@@ -6,6 +6,7 @@ import { X, Calendar, Package, Wallet, Percent, Info, AlertTriangle } from 'luci
 import { useNotificationStore, type AppNotification } from '@/store/notificationStore';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { formatNotificationTime, getStartOfPeruDay } from '@/utils/peruTime';
 
 const typeIcons: Record<AppNotification['type'], React.ReactNode> = {
   appointment: <Calendar className="h-4 w-4" />,
@@ -44,7 +45,7 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps): JS
   // ✅ MEJORA: Limpiar notificaciones leídas antiguas (más de 24 horas)
   useEffect(() => {
     const cleanupOldNotifications = () => {
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const twentyFourHoursAgo = getStartOfPeruDay(new Date(Date.now() - 24 * 60 * 60 * 1000));
       
       useNotificationStore.setState((state) => {
         const activeNotifications = state.items.filter((n: AppNotification) => 
@@ -182,6 +183,9 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps): JS
                                           {n.title}
                                         </p>
                                         <p className="mt-0.5 text-xs text-[var(--unit-text)]/70">{n.message}</p>
+                                        <p className="mt-1 text-xs text-[var(--unit-text)]/50">
+                                          {formatNotificationTime(n.createdAt)}
+                                        </p>
                                         <div className="mt-1.5 flex items-center gap-3">
                                           {n.link && (
                                             <Link

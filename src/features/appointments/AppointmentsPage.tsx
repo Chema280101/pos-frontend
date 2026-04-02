@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format, startOfDay, endOfDay, isWithinInterval, parseISO, subDays } from 'date-fns';
+import { format, isWithinInterval, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getStartOfPeruDay, getEndOfPeruDay, formatPeruDateTime } from '@/utils/peruTime';
 import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
 import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Eye, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -39,8 +40,8 @@ export function AppointmentsPage(): JSX.Element {
 
   const { success } = useToast();
 
-  const [viewStart, setViewStart] = useState<Date>(() => startOfDay(subDays(new Date(), 30))); // Start 30 days ago
-  const [viewEnd, setViewEnd] = useState<Date>(() => endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // End 30 days from now
+  const [viewStart, setViewStart] = useState<Date>(() => getStartOfPeruDay(subDays(new Date(), 30))); // Start 30 days ago
+  const [viewEnd, setViewEnd] = useState<Date>(() => getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // End 30 days from now
   const [calendarView, setCalendarView] = useState<'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'>('timeGridDay');
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
 
@@ -56,8 +57,8 @@ export function AppointmentsPage(): JSX.Element {
   const [search, setSearch] = useState('');
 
   // Date range filter states
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 30))); // 30 días atrás
-  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // 30 días en el futuro
+  const [dateFrom, setDateFrom] = useState<Date>(getStartOfPeruDay(subDays(new Date(), 30))); // 30 días atrás
+  const [dateTo, setDateTo] = useState<Date>(getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // 30 días en el futuro
   const [unitFilter, setUnitFilter] = useState<string>('');
 
   // Additional filter states
@@ -263,27 +264,9 @@ export function AppointmentsPage(): JSX.Element {
       header: 'Fecha y Hora',
       sortable: true,
       render: (row: CalendarAppointmentWithProps) => {
-        const date = new Date(row.start);
-        // Custom formatting for "2 mar. 2026" and "1:00 p. m."
-        const day = format(date, 'd');
-        const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-        const month = monthNames[date.getMonth()];
-        const year = format(date, 'yyyy');
-
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
-        const displayHours = hours % 12 || 12;
-        const displayMinutes = minutes.toString().padStart(2, '0');
-
         return (
-          <div className="flex flex-col gap-1">
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-              {day} {month}. {year}
-            </span>
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
-              {displayHours}:{displayMinutes} {ampm}
-            </span>
+          <div className="text-sm">
+            <div className="font-medium">{formatPeruDateTime(row.start)}</div>
           </div>
         );
       },
@@ -818,13 +801,7 @@ export function AppointmentsPage(): JSX.Element {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {new Date(selectedAppointment.start).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Hora</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {new Date(selectedAppointment.start).toLocaleTimeString()}
+                        {formatPeruDateTime(selectedAppointment.start)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
