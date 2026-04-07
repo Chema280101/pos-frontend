@@ -66,6 +66,13 @@ export function IncomesMetrics({ incomes, totalAmount, aggregatedMetrics }: Inco
   
   // Additional metrics
   const averageSale = total > 0 ? total / incomes.length : 0;
+  
+  // Debug: Log payment methods to see what's available
+  console.log('DEBUG - Incomes received:', incomes.length);
+  console.log('DEBUG - Payment methods in incomes:', incomes.map(i => i.paymentMethod));
+  console.log('DEBUG - Cash payments count:', incomes.filter(i => i.paymentMethod === 'CASH').length);
+  console.log('DEBUG - Aggregated metrics:', aggregatedMetrics);
+  
   const cashPayments = aggregatedMetrics?.cashPayments ?? incomes.filter(i => i.paymentMethod === 'CASH').length;
   const cardPayments = aggregatedMetrics?.cardPayments ?? incomes.filter(i => i.paymentMethod === 'CARD').length;
   const transferPayments = aggregatedMetrics?.transferPayments ?? incomes.filter(i => i.paymentMethod === 'TRANSFER').length;
