@@ -208,13 +208,13 @@ export function useProducts(unit: string, search?: string) {
   });
 }
 
-// 🎯 Hook para paquetes con cache y manejo de errores
-export function usePackages(search?: string) {
+// 🎯 Hook para paquetes con cache y manejo de errores - CORREGIDO para filtrar por unidad
+export function usePackages(unit: string, search?: string) {
   return useQuery({
-    queryKey: ['packages', search],
+    queryKey: ['packages', unit, search],
     queryFn: async () => {
-      const searchParam = search ? `?search=${encodeURIComponent(search)}` : '';
-      const { data } = await api.get(`/api/packages${searchParam}`);
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const { data } = await api.get(`/api/packages?unit=${unit}${searchParam}`);
       return data;
     },
     enabled: search ? search.length >= 2 : true,

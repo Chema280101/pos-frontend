@@ -1,7 +1,8 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(app)/packages/page": "app/(app)/packages/page.js",
   "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
-  "/(app)/reports/sales/page": "app/(app)/reports/sales/page.js",
-  "/(app)/reports/detailed/page": "app/(app)/reports/detailed/page.js",
-  "/(app)/commissions/page": "app/(app)/commissions/page.js",
-  "/(app)/commissions/admin/page": "app/(app)/commissions/admin/page.js"
+  "/(app)/packages/new/page": "app/(app)/packages/new/page.js",
+  "/(app)/income/page": "app/(app)/income/page.js",
+  "/(app)/cash-register/page": "app/(app)/cash-register/page.js"
 }

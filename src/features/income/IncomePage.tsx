@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, CreditCard, Wallet, Smartphone, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, CreditCard, Wallet, Smartphone, ChevronDown, ChevronUp, Layers, Scissors, Tag } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { cn } from '@/lib/utils';
@@ -29,28 +29,69 @@ interface Income {
     id: string;
     startTime: string;
   } | null;
+  type?: 'SALE' | 'MANUAL_INCOME';
+  // Enhanced fields for detailed income information
+  itemsDetails?: Array<{
+    name: string;
+    type: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    employee: string;
+  }>;
+  summary?: string; // Quick display summary
+  employees?: string[]; // All employees involved
+  reason?: string; // For manual incomes
+  category?: string; // For manual incomes
+  // Legacy items (kept for compatibility)
+  items?: Array<{
+    id: string;
+    itemType: string;
+    referenceId: string;
+    name: string;
+    unitPrice: number;
+    quantity: number;
+    discountAmount: number;
+    subtotal: number;
+    employee?: {
+      id: string;
+      name: string;
+    } | null;
+    service?: {
+      id: string;
+      name: string;
+    } | null;
+    product?: {
+      id: string;
+      name: string;
+    } | null;
+    package?: {
+      id: string;
+      name: string;
+    } | null;
+  }> | null;
 }
 
 export function IncomePage(): JSX.Element {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState(false);
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
-  
+
   // Success confirmation state
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   // Date range filter states (como en appointments)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(true);
-  
+
   // Additional filters (como en appointments)
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
-  
+
   // Debounce hook para búsqueda
   function useDebouncedValue<T>(value: T, delay: number): T {
     const [debounced, setDebounced] = useState(value);
@@ -60,9 +101,9 @@ export function IncomePage(): JSX.Element {
     }, [value, delay]);
     return debounced;
   }
-  
+
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
-  
+
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
   const router = useRouter();
@@ -79,20 +120,20 @@ export function IncomePage(): JSX.Element {
       if (unitFilter) params.set('unit', unitFilter);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
-      
+
       // Add date range filters
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
-      
+
       // Add payment method filter
       if (paymentMethodFilter) params.set('paymentMethod', paymentMethodFilter);
-      
+
       // Add status filter
       if (statusFilter) params.set('status', statusFilter);
-      
+
       // Add search filter
       if (debouncedSearch) params.set('search', debouncedSearch);
-      
+
       const { data } = await api.get(`/api/income?${params}`);
       return data;
     },
@@ -167,8 +208,8 @@ export function IncomePage(): JSX.Element {
   }, []);
 
   const getUnitColor = useCallback((unit: string) => {
-    return unit === 'SPA' 
-      ? 'bg-blue-100 text-blue-800' 
+    return unit === 'SPA'
+      ? 'bg-blue-100 text-blue-800'
       : 'bg-amber-100 text-amber-800';
   }, []);
 
@@ -185,76 +226,132 @@ export function IncomePage(): JSX.Element {
     sortable?: boolean;
     render: (row: Income) => React.ReactNode;
   }> = [
-    {
-      key: 'saleNumber',
-      header: 'Venta',
-      sortable: true,
-      render: (row: Income) => (
-        <div className="flex items-center gap-2">
-          <Receipt className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text-muted)]">#{row.saleNumber}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'customer',
-      header: 'Cliente',
-      render: (row: Income) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
-          {row.customer?.name || 'Sin cliente'}
-        </span>
-      ),
-    },
-    {
-      key: 'total',
-      header: 'Total',
-      sortable: true,
-      render: (row: Income) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
-          S/ {row.total.toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      key: 'paymentMethod',
-      header: 'Método de Pago',
-      render: (row: Income) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          getPaymentMethodColor(row.paymentMethod)
-        )}>
-          {row.paymentMethod}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Estado',
-      render: (row: Income) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          getStatusColor(row.status)
-        )}>
-          {row.status === 'completed' ? 'Completado' : 'Pendiente'}
-        </span>
-      ),
-    },
-    {
-      key: 'createdAt',
-      header: 'Fecha',
-      sortable: true,
-      render: (row: Income) => (
-        <div className="flex flex-col gap-1">
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-            {format(new Date(row.createdAt), 'dd/MM/yyyy')}
+      {
+        key: 'saleNumber',
+        header: 'Venta',
+        sortable: true,
+        render: (row: Income) => (
+          <div className="flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-[var(--unit-text-muted)]" />
+            <span className="font-medium text-[var(--unit-text-muted)]">#{row.saleNumber}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'details',
+        header: 'Detalles',
+        render: (row: Income) => (
+          <div className="space-y-1">
+            {row.type === 'SALE' ? (
+              <>
+                {/* Show items summary for sales */}
+                {row.itemsDetails && row.itemsDetails.length > 0 ? (
+                  <div className="space-y-1">
+                    {row.itemsDetails.slice(0, 2).map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 text-xs">
+                        {/* Item type icon */}
+                        {item.type === 'SERVICE' && <Scissors className="h-3 w-3 text-blue-500" />}
+                        {item.type === 'PRODUCT' && <Package className="h-3 w-3 text-green-500" />}
+                        {item.type === 'PACKAGE' && <Layers className="h-3 w-3 text-purple-500" />}
+
+                        {/* Item name and quantity */}
+                        <span className="text-[var(--unit-text)]">
+                          {item.name}
+                          {item.quantity > 1 && <span className="text-[var(--unit-text-muted)]"> (x{item.quantity})</span>}
+                        </span>
+
+                        {/* Employee name */}
+                        {item.employee && (
+                          <span className="text-[var(--unit-text-muted)]">
+                            • {item.employee}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Show "more" indicator if there are more items */}
+                    {row.itemsDetails.length > 2 && (
+                      <span className="text-xs text-[var(--unit-text-muted)]">
+                        +{row.itemsDetails.length - 2} más...
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-[var(--unit-text-muted)]">Sin detalles</span>
+                )}
+              </>
+            ) : (
+              /* Show reason for manual incomes */
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-3 w-3 text-amber-500" />
+                <span className="text-xs text-[var(--unit-text)]">{row.reason || 'Ingreso manual'}</span>
+                {row.category && (
+                  <span className="text-xs text-[var(--unit-text-muted)]">({row.category})</span>
+                )}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'customer',
+        header: 'Cliente',
+        render: (row: Income) => (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+            {row.customer?.name || 'Sin cliente'}
           </span>
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
-            {format(new Date(row.createdAt), 'HH:mm')}
+        ),
+      },
+      {
+        key: 'total',
+        header: 'Total',
+        sortable: true,
+        render: (row: Income) => (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
+            S/ {row.total.toFixed(2)}
           </span>
-        </div>
-      ),
-    },
-  ];
+        ),
+      },
+      {
+        key: 'paymentMethod',
+        header: 'Método de Pago',
+        render: (row: Income) => (
+          <span className={cn(
+            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+            getPaymentMethodColor(row.paymentMethod)
+          )}>
+            {row.paymentMethod}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Estado',
+        render: (row: Income) => (
+          <span className={cn(
+            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+            getStatusColor(row.status)
+          )}>
+            {row.status === 'completed' ? 'Completado' : 'Pendiente'}
+          </span>
+        ),
+      },
+      {
+        key: 'createdAt',
+        header: 'Fecha',
+        sortable: true,
+        render: (row: Income) => (
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+              {format(new Date(row.createdAt), 'dd/MM/yyyy')}
+            </span>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+              {format(new Date(row.createdAt), 'HH:mm')}
+            </span>
+          </div>
+        ),
+      },
+    ];
 
   const actions: Array<{
     label: string;
@@ -263,34 +360,34 @@ export function IncomePage(): JSX.Element {
     className: string;
     disabled?: (row: Income) => boolean;
   }> = [
-    {
-      label: 'Ver',
-      icon: <Eye className="h-4 w-4" />,
-      onClick: (row: Income) => {
-        setSelectedIncome(row);
-        setViewModal(true);
+      {
+        label: 'Ver',
+        icon: <Eye className="h-4 w-4" />,
+        onClick: (row: Income) => {
+          setSelectedIncome(row);
+          setViewModal(true);
+        },
+        className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
       },
-      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
-    },
-    {
-      label: 'Editar',
-      icon: <Edit className="h-4 w-4" />,
-      onClick: (row: Income) => {
-        router.push(`/income/${row.id}/edit`);
+      {
+        label: 'Editar',
+        icon: <Edit className="h-4 w-4" />,
+        onClick: (row: Income) => {
+          router.push(`/income/${row.id}/edit`);
+        },
+        className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
+        disabled: (row: Income) => !canEdit || row.status === 'completed',
       },
-      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
-      disabled: (row: Income) => !canEdit || row.status === 'completed',
-    },
-    {
-      label: 'Eliminar',
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: (row: Income) => {
-        setDeleteConfirm(row.id);
+      {
+        label: 'Eliminar',
+        icon: <Trash2 className="h-4 w-4" />,
+        onClick: (row: Income) => {
+          setDeleteConfirm(row.id);
+        },
+        className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
+        disabled: (row: Income) => !canEdit || row.status === 'completed',
       },
-      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
-      disabled: (row: Income) => !canEdit || row.status === 'completed',
-    },
-  ];
+    ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
@@ -300,7 +397,7 @@ export function IncomePage(): JSX.Element {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
       </div>
-      
+
       <div className="relative max-w-7xl mx-auto p-6">
         {/* Enhanced Header - Idéntico a Appointments */}
         <div className="mb-8">
@@ -317,14 +414,14 @@ export function IncomePage(): JSX.Element {
             </p>
           </div>
 
-        {/* Incomes Metrics - Nueva sección de métricas espectaculares */}
-        <IncomesMetrics incomes={income} />
+          {/* Incomes Metrics - Nueva sección de métricas espectaculares */}
+          <IncomesMetrics incomes={income} />
 
-        {/* Enhanced Action Buttons */}
+          {/* Enhanced Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
             <div className="text-center">
               <p className="text-sm text-[var(--unit-text-muted)]">
-                Para registrar nuevos ingresos, utiliza la página de 
+                Para registrar nuevos ingresos, utiliza la página de
                 <Link href="/cash-register" className="font-bold text-[var(--unit-accent)] hover:underline ml-1">
                   Caja Registradora
                 </Link>
@@ -467,7 +564,7 @@ export function IncomePage(): JSX.Element {
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23DC2626' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
-              
+
               <div className="relative">
                 {/* Premium Header */}
                 <div className="flex items-center justify-between mb-6">
@@ -487,7 +584,7 @@ export function IncomePage(): JSX.Element {
                     <X className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
-                
+
                 {/* Warning Content */}
                 <div className="space-y-6">
                   {/* Warning Card */}
@@ -506,7 +603,7 @@ export function IncomePage(): JSX.Element {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Income Details */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-gray-500/30 bg-gradient-to-br from-gray-50 to-gray-100 p-4">
                     <div className="space-y-2">
@@ -524,7 +621,7 @@ export function IncomePage(): JSX.Element {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Premium Action Buttons */}
                   <div className="flex gap-4 mt-6">
                     <button
@@ -558,39 +655,40 @@ export function IncomePage(): JSX.Element {
           </div>
         )}
 
-        {/* View Details Modal */}
+        {/* View Details Modal - Same style as service modal */}
         {viewModal && selectedIncome && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               {/* Background Pattern */}
               <div className="absolute inset-0 opacity-5">
                 <div className="h-full w-full bg-repeat" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
-              
-              <div className="relative p-6">
-                {/* Premium Header */}
-                <div className="flex items-center justify-between mb-6">
+
+              <div className="relative">
+                {/* Enhanced Header - Same as service modal */}
+                <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <Eye className="h-5 w-5 text-white" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                      <Eye className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Ingreso</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">Información completa del registro</p>
+                      <p className="text-sm text-[var(--unit-text-muted)]">#{selectedIncome.saleNumber}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setViewModal(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/30 transition-all hover:scale-105"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
+                    aria-label="Cerrar"
                   >
-                    <X className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                    <X className="h-4 w-4 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors" />
                   </button>
                 </div>
 
-                {/* Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Enhanced Content Grid - 3 columns like service modal */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {/* Basic Information */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
@@ -687,6 +785,121 @@ export function IncomePage(): JSX.Element {
                     </div>
                   </div>
 
+                  {/* Enhanced Items Details for Sales - Same format as Movimientos Recientes */}
+                  {selectedIncome.type === 'SALE' && selectedIncome.itemsDetails && selectedIncome.itemsDetails.length > 0 && (
+                    <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                      <div className="relative">
+                        {/* Card Header - Same as Movimientos Recientes */}
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                              <ShoppingCart className="h-4 w-4 text-[var(--unit-accent)]" />
+                            </div>
+                            <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">
+                              Items de la Venta
+                            </h4>
+                          </div>
+                          <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                            {selectedIncome.itemsDetails.length} items
+                          </span>
+                        </div>
+
+                        {/* Enhanced Items List - Same format as movements */}
+                        <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                          {selectedIncome.itemsDetails.map((item, index) => (
+                            <div key={index} className="group/item relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
+                              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/item:opacity-100 transition-opacity rounded-xl"></div>
+                              <div className="relative">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      {/* Item type icon */}
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/30">
+                                        {item.type === 'SERVICE' && <Scissors className="h-3 w-3 text-blue-500" />}
+                                        {item.type === 'PRODUCT' && <Package className="h-3 w-3 text-green-500" />}
+                                        {item.type === 'PACKAGE' && <Layers className="h-3 w-3 text-purple-500" />}
+                                      </div>
+                                      <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-2 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                                        {item.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-[var(--unit-text-muted)] mb-2">
+                                      <span>Cantidad: {item.quantity}</span>
+                                      <span>Unitario: S/ {item.unitPrice.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-[var(--unit-text-muted)]">
+                                      <span>Subtotal: S/ {item.subtotal.toFixed(2)}</span>
+                                      {item.employee && (
+                                        <span>Realizado por: {item.employee}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                                      S/ {item.subtotal.toFixed(2)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual Income Details */}
+                  {selectedIncome.type === 'MANUAL_INCOME' && (
+                    <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                      <div className="relative">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                            <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Detalles del Ingreso Manual</h4>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                              <span className="text-sm font-medium text-[var(--unit-text)]">Motivo</span>
+                            </div>
+                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                              {selectedIncome.reason || 'Sin motivo'}
+                            </span>
+                          </div>
+
+                          {selectedIncome.category && (
+                            <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                              <div className="flex items-center gap-2">
+                                <Tag className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                                <span className="text-sm font-medium text-[var(--unit-text)]">Categoría</span>
+                              </div>
+                              <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                                {selectedIncome.category}
+                              </span>
+                            </div>
+                          )}
+
+                          {selectedIncome.employees && selectedIncome.employees.length > 0 && (
+                            <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                                <span className="text-sm font-medium text-[var(--unit-text)]">Registrado por</span>
+                              </div>
+                              <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                                {selectedIncome.employees.join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Payment Detail for Mixed Payments */}
                   {selectedIncome.paymentMethod === 'Mixto' && selectedIncome.paymentDetail && (
                     <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
@@ -707,10 +920,10 @@ export function IncomePage(): JSX.Element {
                                 <div className="flex items-center gap-2">
                                   {getPaymentMethodIcon(method)}
                                   <span className="text-sm font-medium text-[var(--unit-text)]">
-                                    {method === 'CASH' ? 'Efectivo' : 
-                                     method === 'CARD' ? 'Tarjeta' : 
-                                     method === 'TRANSFER' ? 'Transferencia' : 
-                                     method === 'DIGITAL_WALLET' ? 'Billetera Digital' : method}
+                                    {method === 'CASH' ? 'Efectivo' :
+                                      method === 'CARD' ? 'Tarjeta' :
+                                        method === 'TRANSFER' ? 'Transferencia' :
+                                          method === 'DIGITAL_WALLET' ? 'Billetera Digital' : method}
                                   </span>
                                 </div>
                                 <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
@@ -718,7 +931,7 @@ export function IncomePage(): JSX.Element {
                                 </span>
                               </div>
                             ))}
-                          
+
                           {/* Total Summary */}
                           <div className="mt-4 pt-4 border-t-2 border-[var(--unit-border)]/20">
                             <div className="flex justify-between items-center py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border border-[var(--unit-accent)]/30">
@@ -738,51 +951,113 @@ export function IncomePage(): JSX.Element {
                       </div>
                     </div>
                   )}
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-4 mt-6">
-                  {canEdit && selectedIncome.status !== 'completed' && (
-                    <button
-                      onClick={() => {
-                        router.push(`/income/${selectedIncome.id}/edit`);
-                        setViewModal(false);
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Editar Ingreso
-                    </button>
+                  {/* Items Vendidos y Trabajadores */}
+                  {selectedIncome.type === 'SALE' && selectedIncome.items && selectedIncome.items.length > 0 && (
+                    <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                      <div className="relative">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                            <ShoppingCart className="h-4 w-4 text-[var(--unit-accent)]" />
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Ítems Vendidos y Trabajadores</h4>
+                        </div>
+
+                        <div className="space-y-3">
+                          {selectedIncome.items.map((item, index) => (
+                            <div key={item.id} className="group/item flex justify-between items-start py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10 border border-[var(--unit-accent)]/30">
+                                    {item.itemType === 'SERVICE' && <Scissors className="h-3 w-3 text-[var(--unit-accent)]" />}
+                                    {item.itemType === 'PRODUCT' && <Package className="h-3 w-3 text-[var(--unit-accent)]" />}
+                                    {item.itemType === 'PACKAGE' && <Package className="h-3 w-3 text-[var(--unit-accent)]" />}
+                                  </div>
+                                  <span className="text-sm font-medium text-[var(--unit-text)]">
+                                    {item.itemType === 'SERVICE' && 'Servicio'}
+                                    {item.itemType === 'PRODUCT' && 'Producto'}
+                                    {item.itemType === 'PACKAGE' && 'Paquete'}
+                                  </span>
+                                </div>
+
+                                <div className="text-sm text-[var(--unit-text)] font-medium mb-1">
+                                  {item.name}
+                                </div>
+
+                                <div className="flex items-center gap-4 text-xs text-[var(--unit-text-muted)]">
+                                  <span>Cantidad: {item.quantity}</span>
+                                  <span>Precio: S/ {item.unitPrice.toFixed(2)}</span>
+                                  <span>Subtotal: S/ {item.subtotal.toFixed(2)}</span>
+                                </div>
+
+                                {item.employee && (
+                                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--unit-border)]/20">
+                                    <Users className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                                      {item.employee.name}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="text-right">
+                                <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
+                                  S/ {item.subtotal.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Resumen de ítems */}
+                          <div className="mt-4 pt-4 border-t-2 border-[var(--unit-border)]/20">
+                            <div className="flex justify-between items-center py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border border-[var(--unit-accent)]/30">
+                              <div className="flex items-center gap-2">
+                                <ShoppingCart className="h-4 w-4 text-[var(--unit-accent)]" />
+                                <span className="text-sm font-bold text-[var(--unit-text)]">Total Ítems</span>
+                              </div>
+                              <span className="font-bold text-[var(--unit-accent)] bg-white px-3 py-1 rounded-lg border border-[var(--unit-accent)]/30">
+                                S/ {selectedIncome.items.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  <button
-                    onClick={() => setViewModal(false)}
-                    className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <X className="h-4 w-4" />
-                    Cerrar
-                  </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Success Message Toast */}
-        {showSuccessMessage && (
-          <div className="fixed top-4 right-4 z-50 animate-pulse">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-lg border-2 border-green-400/50 backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                {/* Enhanced Footer Actions - Same as service modal */}
+                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                        <Eye className="h-4 w-4 text-[var(--unit-accent)]" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--unit-text-muted)]">Resumen del Ingreso</p>
+                        <p className="text-sm font-bold text-[var(--unit-text)]">
+                          {selectedIncome.type === 'SALE'
+                            ? `Venta #${selectedIncome.saleNumber} - ${selectedIncome.itemsDetails?.length || 0} items - S/ ${selectedIncome.total.toFixed(2)}`
+                            : `${selectedIncome.reason || 'Ingreso manual'} - S/ ${selectedIncome.total.toFixed(2)}`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setViewModal(false)}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Cerrar Detalles
+                    </button>
+                  </div>
                 </div>
-                <span className="font-medium">{successMessage}</span>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </div> {/* <-- ESTE ES EL DIV QUE FALTABA CERRAR */}
     </div>
   );
 }

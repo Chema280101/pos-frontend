@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, XCircle, Building2, RefreshCw } from 'lucide-react';
+import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, XCircle, Building2, RefreshCw, FileText } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
+import { EmptyStateData } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { InventoryMetrics } from './InventoryMetrics';
@@ -347,6 +349,16 @@ export function InventoryPage(): JSX.Element {
             : 'bg-red-100 text-red-800'
         )}>
           {row.isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+    },
+    {
+      key: 'timesVended',
+      header: 'Vendidos',
+      sortable: true,
+      render: (row: Product) => (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
+          {row.timesVended || 0}
         </span>
       ),
     },
@@ -1114,6 +1126,132 @@ export function InventoryPage(): JSX.Element {
                           </span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Recent Movements - Glassmorphism Card */}
+                <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                  <div className="relative">
+                    {/* Enhanced Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                          <Activity className="h-4 w-4 text-[var(--unit-accent)]" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">
+                          Movimientos de Stock
+                        </h4>
+                      </div>
+                      <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                        {movements.length} movimientos
+                      </span>
+                    </div>
+
+                    {/* Enhanced Movements List */}
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                      {movements.length === 0 ? (
+                        <EmptyStateData
+                          title="No hay movimientos registrados"
+                          description="No se encontraron movimientos de stock para este producto. Los movimientos aparecerán aquí cuando se realicen entradas o salidas de inventario."
+                          action={
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.location.href = '/inventory/movements'}
+                            >
+                              Ver todos los movimientos
+                            </Button>
+                          }
+                        />
+                      ) : (
+                        movements.slice(0, 10).map((movement: any) => (
+                          <div key={movement.id} className="group/movement relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
+                            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/movement:opacity-100 transition-opacity rounded-xl"></div>
+                            <div className="relative">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${
+                                      movement.type === 'IN' 
+                                        ? 'bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30'
+                                        : 'bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/30'
+                                    }`}>
+                                      {movement.type === 'IN' ? (
+                                        <Package className="h-3 w-3 text-green-600" />
+                                      ) : (
+                                        <Package className="h-3 w-3 text-red-600" />
+                                      )}
+                                    </div>
+                                    <span className={`text-xs font-bold uppercase tracking-wider ${
+                                      movement.type === 'IN' ? 'text-green-800' : 'text-red-800'
+                                    }`}>
+                                      {movement.type === 'IN' ? 'Entrada' : 'Salida'}
+                                    </span>
+                                    {movement.referenceNumber && (
+                                      <span className="text-xs text-[var(--unit-text-muted)]">
+                                        #{movement.referenceNumber}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
+                                      <span className="text-[var(--unit-text-muted)]">
+                                        {new Date(movement.createdAt).toLocaleDateString('es-PE', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric'
+                                        })}
+                                      </span>
+                                      <span className="text-[var(--unit-text-muted)]">a las</span>
+                                      <span className="text-[var(--unit-text-muted)]">
+                                        {new Date(movement.createdAt).toLocaleTimeString('es-PE', {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Users className="h-3 w-3 text-[var(--unit-text-muted)]" />
+                                      <span className="text-[var(--unit-text-muted)]">Usuario:</span>
+                                      <span className="font-medium text-[var(--unit-text)]">
+                                        {movement.user?.name || 'Sistema'}
+                                      </span>
+                                    </div>
+                                    
+                                    {movement.reason && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <FileText className="h-3 w-3 text-[var(--unit-text-muted)]" />
+                                        <span className="text-[var(--unit-text-muted)]">Motivo:</span>
+                                        <span className="font-medium text-[var(--unit-text)]">
+                                          {movement.reason}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="text-right">
+                                  <div className="space-y-1">
+                                    <div className={`text-sm font-bold ${
+                                      movement.type === 'IN' ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {movement.type === 'IN' ? '+' : '-'}{movement.quantity} {movement.quantity === 1 ? 'unidad' : 'unidades'}
+                                    </div>
+                                    <div className="text-xs text-[var(--unit-text-muted)]">
+                                      Stock: {movement.stockAfter}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>

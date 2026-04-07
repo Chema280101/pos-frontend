@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, XCircle, Scissors } from 'lucide-react';
+import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, XCircle, Scissors, ShoppingCart, Calendar, Users } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
+import { EmptyStateData } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { Package } from '@/types/service';
@@ -27,17 +29,17 @@ export function PackagesPage(): JSX.Element {
   }, [viewModal]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { success, error } = useToast();
-  
+
   // Date range filter states (like services)
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(true);
-  
+
   // Filter states
   const [priceRangeFilter, setPriceRangeFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  
+
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'ADMIN'; // RECEPTIONIST can only view, not edit
   const router = useRouter();
@@ -94,7 +96,7 @@ export function PackagesPage(): JSX.Element {
         return key;
       }
     }
-    
+
     return '1000+';
   };
 
@@ -112,7 +114,7 @@ export function PackagesPage(): JSX.Element {
         return key;
       }
     }
-    
+
     return '240+';
   };
 
@@ -194,6 +196,16 @@ export function PackagesPage(): JSX.Element {
         </div>
       ),
     },
+    {
+      key: 'timesVended',
+      header: 'Vendidos',
+      sortable: true,
+      render: (row: Package) => (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
+          {row.timesVended || 0}
+        </span>
+      ),
+    },
   ];
 
   const actions = [
@@ -227,6 +239,7 @@ export function PackagesPage(): JSX.Element {
     },
   ];
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
       {/* Background Pattern */}
@@ -237,7 +250,7 @@ export function PackagesPage(): JSX.Element {
       </div>
       
       <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header - Exacto estilo ServicesPage */}
+        {/* Enhanced Header */}
         <div className="mb-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
@@ -252,10 +265,10 @@ export function PackagesPage(): JSX.Element {
             </p>
           </div>
 
-          {/* Packages Metrics - Nueva sección de métricas espectaculares */}
+          {/* Packages Metrics */}
           <PackagesMetrics packages={packages || []} />
 
-          {/* Enhanced Action Buttons - Exacto estilo ServicesPage */}
+          {/* Enhanced Action Buttons */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
             {canEdit && (
               <Link href="/packages/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
@@ -266,7 +279,7 @@ export function PackagesPage(): JSX.Element {
           </div>
         </div>
 
-        {/* Enhanced Packages Filters - Exacto estilo ServicesPage */}
+        {/* Enhanced Packages Filters */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
           {/* Filter Header */}
           <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
@@ -392,9 +405,8 @@ export function PackagesPage(): JSX.Element {
           )}
         </div>
 
-        {/* Packages Table - Exacto estilo ServicesPage */}
+        {/* Packages Table */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-          {/* Table Header */}
           <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -412,14 +424,13 @@ export function PackagesPage(): JSX.Element {
             </div>
           </div>
 
-          {/* Table */}
           <DataTable
             columns={columns}
             data={packages ?? []}
             keyExtractor={(row) => row.id}
             loading={isLoading}
-            searchPlaceholder="" // Hidden since we have custom search
-            filters={[]} // Hidden since we have custom filters
+            searchPlaceholder=""
+            filters={[]}
             actions={actions}
             emptyMessage="No se encontraron paquetes con los filtros aplicados."
             pageSize={15}
@@ -427,7 +438,7 @@ export function PackagesPage(): JSX.Element {
           />
         </div>
 
-        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {/* Delete Confirmation Modal */}
         {showDeleteDialog && selectedPackage && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -436,18 +447,14 @@ export function PackagesPage(): JSX.Element {
             }
           }}>
             <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern */}
               <div className="absolute inset-0 opacity-30 pointer-events-none">
                 <div className="h-full w-full bg-repeat" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
 
-              {/* Header - Estándar consistente */}
               <div className="relative mb-6 flex items-start justify-between gap-4">
-                {/* Background gradient for header - Consistente con Modal.tsx */}
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                
                 <div className="relative z-10 flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
                     <Trash2 className="h-6 w-6 text-white" />
@@ -470,7 +477,6 @@ export function PackagesPage(): JSX.Element {
                 </button>
               </div>
 
-              {/* Content */}
               <div className="relative space-y-4">
                 <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
                   <div className="flex items-start gap-3">
@@ -488,7 +494,6 @@ export function PackagesPage(): JSX.Element {
                   </div>
                 </div>
 
-                {/* Package Info */}
                 <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -513,7 +518,6 @@ export function PackagesPage(): JSX.Element {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => {
@@ -548,11 +552,10 @@ export function PackagesPage(): JSX.Element {
           </div>
         )}
 
-        {/* View Details Modal - Exacto Estilo Detalles de Producto */}
+        {/* View Details Modal */}
         {viewModal && selectedPackage && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern - Exacto estilo Producto */}
               <div className="absolute inset-0 opacity-5">
                 <div className="h-full w-full bg-repeat" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
@@ -560,7 +563,7 @@ export function PackagesPage(): JSX.Element {
               </div>
               
               <div className="relative">
-                {/* Enhanced Header - Estándar consistente */}
+                {/* Header Modal */}
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
@@ -580,13 +583,12 @@ export function PackagesPage(): JSX.Element {
                   </button>
                 </div>
 
-                {/* Enhanced Content Grid - Exacto estilo Producto */}
+                {/* Content Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {/* Enhanced General Information - Glassmorphism Card */}
+                  {/* General Information */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     <div className="relative">
-                      {/* Card Header */}
                       <div className="flex items-center gap-3 mb-6">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
                           <PackageIcon className="h-4 w-4 text-[var(--unit-accent)]" />
@@ -594,9 +596,7 @@ export function PackagesPage(): JSX.Element {
                         <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
                       </div>
 
-                      {/* Enhanced Package Info List */}
                       <div className="space-y-4">
-                        {/* Name */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[var(--unit-text)]">Nombre</span>
@@ -606,19 +606,17 @@ export function PackagesPage(): JSX.Element {
                           </span>
                         </div>
 
-                        {/* Description */}
                         {selectedPackage.description && (
                           <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[var(--unit-text)]">Descripción</span>
                             </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
-                            {selectedPackage.description}
-                          </span>
-                        </div>
+                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
+                              {selectedPackage.description}
+                            </span>
+                          </div>
                         )}
 
-                        {/* Status */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
@@ -643,7 +641,6 @@ export function PackagesPage(): JSX.Element {
                           </span>
                         </div>
 
-                        {/* Services Count */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
                           <div className="flex items-center gap-2">
                             <Scissors className="h-4 w-4 text-[var(--unit-text-muted)]" />
@@ -657,11 +654,10 @@ export function PackagesPage(): JSX.Element {
                     </div>
                   </div>
 
-                  {/* Enhanced Pricing and Duration - Glassmorphism Card */}
+                  {/* Pricing and Duration */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     <div className="relative">
-                      {/* Card Header */}
                       <div className="flex items-center gap-3 mb-6">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
                           <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
@@ -669,9 +665,7 @@ export function PackagesPage(): JSX.Element {
                         <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precios y Duración</h4>
                       </div>
 
-                      {/* Enhanced Pricing List */}
                       <div className="space-y-4">
-                        {/* Fixed Price */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-green-500/30 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all">
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-green-600" />
@@ -682,7 +676,6 @@ export function PackagesPage(): JSX.Element {
                           </span>
                         </div>
 
-                        {/* Duration */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-blue-500/30 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-600" />
@@ -693,7 +686,6 @@ export function PackagesPage(): JSX.Element {
                           </span>
                         </div>
 
-                        {/* Price per Minute */}
                         <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-purple-500/30 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all">
                           <div className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-purple-600" />
@@ -707,11 +699,10 @@ export function PackagesPage(): JSX.Element {
                     </div>
                   </div>
 
-                  {/* Enhanced Services List - Glassmorphism Card */}
+                  {/* Services List */}
                   <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                     <div className="relative">
-                      {/* Card Header */}
                       <div className="flex items-center gap-3 mb-6">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
                           <Scissors className="h-4 w-4 text-[var(--unit-accent)]" />
@@ -719,7 +710,6 @@ export function PackagesPage(): JSX.Element {
                         <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Servicios del Paquete</h4>
                       </div>
 
-                      {/* Enhanced Services List */}
                       <div className="space-y-3 max-h-64 overflow-y-auto">
                         {selectedPackage.services.map((serviceItem, index) => (
                           <div key={serviceItem.serviceId} className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
@@ -740,9 +730,116 @@ export function PackagesPage(): JSX.Element {
                       </div>
                     </div>
                   </div>
+
+                  {/* Recent Movements */}
+                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
+                            <Clock className="h-4 w-4 text-[var(--unit-accent)]" />
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">
+                            Movimientos Recientes
+                          </h4>
+                        </div>
+                        <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                          {movements.length} movimientos
+                        </span>
+                      </div>
+
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                        {movements.length === 0 ? (
+                          <EmptyStateData
+                            title="No hay movimientos registrados"
+                            description="No se encontraron movimientos de ventas para este paquete. Los movimientos aparecerán aquí cuando se realicen ventas."
+                            action={
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => window.location.href = '/reports'}
+                              >
+                                Ver reportes de ventas
+                              </Button>
+                            }
+                          />
+                        ) : (
+                          movements.slice(0, 10).map((movement: any) => (
+                            <div key={movement.id} className="group/movement relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
+                              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/movement:opacity-100 transition-opacity rounded-xl"></div>
+                              <div className="relative">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30">
+                                        <ShoppingCart className="h-3 w-3 text-green-600" />
+                                      </div>
+                                      <span className="text-xs font-bold text-green-800 uppercase tracking-wider">Venta</span>
+                                      <span className="text-xs text-[var(--unit-text-muted)]">#{movement.sale?.saleNumber}</span>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
+                                        <span className="text-[var(--unit-text-muted)]">
+                                          {new Date(movement.createdAt).toLocaleDateString('es-PE', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric'
+                                          })}
+                                        </span>
+                                        <span className="text-[var(--unit-text-muted)]">a las</span>
+                                        <span className="text-[var(--unit-text-muted)]">
+                                          {new Date(movement.createdAt).toLocaleTimeString('es-PE', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Users className="h-3 w-3 text-[var(--unit-text-muted)]" />
+                                        <span className="text-[var(--unit-text-muted)]">Cliente:</span>
+                                        <span className="font-medium text-[var(--unit-text)]">
+                                          {movement.sale?.customer?.name || 'Cliente general'}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Tag className="h-3 w-3 text-[var(--unit-text-muted)]" />
+                                        <span className="text-[var(--unit-text-muted)]">Empleado:</span>
+                                        <span className="font-medium text-[var(--unit-text)]">
+                                          {movement.employee?.name || 'Sin asignar'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="text-right">
+                                    <div className="space-y-1">
+                                      <div className="text-sm font-bold text-[var(--unit-text)]">
+                                        {movement.quantity} {movement.quantity === 1 ? 'unidad' : 'unidades'}
+                                      </div>
+                                      <div className="text-xs text-[var(--unit-text-muted)]">
+                                        S/ {Number(movement.unitPrice || 0).toFixed(2)} c/u
+                                      </div>
+                                      <div className="text-sm font-bold text-green-600">
+                                        S/ {Number(movement.subtotal || 0).toFixed(2)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Enhanced Footer Actions - Exacto estilo Producto */}
+                {/* Footer Actions Modal */}
                 <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">

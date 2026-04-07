@@ -32,6 +32,7 @@ export interface Package {
   fixedPrice: number;
   durationMin: number;
   status: 'ACTIVE' | 'INACTIVE';
+  timesVended: number;
   services: Array<{
     id: string;
     serviceId: string;

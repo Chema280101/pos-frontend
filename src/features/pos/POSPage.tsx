@@ -297,9 +297,9 @@ export function POSPage(): JSX.Element {
   // Extract products array from paginated response
   const products = Array.isArray(productsResponse?.data) ? productsResponse.data : Array.isArray(productsResponse) ? productsResponse : [];
   const { data: packagesResponse } = useQuery({
-    queryKey: ['packages'],
+    queryKey: ['packages', unit],
     queryFn: async () => {
-      const { data } = await api.get('/api/packages');
+      const { data } = await api.get(`/api/packages?unit=${unit}`);
       return data;
     },
   });
@@ -345,9 +345,9 @@ export function POSPage(): JSX.Element {
   const searchProducts = Array.isArray(searchProductsResponse?.data) ? searchProductsResponse.data : Array.isArray(searchProductsResponse) ? searchProductsResponse : [];
 
   const { data: searchPackagesResponse = [] } = useQuery({
-    queryKey: ['packages-search', debouncedItemSearch],
+    queryKey: ['packages-search', unit, debouncedItemSearch],
     queryFn: async () => {
-      const { data } = await api.get(`/api/packages?search=${encodeURIComponent(debouncedItemSearch)}`);
+      const { data } = await api.get(`/api/packages?unit=${unit}&search=${encodeURIComponent(debouncedItemSearch)}`);
       return data;
     },
     enabled: debouncedItemSearch.length >= 2,

@@ -13,6 +13,7 @@ export interface Product {
   maxStock: number | null;
   barcode: string | null;
   isActive: boolean;
+  timesVended: number;
   createdAt: string;
   updatedAt: string;
 }
