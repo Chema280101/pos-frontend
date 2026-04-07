@@ -150,6 +150,7 @@ export function POSPage(): JSX.Element {
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [selectedServiceForEmployee, setSelectedServiceForEmployee] = useState<ServiceOption | null>(null);
   const [isPackageSelection, setIsPackageSelection] = useState(false);
+  const [isProductSelection, setIsProductSelection] = useState(false); // ✅ Para detectar productos
 
   // Variable price modal state
   const [showVariablePriceModal, setShowVariablePriceModal] = useState(false);
@@ -160,6 +161,7 @@ export function POSPage(): JSX.Element {
     if (!showEmployeeModal) {
       setSelectedServiceForEmployee(null);
       setIsPackageSelection(false);
+      setIsProductSelection(false);
     }
   }, [showEmployeeModal]);
 
@@ -603,6 +605,22 @@ export function POSPage(): JSX.Element {
       });
       setShowItemSearch(false);
       setItemSearch('');
+    }
+  };
+
+  const addProductToCartWithEmployee = (product: { id: string; name: string; salePrice: number | null }, employeeId: string) => {
+    if (product.salePrice) {
+      addToCart({
+        itemType: 'PRODUCT',
+        referenceId: product.id,
+        name: product.name,
+        unitPrice: product.salePrice,
+        quantity: 1,
+        employeeId, // ✅ Agregar empleado para comisión fija
+      });
+      setShowEmployeeModal(false);
+      setSelectedServiceForEmployee(null);
+      setIsPackageSelection(false);
     }
   };
 
@@ -1207,7 +1225,18 @@ export function POSPage(): JSX.Element {
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => addToCart({ itemType: 'PRODUCT', referenceId: p.id, name: p.name, unitPrice: p.salePrice ?? 0, quantity: 1 })}
+                      onClick={() => {
+                        // Show employee selection modal for products
+                        setIsProductSelection(true); // ✅ Indicar que es un producto
+                        setSelectedServiceForEmployee({
+                          id: p.id,
+                          name: p.name,
+                          price: p.salePrice,
+                          unit: activeUnit || 'BARBERIA'
+                        });
+                        setShowEmployeeModal(true);
+                        setShowItemSearch(false);
+                      }}
                       className="relative flex flex-col items-center gap-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 px-4 py-3 text-sm font-medium transition-all hover:shadow-lg hover:scale-[1.02] hover:border-[var(--unit-accent)]/50 active:scale-[0.98] group"
                     >
                       <div className="flex items-center gap-2">
@@ -1603,7 +1632,8 @@ export function POSPage(): JSX.Element {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--unit-text-muted)]">
-                        {isPackageSelection ? 'Paquete seleccionado' : 'Servicio seleccionado'}
+                        {isPackageSelection ? 'Paquete seleccionado' : 
+                         isProductSelection ? 'Producto seleccionado' : 'Servicio seleccionado'}
                       </p>
                       <p className="text-base font-bold text-[var(--unit-text)]">{selectedServiceForEmployee?.name || ''}</p>
                     </div>
@@ -1631,7 +1661,7 @@ export function POSPage(): JSX.Element {
 
                 <div>
                   <label className="block text-sm font-bold text-[var(--unit-text)] mb-3">
-                    Empleado que realizará {isPackageSelection ? 'el paquete' : 'el servicio'}:
+                    Empleado que realizará {isPackageSelection ? 'el paquete' : isProductSelection ? 'el producto' : 'el servicio'}:
                   </label>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {employees.length === 0 ? (
@@ -1653,7 +1683,11 @@ export function POSPage(): JSX.Element {
                           key={employee.id}
                           onClick={() => {
                             if (!selectedServiceForEmployee) return;
-                            // ✅ Verificar si ya existe un item pendiente de aprobación para este servicio
+                            
+                            // ✅ Determinar si es producto o servicio por el contexto
+                            const isProduct = isProductSelection;
+                            
+                            // ✅ Verificar si ya existe un item pendiente de aprobación para este servicio/producto
                             const existingItem = cart.find(item =>
                               item.referenceId === selectedServiceForEmployee.id &&
                               item.requiresApproval
@@ -1661,6 +1695,7 @@ export function POSPage(): JSX.Element {
 
                             console.log('🔍 Employee Modal Debug:', {
                               selectedServiceId: selectedServiceForEmployee.id,
+                              isProduct,
                               cartItems: cart,
                               existingItem,
                               requiresApproval: selectedServiceForEmployee.requiresApproval
@@ -1671,9 +1706,21 @@ export function POSPage(): JSX.Element {
                               updateCartItemWithEmployee(selectedServiceForEmployee.id, employee.id);
                             } else {
                               // ✅ Agregar nuevo item (flujo normal)
-                              isPackageSelection
-                                ? addPackageToCartWithEmployee(selectedServiceForEmployee, employee.id)
-                                : addServiceToCartWithEmployee(selectedServiceForEmployee, employee.id);
+                              if (isPackageSelection) {
+                                addPackageToCartWithEmployee(selectedServiceForEmployee, employee.id);
+                              } else if (isProduct) {
+                                // ✅ Usar función de productos con empleado
+                                addProductToCartWithEmployee({
+                                  id: selectedServiceForEmployee.id,
+                                  name: selectedServiceForEmployee.name,
+                                  salePrice: typeof selectedServiceForEmployee.price === 'number' 
+                                    ? selectedServiceForEmployee.price 
+                                    : Number(selectedServiceForEmployee.price || 0)
+                                }, employee.id);
+                              } else {
+                                // ✅ Usar función de servicios con empleado
+                                addServiceToCartWithEmployee(selectedServiceForEmployee, employee.id);
+                              }
                             }
                           }}
                           className="relative w-full text-left p-4 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 transition-all hover:shadow-lg hover:scale-[1.02] hover:border-[var(--unit-accent)]/50 group"
