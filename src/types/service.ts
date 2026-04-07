@@ -31,7 +31,6 @@ export interface Package {
   description: string | null;
   fixedPrice: number;
   durationMin: number;
-  unit: 'SPA' | 'BARBERIA';
   status: 'ACTIVE' | 'INACTIVE';
   timesVended: number;
   imageUrl: string | null;

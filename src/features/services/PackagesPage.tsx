@@ -57,8 +57,6 @@ export function PackagesPage(): JSX.Element {
         if (packagesData.length > 0) {
           console.log('Detalle del primer paquete:', packagesData[0]);
           console.log('Servicios del primer paquete:', packagesData[0]?.services);
-          console.log('¿Tiene campo unit?:', 'unit' in packagesData[0]);
-          console.log('Valor de unit:', packagesData[0]?.unit);
           console.log('¿Tiene campo status?:', 'status' in packagesData[0]);
           console.log('Valor de status:', packagesData[0]?.status);
         }
