@@ -1,5 +1,7 @@
 {
-  "/(app)/commissions/admin/page": "app/(app)/commissions/admin/page.js",
-  "/(app)/commissions/page": "app/(app)/commissions/page.js",
-  "/(app)/inventory/products/page": "app/(app)/inventory/products/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(app)/packages/page": "app/(app)/packages/page.js",
+  "/(app)/packages/new/page": "app/(app)/packages/new/page.js"
 }

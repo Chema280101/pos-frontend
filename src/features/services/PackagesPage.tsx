@@ -48,11 +48,34 @@ export function PackagesPage(): JSX.Element {
   const { data: packages, isLoading } = useQuery({
     queryKey: ['packages'],
     queryFn: async (): Promise<Package[]> => {
-      const { data } = await api.get<{ data: Package[] }>('/api/packages');
-      // ✅ FIXED: Validar que data.data exista y sea un array
-      return Array.isArray(data?.data) ? data.data : [];
+      try {
+        const { data } = await api.get<{ data: Package[] }>('/api/packages');
+        console.log('Respuesta del backend:', data);
+        // Validar que data.data exista y sea un array
+        const packagesData = Array.isArray(data?.data) ? data.data : [];
+        console.log('Paquetes procesados:', packagesData);
+        if (packagesData.length > 0) {
+          console.log('Detalle del primer paquete:', packagesData[0]);
+          console.log('Servicios del primer paquete:', packagesData[0]?.services);
+          console.log('¿Tiene campo unit?:', 'unit' in packagesData[0]);
+          console.log('Valor de unit:', packagesData[0]?.unit);
+          console.log('¿Tiene campo status?:', 'status' in packagesData[0]);
+          console.log('Valor de status:', packagesData[0]?.status);
+        }
+        return packagesData;
+      } catch (error) {
+        console.error('Error al cargar paquetes:', error);
+        return [];
+      }
     },
   });
+
+  // Debug logging para DataTable
+  useEffect(() => {
+    console.log('useEffect - packages:', packages);
+    console.log('useEffect - isLoading:', isLoading);
+    console.log('useEffect - packages.length:', packages?.length);
+  }, [packages, isLoading]);
 
   // Query for package movements
   const { data: movements = [] } = useQuery({
@@ -118,24 +141,37 @@ export function PackagesPage(): JSX.Element {
     return '240+';
   };
 
-  const getServiceCount = (pkg: Package) => pkg.services.length;
+  const getServiceCount = (pkg: Package) => {
+  console.log('getServiceCount - pkg:', pkg);
+  console.log('getServiceCount - services:', pkg.services);
+  console.log('getServiceCount - services.length:', pkg.services.length);
+  return pkg.services.length;
+};
 
   const columns = [
     {
       key: 'name',
       header: 'Paquete',
       sortable: true,
-      render: (row: Package) => (
-        <div>
-          <div className="flex items-center gap-2">
-            <PackageIcon className="h-4 w-4 text-[var(--unit-text-muted)]" />
-            <span className="font-medium text-[var(--unit-text-muted)]">{row.name}</span>
-          </div>
-          {row.description && (
-            <div className="text-sm text-[var(--unit-text-muted)] mt-1">{row.description}</div>
-          )}
-        </div>
-      ),
+      render: (row: Package) => {
+        try {
+          console.log('Column name - row:', row);
+          return (
+            <div>
+              <div className="flex items-center gap-2">
+                <PackageIcon className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                <span className="font-medium text-[var(--unit-text-muted)]">{row.name}</span>
+              </div>
+              {row.description && (
+                <div className="text-sm text-[var(--unit-text-muted)] mt-1">{row.description}</div>
+              )}
+            </div>
+          );
+        } catch (error) {
+          console.error('Error en columna name:', error);
+          return <span>Error</span>;
+        }
+      },
     },
     {
       key: 'fixedPrice',
@@ -427,7 +463,10 @@ export function PackagesPage(): JSX.Element {
           <DataTable
             columns={columns}
             data={packages ?? []}
-            keyExtractor={(row) => row.id}
+            keyExtractor={(row) => {
+              console.log('DataTable keyExtractor - row:', row);
+              return row.id;
+            }}
             loading={isLoading}
             searchPlaceholder=""
             filters={[]}
