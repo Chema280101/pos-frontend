@@ -32,7 +32,6 @@ export interface Package {
   fixedPrice: number;
   durationMin: number;
   status: 'ACTIVE' | 'INACTIVE';
-  timesVended: number;
   imageUrl: string | null;
   services: Array<{
     id: string;

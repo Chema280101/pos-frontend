@@ -140,11 +140,11 @@ export function PackagesPage(): JSX.Element {
   };
 
   const getServiceCount = (pkg: Package) => {
-  console.log('getServiceCount - pkg:', pkg);
-  console.log('getServiceCount - services:', pkg.services);
-  console.log('getServiceCount - services.length:', pkg.services.length);
-  return pkg.services.length;
-};
+    console.log('getServiceCount - pkg:', pkg);
+    console.log('getServiceCount - services:', pkg.services);
+    console.log('getServiceCount - services.length:', pkg.services.length);
+    return pkg.services.length;
+  };
 
   const columns = [
     {
@@ -229,17 +229,7 @@ export function PackagesPage(): JSX.Element {
           </div>
         </div>
       ),
-    },
-    {
-      key: 'timesVended',
-      header: 'Vendidos',
-      sortable: true,
-      render: (row: Package) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
-          {row.timesVended || 0}
-        </span>
-      ),
-    },
+    }
   ];
 
   const actions = [
@@ -269,9 +259,9 @@ export function PackagesPage(): JSX.Element {
         setShowDeleteDialog(true);
       },
       className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
-      disabled: (row: Package) => !canEdit,
+      disabled: (row: Package) => !canEdit
     },
-  ];
+  ]
 
 
   return (
@@ -282,7 +272,7 @@ export function PackagesPage(): JSX.Element {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
       </div>
-      
+
       <div className="relative max-w-7xl mx-auto p-6">
         {/* Enhanced Header */}
         <div className="mb-8">
@@ -501,7 +491,7 @@ export function PackagesPage(): JSX.Element {
                     <p className="text-sm text-red-700">Esta acción es permanente</p>
                   </div>
                 </div>
-                
+
                 <button
                   onClick={() => {
                     setShowDeleteDialog(false);
@@ -598,7 +588,7 @@ export function PackagesPage(): JSX.Element {
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}></div>
               </div>
-              
+
               <div className="relative">
                 {/* Header Modal */}
                 <div className="flex items-start justify-between mb-6">
@@ -659,11 +649,10 @@ export function PackagesPage(): JSX.Element {
                             <CheckCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
                             <span className="text-sm font-medium text-[var(--unit-text)]">Estado</span>
                           </div>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
-                            selectedPackage.status === 'ACTIVE' 
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${selectedPackage.status === 'ACTIVE'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                               : 'bg-gray-100 text-gray-800 border-gray-200'
-                          }`}>
+                            }`}>
                             {selectedPackage.status === 'ACTIVE' ? (
                               <>
                                 <CheckCircle className="h-3 w-3" />
@@ -792,8 +781,8 @@ export function PackagesPage(): JSX.Element {
                             title="No hay movimientos registrados"
                             description="No se encontraron movimientos de ventas para este paquete. Los movimientos aparecerán aquí cuando se realicen ventas."
                             action={
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => window.location.href = '/reports'}
                               >
@@ -815,7 +804,7 @@ export function PackagesPage(): JSX.Element {
                                       <span className="text-xs font-bold text-green-800 uppercase tracking-wider">Venta</span>
                                       <span className="text-xs text-[var(--unit-text-muted)]">#{movement.sale?.saleNumber}</span>
                                     </div>
-                                    
+
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-2 text-sm">
                                         <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
@@ -834,7 +823,7 @@ export function PackagesPage(): JSX.Element {
                                           })}
                                         </span>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2 text-sm">
                                         <Users className="h-3 w-3 text-[var(--unit-text-muted)]" />
                                         <span className="text-[var(--unit-text-muted)]">Cliente:</span>
@@ -842,7 +831,7 @@ export function PackagesPage(): JSX.Element {
                                           {movement.sale?.customer?.name || 'Cliente general'}
                                         </span>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2 text-sm">
                                         <Tag className="h-3 w-3 text-[var(--unit-text-muted)]" />
                                         <span className="text-[var(--unit-text-muted)]">Empleado:</span>
@@ -852,7 +841,7 @@ export function PackagesPage(): JSX.Element {
                                       </div>
                                     </div>
                                   </div>
-                                  
+
                                   <div className="text-right">
                                     <div className="space-y-1">
                                       <div className="text-sm font-bold text-[var(--unit-text)]">
