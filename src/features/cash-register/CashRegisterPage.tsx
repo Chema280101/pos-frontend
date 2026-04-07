@@ -440,7 +440,6 @@ export function CashRegisterPage(): JSX.Element {
         { label: 'Tarjeta', value: summary.card, icon: CreditCard, color: 'text-blue-600' },
         { label: 'Transferencia', value: summary.transfer, icon: ArrowRightLeft, color: 'text-violet-600' },
         { label: 'Billetera', value: summary.wallet, icon: Smartphone, color: 'text-orange-600' },
-        { label: 'Ingresos Manuales', value: summary.cashEntries || 0, icon: PlusCircle, color: 'text-purple-600' },
         { label: 'Gastos', value: summary.expenses, icon: TrendingDown, color: 'text-red-500' },
         { label: 'Esperado', value: summary.expectedCash, icon: Vault, color: 'text-[var(--unit-accent)]' },
       ]

@@ -37,6 +37,7 @@ export function AdminCommissions(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [unitFilter, setUnitFilter] = useState<string>('');
+  const [searchFilter, setSearchFilter] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(false);
@@ -63,11 +64,12 @@ export function AdminCommissions(): JSX.Element {
 
   // ✅ MEJORADO: Enviar filtros al backend
   const { data: commissionsResponse, isLoading, error } = useQuery({
-    queryKey: ['commissions', 'all', unitFilter, statusFilter, dateFrom, dateTo],
+    queryKey: ['commissions', 'all', unitFilter, statusFilter, searchFilter, dateFrom, dateTo],
     queryFn: async (): Promise<CommissionsResponse> => {
       const params = new URLSearchParams();
       if (statusFilter) params.append('status', statusFilter);
       if (unitFilter) params.append('unit', unitFilter);
+      if (searchFilter) params.append('search', searchFilter);
       if (dateFrom) params.append('dateFrom', dateFrom.toISOString());
       if (dateTo) params.append('dateTo', dateTo.toISOString());
       
@@ -1047,6 +1049,33 @@ export function AdminCommissions(): JSX.Element {
           </div>
         </div>
 
+        {/* Search Bar - Always Visible */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+              <Search className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Buscar por empleado, número de venta o notas..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] placeholder-[var(--unit-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+              />
+            </div>
+            {searchFilter && (
+              <button
+                onClick={() => setSearchFilter('')}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] rounded-xl border-2 border-[var(--unit-border)]/30 hover:border-[var(--unit-border)]/50 transition-all"
+              >
+                <X className="h-4 w-4" />
+                Limpiar
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Enhanced Commissions Filters - Exacto estilo ServicesPage */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
           {/* Filter Header */}
@@ -1099,7 +1128,7 @@ export function AdminCommissions(): JSX.Element {
               />
 
               {/* Enhanced Active Filters Summary */}
-              {(unitFilter || statusFilter) && (
+              {(unitFilter || statusFilter || searchFilter) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1112,7 +1141,12 @@ export function AdminCommissions(): JSX.Element {
                         )}
                         {statusFilter && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Estado: {statusFilter === 'PENDING' ? 'Pendientes' : statusFilter === 'APPROVED' ? 'Aprobadas' : 'Pagadas'}
+                            Estado: {statusFilter === 'PENDING' ? 'Pendientes' : statusFilter === 'PAID' ? 'Pagadas' : 'Anuladas'}
+                          </span>
+                        )}
+                        {searchFilter && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
+                            Búsqueda: "{searchFilter}"
                           </span>
                         )}
                       </div>
@@ -1121,6 +1155,7 @@ export function AdminCommissions(): JSX.Element {
                       onClick={() => {
                         setUnitFilter('');
                         setStatusFilter('');
+                        setSearchFilter('');
                         setDateFrom(startOfDay(subDays(new Date(), 7)));
                         setDateTo(endOfDay(new Date()));
                       }}
