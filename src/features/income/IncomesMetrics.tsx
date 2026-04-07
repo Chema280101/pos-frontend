@@ -19,56 +19,83 @@ interface Income {
 
 interface IncomesMetricsProps {
   incomes: Income[];
-  totalAmount?: number; // New prop for total amount from backend
+  totalAmount?: number; // Total amount from backend
+  aggregatedMetrics?: {
+    todayTotal: number;
+    weekTotal: number;
+    monthTotal: number;
+    trend: number;
+    cashPayments: number;
+    cardPayments: number;
+    transferPayments: number;
+    yapePayments: number;
+    bestDay: {
+      date: string;
+      total: number;
+    };
+  };
 }
 
-export function IncomesMetrics({ incomes, totalAmount }: IncomesMetricsProps) {
+export function IncomesMetrics({ incomes, totalAmount, aggregatedMetrics }: IncomesMetricsProps) {
   // Use totalAmount from backend if available, otherwise calculate from paginated data
   const total = totalAmount ?? incomes.reduce((sum, i) => sum + i.total, 0);
-  const today = new Date();
-  const todayIncomes = incomes.filter(i => {
-    const incomeDate = new Date(i.createdAt);
-    return incomeDate.toDateString() === today.toDateString();
-  });
-  const todayTotal = todayIncomes.reduce((sum, i) => sum + i.total, 0);
   
-  // This week (last 7 days)
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekIncomes = incomes.filter(i => new Date(i.createdAt) >= weekAgo);
-  const weekTotal = weekIncomes.reduce((sum, i) => sum + i.total, 0);
+  // Use aggregated metrics from backend if available, otherwise calculate from paginated data
+  const todayTotal = aggregatedMetrics?.todayTotal ?? (() => {
+    const today = new Date();
+    const todayIncomes = incomes.filter(i => {
+      const incomeDate = new Date(i.createdAt);
+      return incomeDate.toDateString() === today.toDateString();
+    });
+    return todayIncomes.reduce((sum, i) => sum + i.total, 0);
+  })();
   
-  // This month (last 30 days)
-  const monthAgo = new Date();
-  monthAgo.setDate(monthAgo.getDate() - 30);
-  const monthIncomes = incomes.filter(i => new Date(i.createdAt) >= monthAgo);
-  const monthTotal = monthIncomes.reduce((sum, i) => sum + i.total, 0);
+  const weekTotal = aggregatedMetrics?.weekTotal ?? (() => {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekIncomes = incomes.filter(i => new Date(i.createdAt) >= weekAgo);
+    return weekIncomes.reduce((sum, i) => sum + i.total, 0);
+  })();
+  
+  const monthTotal = aggregatedMetrics?.monthTotal ?? (() => {
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    const monthIncomes = incomes.filter(i => new Date(i.createdAt) >= monthAgo);
+    return monthIncomes.reduce((sum, i) => sum + i.total, 0);
+  })();
   
   // Additional metrics
-  const averageSale = incomes.length > 0 ? total / incomes.length : 0;
-  const cashPayments = incomes.filter(i => i.paymentMethod === 'CASH').length;
-  const cardPayments = incomes.filter(i => i.paymentMethod === 'CARD').length;
-  const transferPayments = incomes.filter(i => i.paymentMethod === 'TRANSFER').length;
-  const yapePayments = incomes.filter(i => i.paymentMethod === 'YAPE').length;
+  const averageSale = total > 0 ? total / incomes.length : 0;
+  const cashPayments = aggregatedMetrics?.cashPayments ?? incomes.filter(i => i.paymentMethod === 'CASH').length;
+  const cardPayments = aggregatedMetrics?.cardPayments ?? incomes.filter(i => i.paymentMethod === 'CARD').length;
+  const transferPayments = aggregatedMetrics?.transferPayments ?? incomes.filter(i => i.paymentMethod === 'TRANSFER').length;
+  const yapePayments = aggregatedMetrics?.yapePayments ?? incomes.filter(i => i.paymentMethod === 'YAPE').length;
   
-  // Trend calculation (compare with previous period)
-  const previousMonthAgo = new Date();
-  previousMonthAgo.setDate(previousMonthAgo.getDate() - 60);
-  const previousMonthIncomes = incomes.filter(i => {
-    const date = new Date(i.createdAt);
-    return date >= previousMonthAgo && date < monthAgo;
-  });
-  const previousMonthTotal = previousMonthIncomes.reduce((sum, i) => sum + i.total, 0);
-  const trend = previousMonthTotal > 0 ? ((monthTotal - previousMonthTotal) / previousMonthTotal) * 100 : 0;
+  // Trend calculation
+  const trend = aggregatedMetrics?.trend ?? (() => {
+    const previousMonthAgo = new Date();
+    previousMonthAgo.setDate(previousMonthAgo.getDate() - 60);
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    const previousMonthIncomes = incomes.filter(i => {
+      const date = new Date(i.createdAt);
+      return date >= previousMonthAgo && date < monthAgo;
+    });
+    const previousMonthTotal = previousMonthIncomes.reduce((sum, i) => sum + i.total, 0);
+    return previousMonthTotal > 0 ? ((monthTotal - previousMonthTotal) / previousMonthTotal) * 100 : 0;
+  })();
   
   // Best day
-  const dailyTotals = incomes.reduce((acc, income) => {
-    const date = new Date(income.createdAt).toDateString();
-    acc[date] = (acc[date] || 0) + income.total;
-    return acc;
-  }, {} as Record<string, number>);
-  const bestDay = Object.entries(dailyTotals).reduce((max, [date, total]) => 
-    total > max[1] ? [date, total] : max, ['', 0]);
+  const bestDay = aggregatedMetrics?.bestDay ?? (() => {
+    const dailyTotals = incomes.reduce((acc, income) => {
+      const date = new Date(income.createdAt).toDateString();
+      acc[date] = (acc[date] || 0) + income.total;
+      return acc;
+    }, {} as Record<string, number>);
+    const bestDayEntries = Object.entries(dailyTotals);
+    return bestDayEntries.reduce((max, [date, total]) => 
+      total > max[1] ? [date, total] : max, ['', 0]) as [string, number];
+  })();
 
   return (
     <>
@@ -195,10 +222,11 @@ export function IncomesMetrics({ incomes, totalAmount }: IncomesMetricsProps) {
               <span className="text-xs font-bold text-pink-800 bg-white px-3 py-1 rounded-full border border-pink-300 shadow-sm">Mejor</span>
             </div>
             <p className="text-lg font-bold text-pink-900 tabular-nums mb-1 truncate">
-              {bestDay[0] ? new Date(bestDay[0]).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : 'N/A'}
+              {Array.isArray(bestDay) && bestDay[0] ? new Date(bestDay[0]).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : 
+               !Array.isArray(bestDay) && bestDay.date ? new Date(bestDay.date).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : 'N/A'}
             </p>
             <p className="text-sm text-pink-700 font-medium">
-              S/{bestDay[1].toFixed(2)}
+              S/{Array.isArray(bestDay) ? bestDay[1].toFixed(2) : bestDay.total.toFixed(2)}
             </p>
           </div>
         </div>

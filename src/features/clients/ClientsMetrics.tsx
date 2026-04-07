@@ -5,9 +5,12 @@ import { es } from 'date-fns/locale';
 
 interface ClientsMetricsProps {
   clients: Client[];
+  total?: number; // New prop for total clients from backend
 }
 
-export function ClientsMetrics({ clients }: ClientsMetricsProps) {
+export function ClientsMetrics({ clients, total }: ClientsMetricsProps) {
+  // Use total from backend if available, otherwise use paginated data length
+  const totalClients = total ?? clients.length;
   // Today's new clients
   const today = new Date();
   const todayClients = clients.filter(client => {
@@ -104,7 +107,7 @@ export function ClientsMetrics({ clients }: ClientsMetricsProps) {
               </div>
               <span className="text-xs font-bold text-blue-800 bg-white px-3 py-1 rounded-full border border-blue-300 shadow-sm">Total</span>
             </div>
-            <p className="text-3xl font-bold text-blue-900 tabular-nums mb-2">{clients.length}</p>
+            <p className="text-3xl font-bold text-blue-900 tabular-nums mb-2">{totalClients}</p>
             <p className="text-sm text-blue-700 font-medium">Clientes totales</p>
           </div>
         </div>

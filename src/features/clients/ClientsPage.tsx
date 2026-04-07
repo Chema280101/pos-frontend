@@ -193,7 +193,7 @@ export default function ClientsPage() {
               <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
             </div>
           ) : (
-            <ClientsMetrics clients={(data as { data: Client[] })?.data || []} />
+            <ClientsMetrics clients={(data as { data: Client[] })?.data || []} total={(data as { total: number })?.total} />
           )}
 
           {/* Enhanced Action Buttons */}
