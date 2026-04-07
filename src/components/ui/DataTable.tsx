@@ -42,6 +42,16 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   maxHeight?: string;
   customFilterLogic?: (data: T[], filterValues: Record<string, any>) => T[];
+  disableInternalPagination?: boolean;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  onPageChange?: (page: number) => void;
   // ✅ MOBILE: Nueva prop para vista cards
   mobileCards?: boolean;
 }
@@ -61,6 +71,9 @@ export function DataTable<T>({
   emptyMessage = 'No hay datos para mostrar.',
   maxHeight = '600px',
   customFilterLogic,
+  disableInternalPagination = false,
+  pagination,
+  onPageChange,
   mobileCards = false,
 }: DataTableProps<T>): JSX.Element {
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -139,10 +152,21 @@ export function DataTable<T>({
     return result;
   }, [sortedData, search, columns, filters, filterValues, customFilterLogic]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  // Usar paginación del backend si está deshabilitada la paginación interna
+  const totalPages = disableInternalPagination && pagination 
+    ? pagination.totalPages 
+    : Math.max(1, Math.ceil(filteredData.length / pageSize));
+    
   const paginatedData = useMemo(
-    () => filteredData.slice(page * pageSize, page * pageSize + pageSize),
-    [filteredData, page, pageSize]
+    () => {
+      if (disableInternalPagination) {
+        // Usar datos directamente sin paginación interna
+        return filteredData;
+      }
+      // Usar paginación interna normal
+      return filteredData.slice(page * pageSize, page * pageSize + pageSize);
+    },
+    [filteredData, page, pageSize, disableInternalPagination]
   );
 
   const handleSort = (key: string): void => {
@@ -459,63 +483,90 @@ export function DataTable<T>({
         </div>
       </div>
 
-      {/* Pagination */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-              <Filter className="h-5 w-5 text-white" />
+      {/* Pagination - Solo mostrar si no está deshabilitada o si hay paginación del backend */}
+      {(!disableInternalPagination || pagination) && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+                <Filter className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[var(--unit-text)]">
+                  Total: <span className="font-bold text-[var(--unit-accent)]">
+                    {disableInternalPagination && pagination ? pagination.total : filteredData.length}
+                  </span> resultados
+                </p>
+                <p className="text-xs text-[var(--unit-text-muted)]">
+                  Página {disableInternalPagination && pagination ? pagination.page : page + 1} de {totalPages}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-[var(--unit-text)]">
-                Total: <span className="font-bold text-[var(--unit-accent)]">{filteredData.length}</span> resultados
-              </p>
-              <p className="text-xs text-[var(--unit-text-muted)]">
-                Página {page + 1} de {totalPages}
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm font-medium text-[var(--unit-text)]">
-              Filas:
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(0);
-                }}
-                className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-              >
-                {pageSizeOptions.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex items-center gap-6">
+              {/* Solo mostrar selector de filas si la paginación interna está activa */}
+              {!disableInternalPagination && (
+                <label className="flex items-center gap-2 text-sm font-medium text-[var(--unit-text)]">
+                  Filas:
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(0);
+                    }}
+                    className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                  >
+                    {pageSizeOptions.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] font-medium transition-all hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] font-medium transition-all hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (disableInternalPagination && onPageChange && pagination) {
+                      onPageChange(pagination.page - 1);
+                    } else {
+                      setPage((p) => Math.max(0, p - 1));
+                    }
+                  }}
+                  disabled={
+                    disableInternalPagination && pagination 
+                      ? !pagination.hasPrev 
+                      : page === 0
+                  }
+                  className="px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] font-medium transition-all hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (disableInternalPagination && onPageChange && pagination) {
+                      onPageChange(pagination.page + 1);
+                    } else {
+                      setPage((p) => Math.min(totalPages - 1, p + 1));
+                    }
+                  }}
+                  disabled={
+                    disableInternalPagination && pagination 
+                      ? !pagination.hasNext 
+                      : page >= totalPages - 1
+                  }
+                  className="px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] font-medium transition-all hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
