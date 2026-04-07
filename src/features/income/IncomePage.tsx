@@ -415,7 +415,7 @@ export function IncomePage(): JSX.Element {
           </div>
 
           {/* Incomes Metrics - Nueva sección de métricas espectaculares */}
-          <IncomesMetrics incomes={income} />
+          <IncomesMetrics incomes={income} totalAmount={incomeData?.totalAmount} />
 
           {/* Enhanced Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 mb-8">

@@ -19,10 +19,12 @@ interface Income {
 
 interface IncomesMetricsProps {
   incomes: Income[];
+  totalAmount?: number; // New prop for total amount from backend
 }
 
-export function IncomesMetrics({ incomes }: IncomesMetricsProps) {
-  const total = incomes.reduce((sum, i) => sum + i.total, 0);
+export function IncomesMetrics({ incomes, totalAmount }: IncomesMetricsProps) {
+  // Use totalAmount from backend if available, otherwise calculate from paginated data
+  const total = totalAmount ?? incomes.reduce((sum, i) => sum + i.total, 0);
   const today = new Date();
   const todayIncomes = incomes.filter(i => {
     const incomeDate = new Date(i.createdAt);
