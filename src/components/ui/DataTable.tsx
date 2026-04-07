@@ -161,12 +161,18 @@ export function DataTable<T>({
     () => {
       if (disableInternalPagination) {
         // Usar datos directamente sin paginación interna
+        console.log('DataTable - disableInternalPagination=true', {
+          filteredDataLength: filteredData.length,
+          pagination,
+          currentPage: pagination?.page,
+          totalPages: pagination?.totalPages
+        });
         return filteredData;
       }
       // Usar paginación interna normal
       return filteredData.slice(page * pageSize, page * pageSize + pageSize);
     },
-    [filteredData, page, pageSize, disableInternalPagination]
+    [filteredData, page, pageSize, disableInternalPagination, pagination]
   );
 
   const handleSort = (key: string): void => {

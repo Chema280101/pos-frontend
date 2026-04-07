@@ -36,6 +36,7 @@ export function ServicesPage(): JSX.Element {
   const [viewModal, setViewModal] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [page, setPage] = useState(1);
   const { success, error } = useToast();
 
   // Reset modal states when closed
@@ -58,11 +59,13 @@ export function ServicesPage(): JSX.Element {
   const router = useRouter();
 
   const { data: servicesData, isLoading } = useQuery({
-    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, debouncedSearch, statusFilter],
+    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, debouncedSearch, statusFilter, page],
     queryFn: async (): Promise<{ data: Service[], pagination: any }> => {
       const params = new URLSearchParams();
       if (unit) params.set('unit', unit);
       if (categoryId) params.set('categoryId', categoryId);
+      params.set('page', String(page));
+      params.set('limit', '15');
       
       // Add unit filter from DateRangeFilter
       if (unitFilter) params.set('unitFilter', unitFilter);
@@ -84,6 +87,7 @@ export function ServicesPage(): JSX.Element {
 
   // Extract services array from paginated response
   const services = servicesData?.data || [];
+  const pagination = servicesData?.pagination;
 
   const { data: categories } = useQuery({
     queryKey: ['service-categories'],
@@ -648,8 +652,9 @@ export function ServicesPage(): JSX.Element {
             filters={[]}
             actions={actions}
             emptyMessage="No se encontraron servicios con los filtros aplicados."
-            pageSize={15}
-            pageSizeOptions={[10, 15, 30, 50]}
+            disableInternalPagination={true}
+            pagination={pagination}
+            onPageChange={(page) => setPage(page)}
             className="rounded-xl"
           />
         </div>

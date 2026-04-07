@@ -737,8 +737,9 @@ export function InventoryPage(): JSX.Element {
             filters={[]} // Hidden since we have custom filters
             actions={actions}
             emptyMessage="No se encontraron productos con los filtros aplicados."
-            pageSize={15}
-            pageSizeOptions={[10, 15, 30, 50]}
+            disableInternalPagination={true}
+            pagination={pagination}
+            onPageChange={(page) => setCurrentPage(page)}
           />
         </div>
 

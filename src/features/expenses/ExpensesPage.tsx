@@ -421,6 +421,9 @@ export function ExpensesPage(): JSX.Element {
             loading={isLoading}
             keyExtractor={(item: any) => item.id}
             emptyMessage="No hay gastos con los filtros aplicados. Prueba ajustando los filtros o términos de búsqueda."
+            disableInternalPagination={true}
+            pagination={pagination}
+            onPageChange={(page) => setCurrentPage(page)}
           />
         </div>
 

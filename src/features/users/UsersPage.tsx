@@ -823,8 +823,9 @@ export function UsersPage(): JSX.Element {
                   loading={isLoading}
                   keyExtractor={(item: any) => item.id}
                   emptyMessage="No se encontraron usuarios para los filtros seleccionados."
-                  pageSize={limit}
-                  pageSizeOptions={[10, 20, 50, 100]}
+                  disableInternalPagination={true}
+                  pagination={pagination}
+                  onPageChange={(page) => setPage(page)}
                 />
               )}
             </div>
