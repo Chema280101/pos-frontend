@@ -900,18 +900,17 @@ export function AdminCommissions(): JSX.Element {
         console.log('DEBUG: Comisión seleccionada en frontend - OBJETO COMPLETO:', row);
         console.log('DEBUG: Comisión seleccionada en frontend - PROPIEDADES:', {
           id: row.id,
-          userName: row.userName,
+          employeeName: row.employeeName,
           totalAmount: row.totalAmount,
-          commissionCount: row.commissionCount,
+          totalSales: row.totalSales,
           typeofTotalAmount: typeof row.totalAmount,
           sales: row.sales?.length || 0,
           // Verificar si hay otras propiedades
           allKeys: Object.keys(row),
           // Verificar propiedades específicas que podrían existir
-          employeeName: row.employeeName,
-          employeeUnit: row.employeeUnit,
+          userName: row.userName,
           userUnit: row.userUnit,
-          totalSales: row.totalSales
+          commissionCount: row.commissionCount
         });
         setSelectedCommission(row);
         setViewModal(true);
