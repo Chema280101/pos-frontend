@@ -1345,7 +1345,7 @@ export function AdminCommissions(): JSX.Element {
                       <div>
                         <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles de Comisiones Agrupadas</h3>
                         <p className="text-sm text-[var(--unit-text-muted)]">
-                          {selectedCommission.employeeName} - {format(parseISO(selectedCommission.date), 'd MMM yyyy', { locale: es })}
+                          {selectedCommission.userName} - {format(parseISO(selectedCommission.date), 'd MMM yyyy', { locale: es })}
                         </p>
                       </div>
                     </div>
@@ -1381,7 +1381,7 @@ export function AdminCommissions(): JSX.Element {
                             <span className="text-sm font-medium text-[var(--unit-text)]">Empleado</span>
                           </div>
                           <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {selectedCommission.employeeName}
+                            {selectedCommission.userName}
                           </span>
                         </div>
 
@@ -1392,7 +1392,7 @@ export function AdminCommissions(): JSX.Element {
                             <span className="text-sm font-medium text-[var(--unit-text)]">Unidad</span>
                           </div>
                           <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {selectedCommission.employeeUnit || '—'}
+                            {selectedCommission.userUnit || '—'}
                           </span>
                         </div>
 
