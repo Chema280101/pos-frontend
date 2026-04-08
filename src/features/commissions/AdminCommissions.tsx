@@ -925,13 +925,21 @@ export function AdminCommissions(): JSX.Element {
       label: 'Ver detalles',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: any) => {
-        console.log('DEBUG: Comisión seleccionada en frontend:', {
+        console.log('DEBUG: Comisión seleccionada en frontend - OBJETO COMPLETO:', row);
+        console.log('DEBUG: Comisión seleccionada en frontend - PROPIEDADES:', {
           id: row.id,
           userName: row.userName,
           totalAmount: row.totalAmount,
           commissionCount: row.commissionCount,
           typeofTotalAmount: typeof row.totalAmount,
-          sales: row.sales?.length || 0
+          sales: row.sales?.length || 0,
+          // Verificar si hay otras propiedades
+          allKeys: Object.keys(row),
+          // Verificar propiedades específicas que podrían existir
+          employeeName: row.employeeName,
+          employeeUnit: row.employeeUnit,
+          userUnit: row.userUnit,
+          totalSales: row.totalSales
         });
         setSelectedCommission(row);
         setViewModal(true);
