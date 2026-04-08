@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
@@ -1345,7 +1345,7 @@ export function AdminCommissions(): JSX.Element {
                       <div>
                         <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles de Comisiones Agrupadas</h3>
                         <p className="text-sm text-[var(--unit-text-muted)]">
-                          {selectedCommission.employeeName} - {format(new Date(selectedCommission.date), 'd MMM yyyy', { locale: es })}
+                          {selectedCommission.employeeName} - {format(parseISO(selectedCommission.date), 'd MMM yyyy', { locale: es })}
                         </p>
                       </div>
                     </div>
@@ -1403,7 +1403,7 @@ export function AdminCommissions(): JSX.Element {
                             <span className="text-sm font-medium text-[var(--unit-text)]">Fecha</span>
                           </div>
                           <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {format(new Date(selectedCommission.date), 'd MMM yyyy', { locale: es })}
+                            {format(parseISO(selectedCommission.date), 'd MMM yyyy', { locale: es })}
                           </span>
                         </div>
 
