@@ -12,6 +12,7 @@ export interface Product {
   minStock: number;
   maxStock: number | null;
   barcode: string | null;
+  commissionFixed: number | null;
   isActive: boolean;
   timesVended: number;
   createdAt: string;

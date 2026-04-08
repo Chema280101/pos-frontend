@@ -24,6 +24,7 @@ const schema = z.object({
   barcode: z.string().max(50).optional().nullable(),
   minStock: z.number().int().min(0).optional(),
   maxStock: z.number().int().min(0).optional().nullable(),
+  commissionFixed: z.number().min(0).optional().nullable(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -99,6 +100,7 @@ export function ProductForm(): JSX.Element {
       barcode: '',
       minStock: 5,
       maxStock: null,
+      commissionFixed: null,
     },
   });
 
@@ -122,6 +124,7 @@ export function ProductForm(): JSX.Element {
         barcode: product.barcode || '',
         minStock: product.minStock || 5,
         maxStock: product.maxStock || null,
+        commissionFixed: product.commissionFixed || null,
       });
     }
   }, [isEdit, product, reset, userUnit]);
@@ -133,6 +136,7 @@ export function ProductForm(): JSX.Element {
         categoryId: formData.categoryId || null,
         salePrice: formData.salePrice ?? null,
         costPrice: formData.costPrice ?? null,
+        commissionFixed: formData.commissionFixed ?? null,
       });
       return response.data;
     },
@@ -201,6 +205,7 @@ export function ProductForm(): JSX.Element {
         categoryId: formData.categoryId || null,
         salePrice: formData.salePrice ?? null,
         costPrice: formData.costPrice ?? null,
+        commissionFixed: formData.commissionFixed ?? null,
       });
       return response.data;
     },
@@ -442,6 +447,33 @@ export function ProductForm(): JSX.Element {
                         placeholder="Ej: 25.00"
                         {...register('costPrice', { valueAsNumber: true })} 
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">
+                        Comisión fija (S/) <span className="text-xs text-[var(--unit-text-muted)] font-normal">- Opcional</span>
+                      </label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          step="0.10" 
+                          min="0" 
+                          className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
+                          placeholder="Ej: 5.00"
+                          {...register('commissionFixed', { valueAsNumber: true })} 
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <DollarSign className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                        </div>
+                      </div>
+                      {errors.commissionFixed && (
+                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {errors.commissionFixed.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-[var(--unit-text-muted)] mt-1">
+                        Comisión fija que recibirá el trabajador por vender este producto
+                      </p>
                     </div>
                   </div>
                 </div>
