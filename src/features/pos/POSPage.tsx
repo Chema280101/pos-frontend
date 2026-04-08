@@ -1132,7 +1132,17 @@ export function POSPage(): JSX.Element {
                                 key={p.id}
                                 type="button"
                                 className="group w-full px-4 py-3 text-left text-[var(--unit-text)] transition-colors hover:bg-[var(--unit-accent)]/10"
-                                onClick={() => addProductToCart(p)}
+                                onClick={() => {
+                                  // ✅ Para productos, requerir selección de empleado para comisión fija
+                                  setSelectedServiceForEmployee({
+                                    id: p.id,
+                                    name: p.name,
+                                    salePrice: p.salePrice,
+                                    itemType: 'PRODUCT'
+                                  } as any);
+                                  setIsProductSelection(true);
+                                  setShowEmployeeModal(true);
+                                }}
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium">{p.name}</span>
