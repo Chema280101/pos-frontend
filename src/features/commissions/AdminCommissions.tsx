@@ -925,6 +925,14 @@ export function AdminCommissions(): JSX.Element {
       label: 'Ver detalles',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: any) => {
+        console.log('DEBUG: Comisión seleccionada en frontend:', {
+          id: row.id,
+          userName: row.userName,
+          totalAmount: row.totalAmount,
+          commissionCount: row.commissionCount,
+          typeofTotalAmount: typeof row.totalAmount,
+          sales: row.sales?.length || 0
+        });
         setSelectedCommission(row);
         setViewModal(true);
       },
