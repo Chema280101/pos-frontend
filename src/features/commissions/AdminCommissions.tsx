@@ -20,16 +20,29 @@ import { saveAs } from 'file-saver';
 // Interface para grouped commissions (agrupadas por empleado y fecha)
 interface GroupedCommission {
   id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeUnit: string;
+  userId: string;
+  userName: string;
+  userUnit: string;
   date: string;
   status: string;
-  totalSales: number;
   totalAmount: number;
-  commissions: Commission[];
+  commissionCount: number;
+  sales: Array<{
+    id: string;
+    saleNumber: string;
+    amount: number;
+    createdAt: Date;
+    itemType?: string;
+    itemName?: string;
+    pctApplied?: number;
+  }>;
+  commissions?: Commission[]; // Para compatibilidad con datos antiguos
   createdAt: string;
-  sale: Commission['sale'];
+  sale?: Commission['sale'];
+  employeeId?: string; // Para compatibilidad
+  employeeName?: string; // Para compatibilidad
+  employeeUnit?: string; // Para compatibilidad
+  totalSales?: number; // Para compatibilidad
 }
 
 export function AdminCommissions(): JSX.Element {
@@ -530,16 +543,28 @@ export function AdminCommissions(): JSX.Element {
       
       return {
         id: groupKey,
+        userId: employeeId,
+        userName: firstCommission.user.name,
+        userUnit: firstCommission.user.unit || '',
+        date,
+        totalAmount,
+        commissionCount: totalSales,
+        status,
+        sales: commissionList.map(c => ({
+          id: c.id,
+          saleNumber: c.sale?.saleNumber || 'N/A',
+          amount: c.amount,
+          createdAt: new Date(c.createdAt),
+          pctApplied: c.pctApplied
+        })),
+        commissions: commissionList, // Para compatibilidad
+        createdAt: firstCommission.createdAt,
+        sale: firstCommission.sale,
+        // Para compatibilidad con estructura antigua
         employeeId,
         employeeName: firstCommission.user.name,
         employeeUnit: firstCommission.user.unit || '',
-        date,
-        totalAmount,
         totalSales,
-        status,
-        commissions: commissionList,
-        createdAt: firstCommission.createdAt,
-        sale: firstCommission.sale,
       };
     });
   };
@@ -650,15 +675,15 @@ export function AdminCommissions(): JSX.Element {
       // Prepare table data
       const tableData = filteredGroupedCommissions.map((group, index) => [
         index + 1, // ID
-        group.employeeName,
+        group.employeeName || '',
         (group.employeeUnit as string) === 'BARBERIA' ? 'Barbería' : 'SPA',
         format(new Date(group.date), 'dd/MM/yyyy'),
-        group.totalSales.toString(),
+        (group.commissionCount || group.totalSales || 0).toString(),
         group.status === 'PENDING' ? 'Pendiente' : 
         group.status === 'APPROVED' ? 'Aprobada' : 
         group.status === 'PAID' ? 'Pagada' : 'Mixto',
         `S/ ${group.totalAmount.toFixed(2)}`
-      ]);
+      ]).filter(row => row.every(cell => cell !== undefined));
       
       // Calculate totals
       const totalAmount = filteredGroupedCommissions.reduce((sum, group) => sum + group.totalAmount, 0);
@@ -812,7 +837,7 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => (
         <span className="font-medium text-[var(--unit-text-muted)]">
-          {row.employeeName}
+          {row.userName || row.employeeName}
         </span>
       ),
     },
@@ -823,11 +848,11 @@ export function AdminCommissions(): JSX.Element {
       render: (row: any) => (
         <span className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.employeeUnit === 'SPA'
+          (row.userUnit || row.employeeUnit) === 'SPA'
             ? 'bg-purple-100 text-purple-800'
             : 'bg-red-100 text-red-800'
         )}>
-          {row.employeeUnit === 'BARBERIA' ? 'Barbería' : 'SPA'}
+          {(row.userUnit || row.employeeUnit) === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
       ),
     },
@@ -836,7 +861,8 @@ export function AdminCommissions(): JSX.Element {
       header: 'Fecha',
       sortable: true,
       render: (row: any) => {
-        const commissionDate = new Date(row.createdAt);
+        // Usar campo date del backend consolidado, o createdAt como fallback
+        const commissionDate = row.date ? new Date(row.date + 'T00:00:00') : new Date(row.createdAt);
         const today = new Date();
         const isToday = commissionDate.toDateString() === today.toDateString();
         
@@ -852,7 +878,7 @@ export function AdminCommissions(): JSX.Element {
               {isToday && ' (Hoy)'}
             </span>
             <span className="text-xs text-[var(--unit-text-muted)]">
-              {format(commissionDate, 'HH:mm', { locale: es })}
+              {row.commissionCount || 1} {row.commissionCount === 1 ? 'comisión' : 'comisiones'}
             </span>
           </div>
         );
@@ -864,7 +890,7 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => (
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-          {row.totalSales}
+          {row.commissionCount || row.totalSales || 1}
         </span>
       ),
     },
@@ -874,7 +900,7 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => (
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
-          S/ {row.totalAmount.toFixed(2)}
+          S/ {(row.totalAmount || 0).toFixed(2)}
         </span>
       ),
     },
@@ -1494,14 +1520,14 @@ export function AdminCommissions(): JSX.Element {
                           </h4>
                         </div>
                         <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                          {selectedCommission.commissions.length} ventas
+                          {(selectedCommission.sales || selectedCommission.commissions || []).length} ventas
                         </span>
                       </div>
 
                       {/* Enhanced Commissions List */}
                       <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                        {selectedCommission.commissions.map((commission: Commission, index: number) => (
-                          <div key={commission.id} className="group/commission relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
+                        {(selectedCommission.sales || selectedCommission.commissions || []).map((item: any, index: number) => (
+                          <div key={item.id || index} className="group/commission relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
                             <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/commission:opacity-100 transition-opacity rounded-xl"></div>
                             <div className="relative">
                               <div className="flex justify-between items-start">
@@ -1509,24 +1535,44 @@ export function AdminCommissions(): JSX.Element {
                                   <div className="flex items-center gap-2 mb-2">
                                     <Receipt className="h-4 w-4 text-[var(--unit-text-muted)]" />
                                     <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-2 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                                      Venta #{commission.sale?.saleNumber || 'N/A'}
+                                      Venta #{item.saleNumber || 'N/A'}
                                     </span>
+                                    {/* Mostrar tipo de venta si está disponible */}
+                                    {item.itemType && (
+                                      <span className={cn(
+                                        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
+                                        item.itemType === 'PRODUCT' 
+                                          ? 'bg-blue-100 text-blue-800' 
+                                          : item.itemType === 'SERVICE'
+                                          ? 'bg-purple-100 text-purple-800'
+                                          : 'bg-green-100 text-green-800'
+                                      )}>
+                                        {item.itemType === 'PRODUCT' ? 'Producto' : 
+                                         item.itemType === 'SERVICE' ? 'Servicio' : 'Paquete'}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2 text-sm text-[var(--unit-text-muted)]">
                                     <Clock className="h-3 w-3" />
-                                    <span>{format(new Date(commission.createdAt), 'HH:mm', { locale: es })}</span>
+                                    <span>{format(new Date(item.createdAt || selectedCommission.date), 'HH:mm', { locale: es })}</span>
                                   </div>
+                                  {/* Mostrar nombre del item si está disponible */}
+                                  {item.itemName && (
+                                    <div className="mt-1 text-sm text-[var(--unit-text)]">
+                                      {item.itemName}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="text-right">
                                   <div className="flex items-center gap-1 mb-1">
                                     <DollarSign className="h-3 w-3 text-emerald-600" />
                                     <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                                      S/ {commission.amount.toFixed(2)}
+                                      S/ {(item.amount || item.totalAmount || 0).toFixed(2)}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1 text-xs text-[var(--unit-text-muted)]">
                                     <TrendingUp className="h-3 w-3" />
-                                    <span>{commission.pctApplied}%</span>
+                                    <span>{item.pctApplied || 0}%</span>
                                   </div>
                                 </div>
                               </div>

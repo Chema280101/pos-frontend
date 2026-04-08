@@ -24,6 +24,7 @@ const schema = z.object({
   barcode: z.string().max(50).optional().nullable(),
   minStock: z.number().int().min(0).optional(),
   maxStock: z.number().int().min(0).optional().nullable(),
+  commissionFixed: z.number().min(0).optional().nullable(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -99,6 +100,7 @@ export function ProductForm(): JSX.Element {
       barcode: '',
       minStock: 5,
       maxStock: null,
+      commissionFixed: null,
     },
   });
 
@@ -122,6 +124,7 @@ export function ProductForm(): JSX.Element {
         barcode: product.barcode || '',
         minStock: product.minStock || 5,
         maxStock: product.maxStock || null,
+        commissionFixed: product.commissionFixed || null,
       });
     }
   }, [isEdit, product, reset, userUnit]);
@@ -133,6 +136,7 @@ export function ProductForm(): JSX.Element {
         categoryId: formData.categoryId || null,
         salePrice: formData.salePrice ?? null,
         costPrice: formData.costPrice ?? null,
+        commissionFixed: formData.commissionFixed ?? null,
       });
       return response.data;
     },
@@ -201,6 +205,7 @@ export function ProductForm(): JSX.Element {
         categoryId: formData.categoryId || null,
         salePrice: formData.salePrice ?? null,
         costPrice: formData.costPrice ?? null,
+        commissionFixed: formData.commissionFixed ?? null,
       });
       return response.data;
     },
@@ -446,6 +451,28 @@ export function ProductForm(): JSX.Element {
                   </div>
                 </div>
               )}
+
+              {/* Enhanced Commission Field */}
+              <div>
+                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Comisión fija (S/)
+                  <span className="text-xs font-normal text-[var(--unit-text-muted)] ml-auto">
+                    Si no se especifica, se usará valor por defecto
+                  </span>
+                </label>
+                <input 
+                  type="number" 
+                  step="0.10" 
+                  min="0" 
+                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
+                  placeholder="Ej: 5.00 (opcional)"
+                  {...register('commissionFixed', { valueAsNumber: true })} 
+                />
+                <p className="text-xs text-[var(--unit-text-muted)] mt-1">
+                  Comisión fija que recibirá el especialista por cada venta de este producto
+                </p>
+              </div>
               
               {!showPrices && (
                 <div className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200">
