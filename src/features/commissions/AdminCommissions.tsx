@@ -13,37 +13,9 @@ import { CommissionsMetrics } from './CommissionsMetrics';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Commission, CommissionsResponse } from '@/types/commission';
+import type { Commission, GroupedCommission, CommissionsResponse } from '@/types/commission';
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-
-// Interface para grouped commissions (agrupadas por empleado y fecha)
-interface GroupedCommission {
-  id: string;
-  userId: string;
-  userName: string;
-  userUnit: string;
-  date: string;
-  status: string;
-  totalAmount: number;
-  commissionCount: number;
-  sales: Array<{
-    id: string;
-    saleNumber: string;
-    amount: number;
-    createdAt: Date;
-    itemType?: string;
-    itemName?: string;
-    pctApplied?: number;
-  }>;
-  commissions?: Commission[]; // Para compatibilidad con datos antiguos
-  createdAt: string;
-  sale?: Commission['sale'];
-  employeeId?: string; // Para compatibilidad
-  employeeName?: string; // Para compatibilidad
-  employeeUnit?: string; // Para compatibilidad
-  totalSales?: number; // Para compatibilidad
-}
 
 export function AdminCommissions(): JSX.Element {
   const queryClient = useQueryClient();

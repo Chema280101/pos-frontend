@@ -33,8 +33,45 @@ export interface Commission {
   } | null;
 }
 
+export interface GroupedCommission {
+  id: string;
+  userId: string;
+  userName: string;
+  userUnit: string;
+  date: string;
+  totalAmount: number;
+  commissionCount: number;
+  status: CommissionStatus;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  paymentNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sales: Array<{
+    id: string;
+    saleNumber: string;
+    amount: number;
+    createdAt: string;
+    itemType?: string;
+    itemName?: string;
+    pctApplied?: number;
+  }>;
+  user: {
+    id: string;
+    name: string;
+    unit: string;
+  };
+  sale: {
+    id: string;
+    saleNumber: string;
+    unit: string;
+    total: number;
+    createdAt: string;
+  } | null;
+}
+
 export interface CommissionsResponse {
-  data: Commission[];
+  data: GroupedCommission[];
   pagination: {
     page: number;
     limit: number;
