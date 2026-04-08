@@ -1469,13 +1469,13 @@ export function AdminCommissions(): JSX.Element {
                           </h4>
                         </div>
                         <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                          {(selectedCommission.sales || selectedCommission.commissions || []).length} ventas
+                          {(selectedCommission.sales || []).length} ventas
                         </span>
                       </div>
 
                       {/* Enhanced Commissions List */}
                       <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                        {(selectedCommission.sales || selectedCommission.commissions || []).map((item: any, index: number) => (
+                        {(selectedCommission.sales || []).map((item: any, index: number) => (
                           <div key={item.id || index} className="group/commission relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
                             <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/commission:opacity-100 transition-opacity rounded-xl"></div>
                             <div className="relative">
