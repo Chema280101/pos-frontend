@@ -837,7 +837,7 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => (
         <span className="font-medium text-[var(--unit-text-muted)]">
-          {row.userName || row.employeeName}
+          {row.employeeName || row.userName}
         </span>
       ),
     },
@@ -848,11 +848,11 @@ export function AdminCommissions(): JSX.Element {
       render: (row: any) => (
         <span className={cn(
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          (row.userUnit || row.employeeUnit) === 'SPA'
+          (row.employeeUnit || row.userUnit) === 'SPA'
             ? 'bg-purple-100 text-purple-800'
             : 'bg-red-100 text-red-800'
         )}>
-          {(row.userUnit || row.employeeUnit) === 'BARBERIA' ? 'Barbería' : 'SPA'}
+          {(row.employeeUnit || row.userUnit) === 'BARBERIA' ? 'Barbería' : 'SPA'}
         </span>
       ),
     },
@@ -878,7 +878,7 @@ export function AdminCommissions(): JSX.Element {
               {isToday && ' (Hoy)'}
             </span>
             <span className="text-xs text-[var(--unit-text-muted)]">
-              {row.commissionCount || 1} {row.commissionCount === 1 ? 'comisión' : 'comisiones'}
+              {row.totalSales || row.commissionCount || 1} {(row.totalSales || row.commissionCount) === 1 ? 'comisión' : 'comisiones'}
             </span>
           </div>
         );
@@ -890,7 +890,7 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => (
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-          {row.commissionCount || row.totalSales || 1}
+          {row.totalSales || row.commissionCount || 1}
         </span>
       ),
     },
