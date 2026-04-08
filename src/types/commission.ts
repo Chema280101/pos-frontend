@@ -68,6 +68,12 @@ export interface GroupedCommission {
     total: number;
     createdAt: string;
   } | null;
+  // Propiedades adicionales que envía el backend
+  employeeId: string;
+  employeeName: string;
+  employeeUnit: string;
+  totalSales: number;
+  commissions: any[];
 }
 
 export interface CommissionsResponse {

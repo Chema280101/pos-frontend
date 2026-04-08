@@ -80,65 +80,17 @@ export function AdminCommissions(): JSX.Element {
     return Array.from(employees).sort();
   }, [commissionsResponse]);
 
-  // Group commissions by employee and date
-  const groupedCommissions = useMemo(() => {
-    const groups: Record<string, Commission[]> = {};
-    
-    commissions.forEach(commission => {
-      // Create group key: employeeId_date
-      const commissionDate = new Date(commission.createdAt);
-      // ✅ CORRECCIÓN: Usar fecha local sin conversión UTC
-      const dateKey = commissionDate.getFullYear() + '-' + 
-                    String(commissionDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(commissionDate.getDate()).padStart(2, '0');
-      const groupKey = `${commission.user.id}_${dateKey}`;
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(commission);
-    });
-    
-    // Convert groups to array with aggregated data
-    return Object.entries(groups).map(([groupKey, commissionList]) => {
-      const [employeeId, date] = groupKey.split('_');
-      const firstCommission = commissionList[0];
-      
-      // Calculate totals
-      const totalAmount = commissionList.reduce((sum, c) => sum + c.amount, 0);
-      const totalSales = commissionList.length;
-      const allPaid = commissionList.every(c => c.status === 'PAID');
-      const allPending = commissionList.every(c => c.status === 'PENDING');
-      
-      // Determine status
-      let status = 'MIXED';
-      if (allPaid) status = 'PAID';
-      else if (allPending) status = 'PENDING';
-      
-      return {
-        id: groupKey, // Use groupKey as ID
-        employeeId,
-        employeeName: firstCommission.user.name,
-        employeeUnit: firstCommission.user.unit,
-        date,
-        totalAmount,
-        totalSales,
-        status,
-        commissions: commissionList, // Keep original commissions for details
-        createdAt: firstCommission.createdAt, // Use first commission date
-        sale: firstCommission.sale, // Use first sale reference
-      };
-    });
-  }, [commissions]);
+  // El backend ya envía los datos agrupados, no necesitamos agruparlos nuevamente
+  const groupedCommissions = commissions;
 
   // Calculate stats
-  const pending = commissions.filter((c: Commission) => c.status === 'PENDING');
-  const paid = commissions.filter((c: Commission) => c.status === 'PAID');
-  const approved = commissions.filter((c: Commission) => c.status === 'APPROVED');
+  const pending = commissions.filter((c: GroupedCommission) => c.status === 'PENDING');
+  const paid = commissions.filter((c: GroupedCommission) => c.status === 'PAID');
+  const approved = commissions.filter((c: GroupedCommission) => c.status === 'APPROVED');
   
-  const totalPending = pending.reduce((sum: number, c: Commission) => sum + c.amount, 0);
-  const totalPaid = paid.reduce((sum: number, c: Commission) => sum + c.amount, 0);
-  const totalApproved = approved.reduce((sum: number, c: Commission) => sum + c.amount, 0);
+  const totalPending = pending.reduce((sum: number, c: GroupedCommission) => sum + c.totalAmount, 0);
+  const totalPaid = paid.reduce((sum: number, c: GroupedCommission) => sum + c.totalAmount, 0);
+  const totalApproved = approved.reduce((sum: number, c: GroupedCommission) => sum + c.totalAmount, 0);
 
   const markPaidMutation = useMutation({
     mutationFn: async ({ groupId, method, notes }: { groupId: string; method: string; notes: string }) => {
@@ -391,37 +343,47 @@ export function AdminCommissions(): JSX.Element {
       });
 
       // Add data rows
-      filteredCommissions.forEach((commission, index) => {
-        const dataRow = worksheet.getRow((headerStartRow + 2) + index);
-        dataRow.height = 15;
+      let dataRowNumber = headerStartRow + 2;
+      filteredCommissions.forEach((commission: any) => {
+        const dataRow = worksheet.getRow(dataRowNumber);
+        dataRow.height = 20;
+        
+        // Format date
+        const createdDate = new Date(commission.createdAt);
+        const formattedDate = format(createdDate, 'dd/MM/yyyy');
+        
+        // Format payment date if exists
+        const paymentDate = commission.paidAt ? format(new Date(commission.paidAt), 'dd/MM/yyyy') : '';
+        
+        // Calculate commission percentage
+        const commissionPercentage = commission.totalAmount && commission.sale ? 
+          ((commission.totalAmount / commission.sale.total) * 100).toFixed(2) + '%' : '0.00%';
+        
         dataRow.values = [
           commission.id,
-          commission.user.name,
-          commission.user.unit || '',
-          commission.status === 'PENDING' ? 'Pendiente' : 
-           commission.status === 'APPROVED' ? 'Aprobada' : 'Pagada',
-          commission.sale?.id || '',
-          commission.sale?.saleNumber || '',
-          new Date(commission.createdAt).toLocaleString('es-PE'),
-          commission.amount,
-          commission.pctApplied / 100, // Convert to decimal for percentage format
-          commission.paidAt ? new Date(commission.paidAt).toLocaleString('es-PE') : '',
+          commission.employeeName || commission.userName || '',
+          commission.employeeUnit || commission.userUnit || '',
+          formattedDate,
+          commission.totalAmount || 0,
+          commissionPercentage,
+          paymentDate,
           commission.paymentMethod || '',
           commission.paymentNotes || ''
         ];
-
-        // Apply styles to data cells
-        dataRow.getCell(1).style = dataStyle; // ID
-        dataRow.getCell(2).style = dataStyle; // Nombre
-        dataRow.getCell(3).style = dataStyle; // Unidad
-        dataRow.getCell(4).style = dataStyle; // Estado
-        dataRow.getCell(5).style = dataStyle; // ID Venta
-        dataRow.getCell(6).style = dataStyle; // Número Venta
-        dataRow.getCell(7).style = dataStyle; // Fecha Creación
-        dataRow.getCell(8).style = numberStyle; // Monto
-        dataRow.getCell(9).style = percentStyle; // % Comisión
-        dataRow.getCell(10).style = dataStyle; // Fecha Pago
-        dataRow.getCell(11).style = dataStyle; // Método Pago
+        
+        // Apply styles to data row
+        for (let col = 1; col <= 9; col++) {
+          const cell = dataRow.getCell(col);
+          if (col === 5 || col === 7) { // Amount and payment date columns
+            cell.style = numberStyle;
+          } else if (col === 6) { // Percentage column
+            cell.style = percentStyle;
+          } else {
+            cell.style = dataStyle;
+          }
+        }
+        
+        dataRowNumber++;
         dataRow.getCell(12).style = dataStyle; // Notas
       });
 
@@ -442,7 +404,7 @@ export function AdminCommissions(): JSX.Element {
       // Add totals row
       const totalRow = worksheet.getRow((headerStartRow + 2) + filteredCommissions.length);
       totalRow.height = 20;
-      const totalAmount = filteredCommissions.reduce((sum, c) => sum + c.amount, 0);
+      const totalAmount = filteredCommissions.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
       totalRow.values = ['', '', '', '', '', '', '', 'TOTAL:', totalAmount, '', '', '', ''];
       
       totalRow.getCell(8).style = {
@@ -504,7 +466,7 @@ export function AdminCommissions(): JSX.Element {
       const [employeeId, date] = groupKey.split('_');
       const firstCommission = commissionList[0];
       
-      const totalAmount = commissionList.reduce((sum, c) => sum + c.amount, 0);
+      const totalAmount = commissionList.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
       const totalSales = commissionList.length;
       const allPaid = commissionList.every(c => c.status === 'PAID');
       const allPending = commissionList.every(c => c.status === 'PENDING');
