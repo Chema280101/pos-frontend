@@ -336,7 +336,7 @@ export function AdminCommissions(): JSX.Element {
 
       // Filter commissions by unit and date
       const filteredCommissions = commissions.filter(c => {
-        const commissionDate = new Date(c.createdAt);
+        const commissionDate = parseISO(c.createdAt);
         const unitMatch = exportConfig.unit === 'ALL' || c.user.unit === exportConfig.unit;
         const dateMatch = commissionDate >= exportConfig.dateFrom && commissionDate <= exportConfig.dateTo;
         return unitMatch && dateMatch;
@@ -349,11 +349,11 @@ export function AdminCommissions(): JSX.Element {
         dataRow.height = 20;
         
         // Format date
-        const createdDate = new Date(commission.createdAt);
+        const createdDate = parseISO(commission.createdAt);
         const formattedDate = format(createdDate, 'dd/MM/yyyy');
         
         // Format payment date if exists
-        const paymentDate = commission.paidAt ? format(new Date(commission.paidAt), 'dd/MM/yyyy') : '';
+        const paymentDate = commission.paidAt ? format(parseISO(commission.paidAt), 'dd/MM/yyyy') : '';
         
         // Calculate commission percentage
         const commissionPercentage = commission.totalAmount && commission.sale ? 
@@ -488,7 +488,7 @@ export function AdminCommissions(): JSX.Element {
           id: c.id,
           saleNumber: c.sale?.saleNumber || 'N/A',
           amount: c.amount,
-          createdAt: new Date(c.createdAt),
+          createdAt: parseISO(c.createdAt),
           pctApplied: c.pctApplied
         })),
         commissions: commissionList, // Para compatibilidad
@@ -533,7 +533,7 @@ export function AdminCommissions(): JSX.Element {
       
       // Filter by date range
       filteredCommissions = filteredCommissions.filter(commission => {
-        const commissionDate = new Date(commission.createdAt);
+        const commissionDate = parseISO(commission.createdAt);
         return commissionDate >= exportConfig.dateFrom && commissionDate <= exportConfig.dateTo;
       });
       
@@ -611,7 +611,7 @@ export function AdminCommissions(): JSX.Element {
         index + 1, // ID
         group.employeeName || '',
         (group.employeeUnit as string) === 'BARBERIA' ? 'Barbería' : 'SPA',
-        format(new Date(group.date), 'dd/MM/yyyy'),
+        format(parseISO(group.date), 'dd/MM/yyyy'),
         (group.commissionCount || group.totalSales || 0).toString(),
         group.status === 'PENDING' ? 'Pendiente' : 
         group.status === 'APPROVED' ? 'Aprobada' : 
@@ -711,8 +711,8 @@ export function AdminCommissions(): JSX.Element {
       c.pctApplied.toString(),
       c.status === 'PENDING' ? 'Pendiente' : 
        c.status === 'APPROVED' ? 'Aprobada' : 'Pagada',
-      new Date(c.createdAt).toLocaleString('es-PE'),
-      c.paidAt ? new Date(c.paidAt).toLocaleString('es-PE') : '',
+      parseISO(c.createdAt).toLocaleString('es-PE'),
+      c.paidAt ? parseISO(c.paidAt).toLocaleString('es-PE') : '',
       c.paymentMethod || '',
       c.paymentNotes || '',
       c.sale?.id || '',
@@ -796,7 +796,7 @@ export function AdminCommissions(): JSX.Element {
       sortable: true,
       render: (row: any) => {
         // Usar campo date del backend consolidado, o createdAt como fallback
-        const commissionDate = row.date ? new Date(row.date + 'T00:00:00') : new Date(row.createdAt);
+        const commissionDate = row.date ? parseISO(row.date) : parseISO(row.createdAt);
         const today = new Date();
         const isToday = commissionDate.toDateString() === today.toDateString();
         
@@ -1246,8 +1246,8 @@ export function AdminCommissions(): JSX.Element {
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
                       <span className="text-sm font-medium text-gray-900">
                         {groupedCommissions?.find(c => c.id === payingId) ? 
-                          new Date(groupedCommissions.find(c => c.id === payingId)!.date).toLocaleDateString() : 
-                          new Date().toLocaleDateString()
+                          parseISO(groupedCommissions.find(c => c.id === payingId)!.date).toLocaleDateString() : 
+                          parseISO(new Date().toISOString()).toLocaleDateString()
                         }
                       </span>
                     </div>
@@ -1503,7 +1503,7 @@ export function AdminCommissions(): JSX.Element {
                                   </div>
                                   <div className="flex items-center gap-2 text-sm text-[var(--unit-text-muted)]">
                                     <Clock className="h-3 w-3" />
-                                    <span>{format(new Date(item.createdAt || selectedCommission.date), 'HH:mm', { locale: es })}</span>
+                                    <span>{format(parseISO(item.createdAt || selectedCommission.date), 'HH:mm', { locale: es })}</span>
                                   </div>
                                   {/* Mostrar nombre del item si está disponible */}
                                   {item.itemName && (
