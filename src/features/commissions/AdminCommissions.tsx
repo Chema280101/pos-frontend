@@ -100,10 +100,25 @@ export function AdminCommissions(): JSX.Element {
       
       console.log('DEBUG - Group structure:', group);
       console.log('DEBUG - Group properties:', Object.keys(group));
+      console.log('DEBUG - Group ID type:', typeof group.id);
+      console.log('DEBUG - Is consolidated ID?', group.id.includes('consolidated_'));
       
       // Mark all commissions in the group as paid
-      // El grupo puede ser la comisión individual o contener las comisiones
-      const commissionsToMark = group.commissions || [group]; // Si no hay commissions, el grupo es la comisión individual
+      // Si el ID es consolidado, necesitamos encontrar las comisiones individuales
+      let commissionsToMark;
+      
+      if (group.id.includes('consolidated_')) {
+        // Es un ID consolidado, buscar comisiones individuales con mismo empleado y fecha
+        const employeeCommissions = groupedCommissions.filter(c => 
+          c.employeeName === group.employeeName && 
+          c.date === group.date
+        );
+        commissionsToMark = employeeCommissions;
+        console.log('DEBUG - Found individual commissions:', employeeCommissions.length);
+      } else {
+        // Es una comisión individual
+        commissionsToMark = [group];
+      }
       
       const promises = commissionsToMark.map(commission => 
         api.patch(`/api/commissions/${commission.id}/paid`, {
