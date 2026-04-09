@@ -1244,13 +1244,13 @@ export function AdminCommissions(): JSX.Element {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Comisiones</span>
                       <span className="text-sm font-bold text-gray-900">
-                        {groupedCommissions?.find(c => c.id === payingId)?.commissions.length || 0} comisiones
+                        {groupedCommissions?.find(c => c.id === payingId)?.commissions?.length || 0} comisiones
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Monto Total</span>
                       <span className="text-sm font-bold text-gray-900">
-                        S/ {groupedCommissions?.find(c => c.id === payingId)?.totalAmount.toFixed(2) || '0.00'}
+                        S/ {(groupedCommissions?.find(c => c.id === payingId)?.totalAmount || 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
