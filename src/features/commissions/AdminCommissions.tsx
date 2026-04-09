@@ -167,7 +167,12 @@ export function AdminCommissions(): JSX.Element {
       setPaymentMethod('Efectivo');
       setPaymentNotes('');
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
-      addToast(`Comisiones liquidadas: ${data.commissions.length} comisiones por S/ ${data.totalAmount.toFixed(2)}`, 'success');
+      
+      // Acceder correctamente a los datos del grupo
+      const commissionCount = data.commissionCount || data.sales?.length || 0;
+      const totalAmount = data.totalAmount || 0;
+      
+      addToast(`Comisiones liquidadas: ${commissionCount} comisiones por S/ ${totalAmount.toFixed(2)}`, 'success');
     },
     onError: (error: any) => {
       console.error('Error marking commission as paid:', error);
