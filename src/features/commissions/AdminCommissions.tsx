@@ -98,8 +98,14 @@ export function AdminCommissions(): JSX.Element {
       const group = groupedCommissions.find(g => g.id === groupId);
       if (!group) throw new Error('Group not found');
       
+      console.log('DEBUG - Group structure:', group);
+      console.log('DEBUG - Group properties:', Object.keys(group));
+      
       // Mark all commissions in the group as paid
-      const promises = group.commissions.map(commission => 
+      // El grupo puede ser la comisión individual o contener las comisiones
+      const commissionsToMark = group.commissions || [group]; // Si no hay commissions, el grupo es la comisión individual
+      
+      const promises = commissionsToMark.map(commission => 
         api.patch(`/api/commissions/${commission.id}/paid`, {
         paymentMethod: method || undefined,
         paymentNotes: notes || undefined,
