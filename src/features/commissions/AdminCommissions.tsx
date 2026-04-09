@@ -110,20 +110,36 @@ export function AdminCommissions(): JSX.Element {
       if (group.id.includes('consolidated_')) {
         // Es un ID consolidado, usar las ventas individuales para crear comisiones individuales
         console.log('DEBUG - Group sales:', group.sales);
+        console.log('DEBUG - First sale structure:', group.sales[0]);
+        console.log('DEBUG - First sale properties:', Object.keys(group.sales[0]));
         
         if (group.sales && Array.isArray(group.sales)) {
-          // Crear comisiones individuales basadas en las ventas
-          commissionsToMark = group.sales.map((sale: any, index: number) => ({
-            id: `${group.userId}_${sale.saleNumber}_${group.date}`, // ID único basado en venta
-            userId: group.userId,
-            userName: group.userName,
-            userUnit: group.userUnit,
-            date: group.date,
-            totalAmount: (sale.total * 0.1), // 10% de comisión
-            saleNumber: sale.saleNumber,
-            saleId: sale.id
-          }));
-          console.log('DEBUG - Created individual commissions from sales:', commissionsToMark.length);
+          // Buscar comisiones individuales existentes que coincidan con estas ventas
+          const individualCommissions = groupedCommissions.filter(c => 
+            !c.id.includes('consolidated_') && // No debe ser consolidado
+            c.userId === group.userId && 
+            c.date === group.date
+          );
+          
+          console.log('DEBUG - Found individual commissions:', individualCommissions.length);
+          console.log('DEBUG - Individual commission IDs:', individualCommissions.map(c => c.id));
+          
+          if (individualCommissions.length > 0) {
+            commissionsToMark = individualCommissions;
+          } else {
+            // Si no hay comisiones individuales, usar los IDs de las ventas si tienen comisionId
+            commissionsToMark = group.sales.map((sale: any) => ({
+              id: sale.commissionId || `${group.userId}_${sale.saleNumber}_${group.date}`,
+              userId: group.userId,
+              userName: group.userName,
+              userUnit: group.userUnit,
+              date: group.date,
+              totalAmount: (sale.total * 0.1),
+              saleNumber: sale.saleNumber,
+              saleId: sale.id
+            }));
+            console.log('DEBUG - Using sale-based commission IDs');
+          }
         } else {
           throw new Error('No sales data found in consolidated commission');
         }
