@@ -127,18 +127,22 @@ export function AdminCommissions(): JSX.Element {
           if (individualCommissions.length > 0) {
             commissionsToMark = individualCommissions;
           } else {
-            // Si no hay comisiones individuales, usar los IDs de las ventas si tienen comisionId
+            // USAR IDs REALES DE VENTAS - Cada venta debe tener una comisión asociada
+            console.log('DEBUG - Using real sale IDs as commission IDs');
             commissionsToMark = group.sales.map((sale: any) => ({
-              id: sale.commissionId || `${group.userId}_${sale.saleNumber}_${group.date}`,
+              id: sale.id, // Usar el ID real de la venta como ID de comisión
               userId: group.userId,
               userName: group.userName,
               userUnit: group.userUnit,
               date: group.date,
-              totalAmount: (sale.total * 0.1),
+              amount: (sale.amount * (sale.pctApplied || 0.1)), // Usar amount y pctApplied reales
+              pctApplied: sale.pctApplied || 0.1,
               saleNumber: sale.saleNumber,
-              saleId: sale.id
+              saleId: sale.id,
+              // Para compatibilidad con la API
+              totalAmount: (sale.amount * (sale.pctApplied || 0.1)),
+              basedOnGross: true
             }));
-            console.log('DEBUG - Using sale-based commission IDs');
           }
         } else {
           throw new Error('No sales data found in consolidated commission');
