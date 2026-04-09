@@ -108,13 +108,25 @@ export function AdminCommissions(): JSX.Element {
       let commissionsToMark;
       
       if (group.id.includes('consolidated_')) {
-        // Es un ID consolidado, buscar comisiones individuales con mismo empleado y fecha
-        const employeeCommissions = groupedCommissions.filter(c => 
-          c.employeeName === group.employeeName && 
-          c.date === group.date
-        );
-        commissionsToMark = employeeCommissions;
-        console.log('DEBUG - Found individual commissions:', employeeCommissions.length);
+        // Es un ID consolidado, usar las ventas individuales para crear comisiones individuales
+        console.log('DEBUG - Group sales:', group.sales);
+        
+        if (group.sales && Array.isArray(group.sales)) {
+          // Crear comisiones individuales basadas en las ventas
+          commissionsToMark = group.sales.map((sale: any, index: number) => ({
+            id: `${group.userId}_${sale.saleNumber}_${group.date}`, // ID único basado en venta
+            userId: group.userId,
+            userName: group.userName,
+            userUnit: group.userUnit,
+            date: group.date,
+            totalAmount: (sale.total * 0.1), // 10% de comisión
+            saleNumber: sale.saleNumber,
+            saleId: sale.id
+          }));
+          console.log('DEBUG - Created individual commissions from sales:', commissionsToMark.length);
+        } else {
+          throw new Error('No sales data found in consolidated commission');
+        }
       } else {
         // Es una comisión individual
         commissionsToMark = [group];
