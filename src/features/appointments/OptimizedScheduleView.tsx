@@ -242,23 +242,23 @@ export function OptimizedScheduleView({
           {(selectedUnit === 'SPA' || selectedUnit === null) && (
             <div className={selectedUnit === null ? 'mb-8' : ''}>
               {/* SPA Premium Header */}
-              <div className="relative overflow-hidden rounded-xl border-2 border-purple-500/30 bg-gradient-to-br from-purple-50 to-purple-100 p-4 mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-xl"></div>
+              <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-primary)]/30 bg-gradient-to-br from-[var(--unit-primary)]/10 to-[var(--unit-primary)]/5 p-4 mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-primary)]/10 to-[var(--unit-primary-dark)]/10 rounded-xl"></div>
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-primary)] to-[var(--unit-primary-dark)] shadow-lg">
                       <Sparkles className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-purple-900">SPA</h4>
-                      <p className="text-sm text-purple-700 font-medium">
+                      <h4 className="text-lg font-bold text-[var(--unit-text)]">SPA</h4>
+                      <p className="text-sm text-[var(--unit-text-muted)] font-medium">
                         {employeesByUnit.SPA.length} estilistas disponibles
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100/80 rounded-full border border-purple-300">
-                    <div className="h-2 w-2 rounded-full bg-purple-500 animate-pulse"></div>
-                    <span className="text-xs font-bold text-purple-700">Activo</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--unit-primary)]/20 rounded-full border border-[var(--unit-primary)]/30">
+                    <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
+                    <span className="text-xs font-bold text-[var(--unit-text)]">Activo</span>
                   </div>
                 </div>
               </div>
@@ -266,13 +266,13 @@ export function OptimizedScheduleView({
               <div className="min-w-[600px]">
                 {/* SPA Header */}
                 <div className="grid grid-cols-[80px_repeat(auto-fit,_minmax(180px,_1fr))] gap-3 mb-4">
-                  <div className="text-xs font-bold text-purple-700 uppercase tracking-wider bg-purple-100/50 px-3 py-2 rounded-xl border border-purple-200 text-center">
+                  <div className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider bg-[var(--unit-primary)]/20 px-3 py-2 rounded-xl border border-[var(--unit-primary)]/30 text-center">
                     Hora
                   </div>
                   {employeesByUnit.SPA.map(emp => (
                     <div key={emp.id} className="text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center text-sm font-bold text-purple-600 border-2 border-purple-200 shadow-sm group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--unit-primary)]/20 flex items-center justify-center text-sm font-bold text-[var(--unit-text)] border-2 border-[var(--unit-primary)]/30 shadow-sm group-hover:scale-110 transition-transform">
                           {emp.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="text-sm font-medium text-[var(--unit-text)]">{emp.name}</span>
@@ -284,7 +284,7 @@ export function OptimizedScheduleView({
                 {/* SPA Time Slots */}
                 {TIME_SLOTS.map(time => (
                   <div key={time} className="grid grid-cols-[80px_repeat(auto-fit,_minmax(180px,_1fr))] gap-3 mb-3">
-                    <div className="text-xs font-bold text-purple-700 uppercase tracking-wider bg-purple-100/30 px-3 py-3 rounded-xl border border-purple-200 text-center font-medium">
+                    <div className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider bg-[var(--unit-primary)]/15 px-3 py-3 rounded-xl border border-[var(--unit-primary)]/25 text-center font-medium">
                       {time}
                     </div>
 

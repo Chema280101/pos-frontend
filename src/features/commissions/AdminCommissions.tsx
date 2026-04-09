@@ -27,7 +27,7 @@ export function AdminCommissions(): JSX.Element {
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [viewModal, setViewModal] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState<GroupedCommission | null>(null);
@@ -109,11 +109,16 @@ export function AdminCommissions(): JSX.Element {
       await Promise.all(promises);
       return group;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setPayingId(null);
-      setPaymentMethod('');
+      setPaymentMethod('Efectivo');
       setPaymentNotes('');
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
+      addToast(`Comisiones liquidadas: ${data.commissions.length} comisiones por S/ ${data.totalAmount.toFixed(2)}`, 'success');
+    },
+    onError: (error: any) => {
+      console.error('Error marking commission as paid:', error);
+      addToast(error.response?.data?.error || 'Error al liquidar comisiones', 'error');
     },
   });
 
@@ -1227,7 +1232,7 @@ export function AdminCommissions(): JSX.Element {
                   </div>
                 </div>
 
-                {/* Commission Info - Estilo Eliminar Gasto */}
+                {/* Commission Group Info - Estilo Eliminar Gasto */}
                 <div className="rounded-xl border-2 border-emerald-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -1237,7 +1242,13 @@ export function AdminCommissions(): JSX.Element {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Monto</span>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Comisiones</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {groupedCommissions?.find(c => c.id === payingId)?.commissions.length || 0} comisiones
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Monto Total</span>
                       <span className="text-sm font-bold text-gray-900">
                         S/ {groupedCommissions?.find(c => c.id === payingId)?.totalAmount.toFixed(2) || '0.00'}
                       </span>

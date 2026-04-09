@@ -78,61 +78,62 @@
   --unit-border: rgba(255, 255, 255, 0.2);
 }
 
-/* ========== SPA — Elegante y relajante ========== */
+/* ========== SPA - Rosa y Dorado ========== */
 [data-unit='SPA'] {
-  /* Colores principales con mejor contraste */
-  --unit-primary: #6B46C1; /* Púrpura profundo elegante */
-  --unit-primary-dark: #553C9A;
-  --unit-secondary: #F3E8FF; /* Lavanda suave */
-  --unit-accent: #9333EA; /* Púrpura vibrante para CTAs */
-  --unit-accent-hover: #7C3AED;
-  /* Texto con mejor legibilidad */
-  --unit-text: #1F2937; /* Gris oscuro para alto contraste */
-  --unit-text-muted: #6B7280; /* Gris medio para texto secundario */
-  /* Superficies limpias */
-  --unit-surface: #FAFAFA; /* Fondo muy claro */
-  --unit-surface-elevated: #FFFFFF;
-  /* Bordes sutiles pero visibles */
-  --unit-border: rgba(147, 51, 234, 0.15);
-  --unit-border-radius: 14px;
-  --unit-radius-sm: 10px;
-  /* Sombras suaves */
-  --unit-shadow: 0 4px 20px rgba(107, 70, 193, 0.08);
-  --unit-shadow-lg: 0 12px 40px rgba(107, 70, 193, 0.12);
+  /* Colores principales con mejor profundidad */
+  --unit-primary: #E8D5D1; /* Rosa suave mantenido */
+  --unit-primary-dark: #222220; /* Negro suave mantenido */
+  --unit-secondary: #FCFCFC; /* Blanco mantenido */
+  /* Acentos: Rosa principal y dorado para detalles */
+  --unit-accent: #E8D5D1; /* Rosa para CTAs */
+  --unit-accent-hover: #937A52; /* Dorado para hover */
+  /* Texto con coherencia de superficie */
+  --unit-text: #222220; /* Negro sobre superficies claras */
+  --unit-text-muted: #937A52; /* Dorado suave para texto secundario */
+  /* Superficies con contraste apropiado */
+  --unit-surface: #FCFCFC; /* Fondo principal blanco */
+  --unit-surface-elevated: #F8F8F8; /* Cards ligeramente rosados */
+  /* Bordes con rosa sutil */
+  --unit-border: rgba(232, 213, 209, 0.2);
+  --unit-border-radius: 8px; /* Moderadamente redondeados */
+  --unit-radius-sm: 4px;
+  /* Sombras profundas pero elegantes */
+  --unit-shadow: 0 4px 20px rgba(232, 213, 209, 0.08);
+  --unit-shadow-lg: 0 15px 50px rgba(232, 213, 209, 0.12);
   /* Tipografía */
-  --unit-font-heading: 'Playfair Display', Georgia, serif;
-  --unit-font-body: var(--font-outfit), 'Outfit', system-ui, sans-serif;
-  /* Gradiente hero más atractivo */
-  --unit-gradient-hero: linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 50%, #DDD6FE 100%);
+  --unit-font-heading: 'Bebas Neue', 'Oswald', sans-serif;
+  --unit-font-body: 'Inter', system-ui, sans-serif;
+  /* Gradiente hero con colores mantenidos */
+  --unit-gradient-hero: linear-gradient(135deg, #E8D5D1 0%, #FCFCFC 100%);
   --unit-icon-style: outline;
 }
 
 /* ========== SPA Dark Mode ========== */
 .dark[data-unit='SPA'] {
-  /* Colores principales para SPA en modo oscuro */
-  --unit-primary: #E9D5FF; /* Lavanda brillante */
-  --unit-primary-dark: #DDD6FE;
-  --unit-secondary: #2E1065; /* Púrpura profundo */
-  --unit-accent: #A78BFA; /* Púrpura brillante suave */
-  --unit-accent-hover: #C4B5FD;
+  /* Colores principales con nueva paleta */
+  --unit-primary: #E8D5D1; /* Rosa suave principal */
+  --unit-primary-dark: #937A52; /* Café medio oscuro */
+  --unit-secondary: #222220; /* Negro suave */
+  --unit-accent: #FCFCFC; /* Blanco brillante para CTAs */
+  --unit-accent-hover: #E8D5D1; /* Rosa suave para hover */
   
   /* Texto para SPA dark con máximo contraste */
-  --unit-text: #FFFFFF; /* Blanco puro para máxima legibilidad */
-  --unit-text-muted: #E2E8F0; /* Gris claro para texto secundario */
+  --unit-text: #FCFCFC; /* Blanco brillante para máxima legibilidad */
+  --unit-text-muted: #E8D5D1; /* Rosa suave para texto secundario */
   
-  /* Superficies para SPA dark con gradientes */
-  --unit-surface: #1E1B4B; /* Púrpura muy oscuro */
-  --unit-surface-elevated: #312E81; /* Púrpura oscuro medio */
+  /* Superficies para SPA dark con nueva paleta */
+  --unit-surface: #222220; /* Negro suave como fondo principal */
+  --unit-surface-elevated: #2A2A28; /* Negro suave ligeramente más claro */
   
-  /* Bordes para SPA dark más visibles */
-  --unit-border: rgba(226, 232, 240, 0.35);
+  /* Bordes para SPA dark con rosa sutil */
+  --unit-border: rgba(232, 213, 209, 0.3);
   
-  /* Sombras para SPA dark con más profundidad */
-  --unit-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
-  --unit-shadow-lg: 0 12px 40px rgba(139, 92, 246, 0.4);
+  /* Sombras para SPA dark con tonos cálidos */
+  --unit-shadow: 0 4px 20px rgba(147, 122, 82, 0.25);
+  --unit-shadow-lg: 0 12px 40px rgba(147, 122, 82, 0.35);
   
-  /* Gradiente hero para SPA dark más elegante */
-  --unit-gradient-hero: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4C1D95 100%);
+  /* Gradiente hero para SPA dark con nueva paleta */
+  --unit-gradient-hero: linear-gradient(135deg, #222220 0%, #2A2A28 50%, #333330 100%);
 }
 
 /* ========== Barbería — Urbana y masculina ========== */
@@ -307,14 +308,14 @@ body {
 }
 .appointment-calendar .fc-event-unit { font-size: 0.75rem; }
 .appointment-calendar .fc-event-spa {
-  background: #e8d5f5;
-  border-color: #c9a96e;
-  color: #4a3728;
+  background: var(--unit-primary);
+  border-color: var(--unit-primary-dark);
+  color: var(--unit-text);
 }
 .appointment-calendar .fc-event-barberia {
-  background: #2d2d2d;
-  border-color: #8b0000;
-  color: #f5f5f5;
+  background: var(--unit-primary);
+  border-color: var(--unit-primary-dark);
+  color: var(--unit-text);
 }
 .appointment-calendar .fc-event-confirmed {
   background: linear-gradient(135deg, #10b981, #059669);
