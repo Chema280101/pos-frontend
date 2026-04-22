@@ -16,6 +16,10 @@ interface ArqueoProps {
   wallet: number;
   expenses: number;
   cashEntries: number;
+  cashExpenses: number;
+  cardExpenses: number;
+  transferExpenses: number;
+  walletExpenses: number;
 }
 
 const DENOM_ORDER = [200, 100, 50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1];
@@ -32,6 +36,10 @@ export function CashClosingArqueo({
   wallet,
   expenses,
   cashEntries,
+  cashExpenses,
+  cardExpenses,
+  transferExpenses,
+  walletExpenses,
 }: ArqueoProps): JSX.Element {
   const totalDeclared = useMemo(
     () => DENOM_ORDER.reduce((acc, d) => acc + d * (denominations[d] ?? 0), 0),
@@ -67,7 +75,16 @@ export function CashClosingArqueo({
           <Row label="Total ventas" value={totalSales} bold />
         </div>
         <Row label="Ingresos manuales" value={cashEntries} className="text-emerald-600" />
-        <Row label="Egresos" value={-expenses} className="text-red-500" />
+        <div className="border-t py-2" style={{ borderColor: 'var(--unit-border)' }}>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--unit-text)]/60">
+            Egresos por método
+          </p>
+          {cashExpenses > 0 && <Row label="Efectivo" value={-cashExpenses} className="text-red-500" />}
+          {cardExpenses > 0 && <Row label="Tarjeta" value={-cardExpenses} className="text-red-500" />}
+          {transferExpenses > 0 && <Row label="Transferencia" value={-transferExpenses} className="text-red-500" />}
+          {walletExpenses > 0 && <Row label="Billetera" value={-walletExpenses} className="text-red-500" />}
+          {expenses > 0 && <Row label="Total egresos" value={-expenses} bold className="text-red-600" />}
+        </div>
       </div>
 
       {/* Conteo de denominaciones */}

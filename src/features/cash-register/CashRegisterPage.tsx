@@ -34,6 +34,7 @@ export function CashRegisterPage(): JSX.Element {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseReason, setExpenseReason] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('other');
+  const [expensePaymentMethod, setExpensePaymentMethod] = useState('CASH');
   const [showClose, setShowClose] = useState(false);
   const [showExpense, setShowExpense] = useState(false);
   const [showCashEntry, setShowCashEntry] = useState(false);
@@ -186,8 +187,9 @@ export function CashRegisterPage(): JSX.Element {
         amount: Number(expenseAmount),
         reason: expenseReason.trim(),
         category: expenseCategory,
+        paymentMethod: expensePaymentMethod,
       };
-      
+
       await api.post(`/api/cash-register/${openRegister?.id}/expense`, payload);
     },
     onSuccess: () => {
@@ -201,6 +203,7 @@ export function CashRegisterPage(): JSX.Element {
       setExpenseAmount('');
       setExpenseReason('');
       setExpenseCategory('other');
+      setExpensePaymentMethod('CASH');
     },
   });
 
@@ -655,6 +658,10 @@ export function CashRegisterPage(): JSX.Element {
                         wallet={summary.wallet}
                         expenses={summary.expenses}
                         cashEntries={summary.cashEntries || 0}
+                        cashExpenses={summary.cashExpenses || 0}
+                        cardExpenses={summary.cardExpenses || 0}
+                        transferExpenses={summary.transferExpenses || 0}
+                        walletExpenses={summary.walletExpenses || 0}
                       />
                     </div>
                   )}
@@ -828,6 +835,21 @@ export function CashRegisterPage(): JSX.Element {
                         <option value="utilities">Servicios básicos</option>
                         <option value="marketing">Marketing</option>
                         <option value="office">Oficina</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">
+                        Método de Pago
+                      </label>
+                      <select
+                        value={expensePaymentMethod}
+                        onChange={(e) => setExpensePaymentMethod(e.target.value)}
+                        className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-[var(--unit-surface-elevated)] to-[var(--unit-surface)] px-4 py-3 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="CASH">Efectivo</option>
+                        <option value="CARD">Tarjeta</option>
+                        <option value="TRANSFER">Transferencia</option>
+                        <option value="DIGITAL_WALLET">Billetera Digital</option>
                       </select>
                     </div>
                     <div>
