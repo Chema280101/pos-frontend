@@ -21,6 +21,7 @@ import { CashRegisterOperations } from './CashRegisterOperations';
 
 // Importar CashRegisterMetrics
 import { CashRegisterMetrics } from './CashRegisterMetrics';
+import { CashClosingArqueo } from './CashClosingArqueo';
 
 export function CashRegisterPage(): JSX.Element {
   const queryClient = useQueryClient();
@@ -639,6 +640,25 @@ export function CashRegisterPage(): JSX.Element {
                 </div>
 
                 <div className="p-6">
+                  {/* Arqueo de Caja - Desglose completo */}
+                  {summary && (
+                    <div className="mb-6">
+                      <CashClosingArqueo
+                        denominations={quantities}
+                        expectedCash={summary.expectedCash}
+                        opening={summary.opening}
+                        totalSales={summary.totalSales}
+                        cash={summary.cash}
+                        cashFromSales={summary.cashFromSales || 0}
+                        card={summary.card}
+                        transfer={summary.transfer}
+                        wallet={summary.wallet}
+                        expenses={summary.expenses}
+                        cashEntries={summary.cashEntries || 0}
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-4 mb-6">
                     {/* Denominations Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -10,10 +10,12 @@ interface ArqueoProps {
   opening: number;
   totalSales: number;
   cash: number;
+  cashFromSales: number;
   card: number;
   transfer: number;
   wallet: number;
   expenses: number;
+  cashEntries: number;
 }
 
 const DENOM_ORDER = [200, 100, 50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1];
@@ -24,10 +26,12 @@ export function CashClosingArqueo({
   opening,
   totalSales,
   cash,
+  cashFromSales,
   card,
   transfer,
   wallet,
   expenses,
+  cashEntries,
 }: ArqueoProps): JSX.Element {
   const totalDeclared = useMemo(
     () => DENOM_ORDER.reduce((acc, d) => acc + d * (denominations[d] ?? 0), 0),
@@ -56,12 +60,13 @@ export function CashClosingArqueo({
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--unit-text)]/60">
             Ventas por método
           </p>
-          <Row label="Efectivo" value={cash} />
+          <Row label="Efectivo" value={cashFromSales} />
           <Row label="Tarjeta" value={card} />
           <Row label="Transferencia" value={transfer} />
           <Row label="Billetera digital" value={wallet} />
           <Row label="Total ventas" value={totalSales} bold />
         </div>
+        <Row label="Ingresos manuales" value={cashEntries} className="text-emerald-600" />
         <Row label="Egresos" value={-expenses} className="text-red-500" />
       </div>
 
