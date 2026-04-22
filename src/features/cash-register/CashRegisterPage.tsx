@@ -407,11 +407,11 @@ export function CashRegisterPage(): JSX.Element {
         openedBy: 'Usuario', // Debería venir del backend
         closedBy: closeSignature,
         openingAmount: summary.opening || 0,
-        cashFromSales: summary.cash || 0,
+        cashFromSales: summary.cashFromSales || 0,
         cardSales: summary.card || 0,
         transferSales: summary.transfer || 0,
         walletSales: summary.wallet || 0,
-        totalSales: (summary.cash || 0) + (summary.card || 0) + (summary.transfer || 0) + (summary.wallet || 0),
+        totalSales: (summary.cashFromSales || summary.cash || 0) + (summary.card || 0) + (summary.transfer || 0) + (summary.wallet || 0),
         manualIncome: summary.cashEntries || 0,
         expenses: summary.expenses || 0,
         expectedCash: summary.expectedCash || 0,
@@ -436,7 +436,7 @@ export function CashRegisterPage(): JSX.Element {
 
   const kpiCards = summary
     ? [
-        { label: 'Efectivo', value: summary.cash, icon: Banknote, color: 'text-emerald-600' },
+        { label: 'Efectivo', value: summary.cashFromSales || 0, icon: Banknote, color: 'text-emerald-600' },
         { label: 'Tarjeta', value: summary.card, icon: CreditCard, color: 'text-blue-600' },
         { label: 'Transferencia', value: summary.transfer, icon: ArrowRightLeft, color: 'text-violet-600' },
         { label: 'Billetera', value: summary.wallet, icon: Smartphone, color: 'text-orange-600' },
@@ -543,7 +543,7 @@ export function CashRegisterPage(): JSX.Element {
                           </div>
                           <div className="flex-1">
                             <p className="text-xs font-medium text-[var(--unit-text-muted)]">Efectivo</p>
-                            <p className="font-bold text-lg text-[var(--unit-text)] tabular-nums">S/ {summary.cash.toFixed(2)}</p>
+                            <p className="font-bold text-lg text-[var(--unit-text)] tabular-nums">S/ {(summary.cashFromSales || 0).toFixed(2)}</p>
                           </div>
                         </div>
                       </div>

@@ -109,7 +109,7 @@ export function CashRegisterHeader({
               <div>
                 <p className="text-sm text-gray-600">Ventas Efectivo</p>
                 <p className="text-2xl font-bold text-green-600">
-                  S/ {summary.cash?.toFixed(2) || '0.00'}
+                  S/ {(summary.cashFromSales || summary.cash || 0).toFixed(2)}
                 </p>
               </div>
               <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
