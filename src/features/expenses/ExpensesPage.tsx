@@ -75,25 +75,29 @@ export function ExpensesPage(): JSX.Element {
   // ✅ MEJORADO: Query con paginación real
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+  const [getAll, setGetAll] = useState(true); // ✅ Por defecto obtener todos los registros
 
   const { data: expensesData, isLoading } = useQuery({
-    queryKey: ['expenses', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryFilter, debouncedSearch],
+    queryKey: ['expenses', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryFilter, debouncedSearch, getAll],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (unitFilter) params.set('unit', unitFilter);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
-      
+
       // Add date range filters
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
-      
+
       // Add category filter
       if (categoryFilter) params.set('category', categoryFilter);
-      
+
       // Add search filter
       if (debouncedSearch) params.set('search', debouncedSearch);
-      
+
+      // Add getAll parameter
+      if (getAll) params.set('getAll', 'true');
+
       const { data } = await api.get(`/api/expenses?${params}`);
       return data;
     },
