@@ -13,7 +13,7 @@ import { CommissionsMetrics } from './CommissionsMetrics';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Commission, GroupedCommission, CommissionsResponse } from '@/types/commission';
+import type { Commission, GroupedCommission, CommissionsResponse, CommissionStatus } from '@/types/commission';
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -108,44 +108,16 @@ export function AdminCommissions(): JSX.Element {
       let commissionsToMark;
       
       if (group.id.includes('consolidated_')) {
-        // Es un ID consolidado, usar las ventas individuales para crear comisiones individuales
-        console.log('DEBUG - Group sales:', group.sales);
-        console.log('DEBUG - First sale structure:', group.sales[0]);
-        console.log('DEBUG - First sale properties:', Object.keys(group.sales[0]));
-        
-        if (group.sales && Array.isArray(group.sales)) {
-          // Buscar comisiones individuales existentes que coincidan con estas ventas
-          const individualCommissions = groupedCommissions.filter(c => 
-            !c.id.includes('consolidated_') && // No debe ser consolidado
-            c.userId === group.userId && 
-            c.date === group.date
-          );
-          
-          console.log('DEBUG - Found individual commissions:', individualCommissions.length);
-          console.log('DEBUG - Individual commission IDs:', individualCommissions.map(c => c.id));
-          
-          if (individualCommissions.length > 0) {
-            commissionsToMark = individualCommissions;
-          } else {
-            // USAR IDs REALES DE VENTAS - Cada venta debe tener una comisión asociada
-            console.log('DEBUG - Using real sale IDs as commission IDs');
-            commissionsToMark = group.sales.map((sale: any) => ({
-              id: sale.id, // Usar el ID real de la venta como ID de comisión
-              userId: group.userId,
-              userName: group.userName,
-              userUnit: group.userUnit,
-              date: group.date,
-              amount: (sale.amount * (sale.pctApplied || 0.1)), // Usar amount y pctApplied reales
-              pctApplied: sale.pctApplied || 0.1,
-              saleNumber: sale.saleNumber,
-              saleId: sale.id,
-              // Para compatibilidad con la API
-              totalAmount: (sale.amount * (sale.pctApplied || 0.1)),
-              basedOnGross: true
-            }));
-          }
+        // ✅ Usar los IDs de comisiones reales del campo commissionIds
+        if (group.commissionIds && Array.isArray(group.commissionIds) && group.commissionIds.length > 0) {
+          console.log('DEBUG - Using commissionIds from consolidated group:', group.commissionIds);
+          commissionsToMark = group.commissionIds.map(id => ({ id }));
+        } else if (group.sales && Array.isArray(group.sales)) {
+          // Fallback: Usar IDs de sales si commissionIds no está disponible
+          console.log('DEBUG - commissionIds not available, using sales IDs');
+          commissionsToMark = group.sales.map((sale: any) => ({ id: sale.id }));
         } else {
-          throw new Error('No sales data found in consolidated commission');
+          throw new Error('No commission IDs or sales data found in consolidated commission');
         }
       } else {
         // Es una comisión individual
@@ -507,64 +479,6 @@ export function AdminCommissions(): JSX.Element {
     },
   });
 
-  // Helper function to group commissions (moved outside mutation to avoid hook error)
-  const groupCommissionsByEmployeeAndDate = (commissionsToGroup: Commission[]): GroupedCommission[] => {
-    const groups: Record<string, Commission[]> = {};
-    
-    commissionsToGroup.forEach(commission => {
-      const commissionDate = new Date(commission.createdAt);
-      // ✅ CORRECCIÓN: Usar fecha local sin conversión UTC
-      const dateKey = commissionDate.getFullYear() + '-' + 
-                    String(commissionDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(commissionDate.getDate()).padStart(2, '0');
-      const groupKey = `${commission.user.id}_${dateKey}`;
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(commission);
-    });
-    
-    return Object.entries(groups).map(([groupKey, commissionList]) => {
-      const [employeeId, date] = groupKey.split('_');
-      const firstCommission = commissionList[0];
-      
-      const totalAmount = commissionList.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
-      const totalSales = commissionList.length;
-      const allPaid = commissionList.every(c => c.status === 'PAID');
-      const allPending = commissionList.every(c => c.status === 'PENDING');
-      
-      let status = 'MIXED';
-      if (allPaid) status = 'PAID';
-      else if (allPending) status = 'PENDING';
-      
-      return {
-        id: groupKey,
-        userId: employeeId,
-        userName: firstCommission.user.name,
-        userUnit: firstCommission.user.unit || '',
-        date,
-        totalAmount,
-        commissionCount: totalSales,
-        status,
-        sales: commissionList.map(c => ({
-          id: c.id,
-          saleNumber: c.sale?.saleNumber || 'N/A',
-          amount: c.amount,
-          createdAt: parseISO(c.createdAt),
-          pctApplied: c.pctApplied
-        })),
-        commissions: commissionList, // Para compatibilidad
-        createdAt: firstCommission.createdAt,
-        sale: firstCommission.sale,
-        // Para compatibilidad con estructura antigua
-        employeeId,
-        employeeName: firstCommission.user.name,
-        employeeUnit: firstCommission.user.unit || '',
-        totalSales,
-      };
-    });
-  };
 
   // Export PDF mutation - Profesional con jsPDF
   const exportPDFMutation = useMutation({
@@ -614,8 +528,8 @@ export function AdminCommissions(): JSX.Element {
         );
       }
 
-      // Group filtered commissions by employee and date (using helper function)
-      const filteredGroupedCommissions = groupCommissionsByEmployeeAndDate(filteredCommissions);
+      // Use filtered commissions directly (backend already groups them)
+      const filteredGroupedCommissions = filteredCommissions;
 
       // Create professional PDF with jsPDF
       const doc = new jsPDF();

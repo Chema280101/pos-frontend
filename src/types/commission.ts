@@ -47,6 +47,7 @@ export interface GroupedCommission {
   paymentNotes: string | null;
   createdAt: string;
   updatedAt: string;
+  commissionIds?: string[]; // ✅ IDs de comisiones individuales reales
   sales: Array<{
     id: string;
     saleNumber: string;

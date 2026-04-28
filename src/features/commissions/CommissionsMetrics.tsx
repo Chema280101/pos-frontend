@@ -1,22 +1,10 @@
 import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, CheckCircle, Clock, XCircle, Award, Target, BarChart3, Star, Zap, CreditCard, Building2, Receipt } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-interface Commission {
-  id: string;
-  amount: number;
-  pctApplied: number;
-  status: string;
-  paidAt: string | null;
-  paymentMethod: string | null;
-  paymentNotes: string | null;
-  createdAt: string;
-  user: { id: string; name: string; unit: string | null };
-  sale: { id: string; saleNumber: string; unit: string; total: number; createdAt: string } | null;
-}
+import type { GroupedCommission } from '@/types/commission';
 
 interface CommissionsMetricsProps {
-  commissions: Commission[];
+  commissions: GroupedCommission[];
 }
 
 export function CommissionsMetrics({ commissions }: CommissionsMetricsProps) {
@@ -42,28 +30,23 @@ export function CommissionsMetrics({ commissions }: CommissionsMetricsProps) {
   // Status breakdown
   const paidCommissions = commissions.filter(commission => commission.status === 'PAID');
   const pendingCommissions = commissions.filter(commission => commission.status === 'PENDING');
-  const cancelledCommissions = commissions.filter(commission => commission.status === 'CANCELLED');
 
   // Unit breakdown
   const barberiaCommissions = commissions.filter(commission => 
-    commission.user.unit === 'BARBERIA' || commission.sale?.unit === 'BARBERIA'
+    commission.userUnit === 'BARBERIA' || commission.user.unit === 'BARBERIA'
   );
   const spaCommissions = commissions.filter(commission => 
-    commission.user.unit === 'SPA' || commission.sale?.unit === 'SPA'
+    commission.userUnit === 'SPA' || commission.user.unit === 'SPA'
   );
 
   // Financial metrics
-  const totalCommissions = commissions.reduce((sum, commission) => sum + commission.amount, 0);
+  const totalCommissions = commissions.reduce((sum, commission) => sum + commission.totalAmount, 0);
   const avgCommissionAmount = commissions.length > 0 ? totalCommissions / commissions.length : 0;
-  const avgCommissionRate = commissions.length > 0 
-    ? commissions.reduce((sum, commission) => sum + commission.pctApplied, 0) / commissions.length 
-    : 0;
 
   // Performance metrics
-  const commissionsWithSales = commissions.filter(commission => commission.sale !== null);
   const topPerformers = commissions.reduce((acc, commission) => {
-    const userName = commission.user.name;
-    acc[userName] = (acc[userName] || 0) + commission.amount;
+    const userName = commission.userName || commission.user.name;
+    acc[userName] = (acc[userName] || 0) + commission.totalAmount;
     return acc;
   }, {} as Record<string, number>);
   
@@ -89,8 +72,8 @@ export function CommissionsMetrics({ commissions }: CommissionsMetricsProps) {
   , paymentMethods[0]);
 
   // Best performing unit
-  const barberiaTotal = barberiaCommissions.reduce((sum, commission) => sum + commission.amount, 0);
-  const spaTotal = spaCommissions.reduce((sum, commission) => sum + commission.amount, 0);
+  const barberiaTotal = barberiaCommissions.reduce((sum, commission) => sum + commission.totalAmount, 0);
+  const spaTotal = spaCommissions.reduce((sum, commission) => sum + commission.totalAmount, 0);
   const bestUnit = barberiaTotal > spaTotal ? 'BARBERIA' : 'SPA';
   const bestUnitRevenue = Math.max(barberiaTotal, spaTotal);
 
