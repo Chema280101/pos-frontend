@@ -116,21 +116,64 @@ export function ReportsPage(): JSX.Element {
   // Export mutations
   const exportExcelMutation = useMutation({
     mutationFn: async () => {
-      // Simulate Excel export with mock data using ExcelJS
-      const mockData = [
-        ['ID', 'Tipo', 'Fecha', 'Monto', 'Estado'],
-        [1, detectedReportType, format(new Date(), 'dd/MM/yyyy'), 1500, 'Completado'],
-        [2, detectedReportType, format(subDays(new Date(), 1), 'dd/MM/yyyy'), 2300, 'Pendiente'],
-        [3, detectedReportType, format(subDays(new Date(), 2), 'dd/MM/yyyy'), 1800, 'Completado']
-      ];
+      // Obtener datos reales del backend
+      const params = new URLSearchParams({
+        from: dateFrom.toISOString(),
+        to: dateTo.toISOString(),
+        unit: activeUnit || '',
+        format: 'csv'
+      });
+
+      let endpoint = '';
+      let headers: string[] = [];
+
+      switch (detectedReportType) {
+        case 'sales':
+          endpoint = '/api/reports/sales/export';
+          headers = ['id', 'saleNumber', 'unit', 'total', 'status', 'createdAt', 'customerName', 'employeeName'];
+          break;
+        case 'appointments':
+          endpoint = '/api/reports/appointments/export';
+          headers = ['id', 'startTime', 'endTime', 'status', 'unit', 'customerName', 'employeeName', 'serviceName'];
+          break;
+        case 'clients':
+          endpoint = '/api/reports/clients/export';
+          headers = ['id', 'name', 'phone', 'email', 'howFoundUs', 'createdAt', 'totalVisits'];
+          break;
+        case 'inventory':
+          endpoint = '/api/reports/inventory/export';
+          headers = ['id', 'name', 'type', 'unit', 'category', 'stock', 'minStock', 'salePrice'];
+          break;
+        case 'commissions':
+          endpoint = '/api/reports/commissions/export';
+          headers = ['id', 'userName', 'amount', 'status', 'createdAt', 'saleNumber'];
+          break;
+        case 'cash-register':
+          endpoint = '/api/reports/cash-register/export';
+          headers = ['id', 'date', 'unit', 'openingAmount', 'closingAmount', 'status', 'employeeName'];
+          break;
+        default:
+          // Para overview, usar datos de ventas por defecto
+          endpoint = '/api/reports/sales/export';
+          headers = ['id', 'saleNumber', 'unit', 'total', 'status', 'createdAt', 'customerName', 'employeeName'];
+      }
+
+      // Llamar a la API para obtener datos reales
+      const response = await api.get(`${endpoint}?${params}`);
+      const realData = response.data.data || [];
 
       // Create Excel workbook
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Reporte');
 
-      // Add data to worksheet
-      worksheet.addRow(mockData[0]); // Header
-      mockData.slice(1).forEach(row => worksheet.addRow(row)); // Data rows
+      // Add header
+      worksheet.addRow(headers.map(h => h.charAt(0).toUpperCase() + h.slice(1)));
+
+      // Add data rows
+      realData.forEach((row: any) => {
+        const rowData = headers.map(header => row[header] || '');
+        worksheet.addRow(rowData);
+      });
 
       // Style header
       worksheet.getRow(1).font = { bold: true, size: 12 };
@@ -143,7 +186,7 @@ export function ReportsPage(): JSX.Element {
       // Auto-fit columns
       worksheet.columns.forEach((column) => {
         if (column.header) {
-          column.width = column.header.toString().length + 10;
+          column.width = Math.max(column.header.toString().length + 5, 15);
         }
       });
 
@@ -151,8 +194,8 @@ export function ReportsPage(): JSX.Element {
       const buffer = await workbook.xlsx.writeBuffer();
 
       // Create blob and download
-      const blob = new Blob([buffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -163,7 +206,7 @@ export function ReportsPage(): JSX.Element {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      setNotification({type: 'success', message: 'Reporte Excel exportado exitosamente'});
+      setNotification({type: 'success', message: `Reporte Excel exportado con ${realData.length} registros`});
       setShowExportModal(false);
     },
     onSuccess: () => {
