@@ -80,25 +80,19 @@ export function ReportsPage(): JSX.Element {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel');
   const [exportConfig, setExportConfig] = useState({
-    unit: 'ALL' as 'ALL' | 'SPA' | 'BARBERIA',
-    dateFrom: startOfDay(subDays(new Date(), 30)),
-    dateTo: endOfDay(new Date()),
     includeLogo: true,
     includeTotals: true,
-    includeBorders: true
+    includeBorders: true,
   });
 
-  // Reset export modal when closed
+  // Sincronizar con filtros principales cuando se abre el modal
   useEffect(() => {
-    if (!showExportModal) {
+    if (showExportModal) {
       setExportType('excel');
       setExportConfig({
-        unit: 'ALL' as 'ALL' | 'SPA' | 'BARBERIA',
-        dateFrom: startOfDay(subDays(new Date(), 30)),
-        dateTo: endOfDay(new Date()),
         includeLogo: true,
         includeTotals: true,
-        includeBorders: true
+        includeBorders: true,
       });
     }
   }, [showExportModal]);
@@ -274,11 +268,11 @@ export function ReportsPage(): JSX.Element {
   const exportPDFMutation = useMutation({
     mutationFn: async () => {
       // Get unit colors for PDF styling
-      const unitColors = exportConfig.unit === 'ALL' ? {
+      const unitColors = !activeUnit ? {
         primary: '#4A0E0E',
         accent: '#0028b3',
         secondary: '#F8F5FF'
-      } : exportConfig.unit === 'SPA' ? {
+      } : activeUnit === 'SPA' ? {
         primary: '#6B46C1',
         accent: '#9333EA',
         secondary: '#F3E8FF'
@@ -317,8 +311,8 @@ export function ReportsPage(): JSX.Element {
       currentY += 10;
       doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
-      const unitName = exportConfig.unit === 'ALL' ? 'TODAS LAS UNIDADES' : 
-                      exportConfig.unit === 'SPA' ? 'SPA' : 'BARBERÍA';
+      const unitName = !activeUnit ? 'TODAS LAS UNIDADES' : 
+                      activeUnit === 'SPA' ? 'SPA' : 'BARBERÍA';
       doc.text(`Unidad: ${unitName}`, pageWidth / 2, currentY, { align: 'center' });
       
       // Date and period info (right aligned)
@@ -326,7 +320,7 @@ export function ReportsPage(): JSX.Element {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const dateStr = format(new Date(), 'dd/MM/yyyy');
-      const periodStr = `${format(exportConfig.dateFrom, 'dd/MM/yyyy')} al ${format(exportConfig.dateTo, 'dd/MM/yyyy')}`;
+      const periodStr = `${format(dateFrom, 'dd/MM/yyyy')} al ${format(dateTo, 'dd/MM/yyyy')}`;
       doc.text(`Fecha: ${dateStr}`, pageWidth - 60, currentY);
       currentY += 6;
       doc.text(`Período: ${periodStr}`, pageWidth - 60, currentY);
@@ -753,51 +747,28 @@ export function ReportsPage(): JSX.Element {
 
             {/* Content */}
             <div className="relative space-y-4">
-              {/* Unit Selection */}
-              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
-                <label className="block text-sm font-medium text-[var(--unit-text)] mb-2">
-                  Unidad de Negocio
-                </label>
-                <select
-                  value={exportConfig.unit}
-                  onChange={(e) => setExportConfig((prev: any) => ({ ...prev, unit: e.target.value as any }))}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-2.5 text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                >
-                  <option value="ALL">Todas las unidades</option>
-                  <option value="SPA">SPA</option>
-                  <option value="BARBERIA">Barbería</option>
-                </select>
-              </div>
-
-              {/* Date Range */}
+              {/* Información Actual */}
               <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
                 <label className="block text-sm font-medium text-[var(--unit-text)] mb-3">
-                  Período de Exportación
+                  Configuración Actual
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--unit-text-muted)] mb-1">
-                      Desde
-                    </label>
-                    <input
-                      type="date"
-                      value={exportConfig.dateFrom.toISOString().split('T')[0]}
-                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, dateFrom: new Date(e.target.value) }))}
-                      className="w-full rounded-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    />
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[var(--unit-text-muted)]">Unidad:</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {!activeUnit ? 'Todas' : activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--unit-text-muted)] mb-1">
-                      Hasta
-                    </label>
-                    <input
-                      type="date"
-                      value={exportConfig.dateTo.toISOString().split('T')[0]}
-                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, dateTo: new Date(e.target.value) }))}
-                      className="w-full rounded-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-3 py-2 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[var(--unit-text-muted)]">Período:</span>
+                    <span className="text-sm font-medium text-[var(--unit-text)]">
+                      {format(dateFrom, 'dd/MM/yyyy')} - {format(dateTo, 'dd/MM/yyyy')}
+                    </span>
                   </div>
                 </div>
+                <p className="text-xs text-[var(--unit-text-muted)] mt-2">
+                  Usa los filtros de la página para cambiar estos valores
+                </p>
               </div>
 
               {/* Include Logo */}
@@ -859,13 +830,13 @@ export function ReportsPage(): JSX.Element {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-[var(--unit-text-muted)]">Unidad</span>
                     <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {exportConfig.unit === 'ALL' ? 'Todas' : exportConfig.unit === 'SPA' ? 'SPA' : 'Barbería'}
+                      {!activeUnit ? 'Todas' : activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-[var(--unit-text-muted)]">Período</span>
                     <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {format(exportConfig.dateFrom, 'dd/MM/yyyy')} - {format(exportConfig.dateTo, 'dd/MM/yyyy')}
+                      {format(dateFrom, 'dd/MM/yyyy')} - {format(dateTo, 'dd/MM/yyyy')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
