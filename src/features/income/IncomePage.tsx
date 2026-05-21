@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { useUnitStore } from '@/store/unitStore';
 import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, CreditCard, Wallet, Smartphone, ChevronDown, ChevronUp, Layers, Scissors, Tag } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
@@ -105,9 +106,17 @@ export function IncomePage(): JSX.Element {
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
 
   const user = useAuthStore((s) => s.user);
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // Auto-filter by active unit
+  useEffect(() => {
+    if (activeUnit) {
+      setUnitFilter(activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA');
+    }
+  }, [activeUnit]);
 
   // ✅ MEJORADO: Query con paginación real
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,7 +126,7 @@ export function IncomePage(): JSX.Element {
     queryKey: ['income', unitFilter, currentPage, pageSize, dateFrom, dateTo, paymentMethodFilter, statusFilter, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (unitFilter) params.set('unit', unitFilter);
+      if (unitFilter) params.set('unitFilter', unitFilter);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
 

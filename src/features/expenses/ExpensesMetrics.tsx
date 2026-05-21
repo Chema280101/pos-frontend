@@ -1,5 +1,22 @@
 import { TrendingDown, Calendar, DollarSign, BarChart3, Receipt, ShoppingCart, Home, Users, ArrowUp, ArrowDown, Activity, AlertTriangle, Building2 } from 'lucide-react';
 
+// Helper function to translate category names
+const translateCategory = (category: string): string => {
+  const translations: Record<string, string> = {
+    'other': 'Otros',
+    'others': 'Otros',
+    'supplies': 'Insumos',
+    'services': 'Servicios',
+    'maintenance': 'Mantenimiento',
+    'rent': 'Alquiler',
+    'utilities': 'Servicios básicos',
+    'marketing': 'Marketing',
+    'office': 'Oficina',
+    'comisiones': 'Comisiones',
+  };
+  return translations[category.toLowerCase()] || category;
+};
+
 interface Expense {
   id: string;
   amount: number;
@@ -192,7 +209,7 @@ export function ExpensesMetrics({ expenses }: ExpensesMetricsProps) {
               <span className="text-xs font-bold text-purple-800 bg-white px-3 py-1 rounded-full border border-purple-300 shadow-sm">Categoría</span>
             </div>
             <p className="text-lg font-bold text-purple-900 tabular-nums mb-1 truncate">
-              {topCategory[0] || 'N/A'}
+              {translateCategory(topCategory[0]) || 'N/A'}
             </p>
             <p className="text-sm text-purple-700 font-medium">
               S/{topCategory[1].toFixed(2)}

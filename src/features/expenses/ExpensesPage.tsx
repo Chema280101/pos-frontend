@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { useUnitStore } from '@/store/unitStore';
 import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, Building2, Receipt, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
@@ -61,8 +62,16 @@ export function ExpensesPage(): JSX.Element {
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
   
   const user = useAuthStore((s) => s.user);
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' || user?.role === 'MANAGER';
   const router = useRouter();
+  
+  // Auto-filter by active unit
+  useEffect(() => {
+    if (activeUnit) {
+      setUnitFilter(activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA');
+    }
+  }, [activeUnit]);
   
   // ✅ Seguridad: Solo usar useQueryClient si estamos en el contexto correcto
   let queryClient: ReturnType<typeof useQueryClient> | undefined;
@@ -81,7 +90,7 @@ export function ExpensesPage(): JSX.Element {
     queryKey: ['expenses', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryFilter, debouncedSearch, getAll],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (unitFilter) params.set('unit', unitFilter);
+      if (unitFilter) params.set('unitFilter', unitFilter);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
 
@@ -128,16 +137,51 @@ export function ExpensesPage(): JSX.Element {
   });
 
   // Helper functions
+  const translateCategory = useCallback((category: string) => {
+    const translations: Record<string, string> = {
+      'other': 'Otros',
+      'others': 'Otros',
+      'supplies': 'Insumos',
+      'services': 'Servicios',
+      'maintenance': 'Mantenimiento',
+      'rent': 'Alquiler',
+      'utilities': 'Servicios básicos',
+      'marketing': 'Marketing',
+      'office': 'Oficina',
+      'comisiones': 'Comisiones',
+    };
+    return translations[category.toLowerCase()] || category;
+  }, []);
+
   const getCategoryColor = useCallback((category: string) => {
-    switch (category.toLowerCase()) {
+    const normalizedCategory = category.toLowerCase();
+    switch (normalizedCategory) {
       case 'servicios':
+      case 'services':
         return 'bg-blue-100 text-blue-800';
-      case 'productos':
+      case 'insumos':
+      case 'supplies':
         return 'bg-green-100 text-green-800';
-      case 'operativos':
+      case 'mantenimiento':
+      case 'maintenance':
         return 'bg-orange-100 text-orange-800';
-      case 'administrativos':
-        return 'bg-purple-100 text-purple-800';
+      case 'alquiler':
+      case 'rent':
+        return 'bg-red-100 text-red-800';
+      case 'servicios básicos':
+      case 'utilities':
+        return 'bg-cyan-100 text-cyan-800';
+      case 'marketing':
+        return 'bg-pink-100 text-pink-800';
+      case 'oficina':
+      case 'office':
+        return 'bg-amber-100 text-amber-800';
+      case 'otros':
+      case 'other':
+      case 'others':
+        return 'bg-gray-100 text-gray-800';
+      case 'comisiones':
+        return 'bg-rose-100 text-rose-800';
       default:
         return 'bg-indigo-100 text-indigo-800';
     }
@@ -182,7 +226,7 @@ export function ExpensesPage(): JSX.Element {
           'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
           getCategoryColor(row.category)
         )}>
-          {row.category}
+          {translateCategory(row.category)}
         </span>
       ),
     },
@@ -375,14 +419,14 @@ export function ExpensesPage(): JSX.Element {
                     onChange={(e) => setCategoryFilter(e.target.value)}
                   >
                     <option value="">Todas las categorías</option>
-                    <option value="other">Otros</option>
-                    <option value="supplies">Insumos</option>
-                    <option value="services">Servicios</option>
-                    <option value="maintenance">Mantenimiento</option>
-                    <option value="rent">Alquiler</option>
-                    <option value="utilities">Servicios básicos</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="office">Oficina</option>
+                    <option value="Otros">Otros</option>
+                    <option value="Insumos">Insumos</option>
+                    <option value="Servicios">Servicios</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Alquiler">Alquiler</option>
+                    <option value="Servicios básicos">Servicios básicos</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Oficina">Oficina</option>
                   </select>
                 </div>
 
