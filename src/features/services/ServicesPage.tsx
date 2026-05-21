@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useUnitStore } from '../../store/unitStore';
 import { Select, Button } from '@/components/ui';
 import { EmptyStateData } from '@/components/ui/EmptyState';
 import { Plus, Edit, Trash2, FolderPlus, Clock, DollarSign, Tag, Building2, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, TrendingDown, CheckCircle, Package } from 'lucide-react';
@@ -45,7 +46,7 @@ export function ServicesPage(): JSX.Element {
     }
   }, [viewModal]);
   
-  const [unitFilter, setUnitFilter] = useState<string>('');
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const [showFilters, setShowFilters] = useState(true);
   
   // Filter states
@@ -55,7 +56,7 @@ export function ServicesPage(): JSX.Element {
   const router = useRouter();
 
   const { data: servicesData, isLoading } = useQuery({
-    queryKey: ['services', unit, categoryId, unitFilter, debouncedSearch, statusFilter, page],
+    queryKey: ['services', unit, categoryId, activeUnit, debouncedSearch, statusFilter, page],
     queryFn: async (): Promise<{ data: Service[], pagination: any }> => {
       const params = new URLSearchParams();
       if (unit) params.set('unit', unit);
@@ -63,8 +64,8 @@ export function ServicesPage(): JSX.Element {
       params.set('page', String(page));
       params.set('limit', '15');
       
-      // Add unit filter from DateRangeFilter
-      if (unitFilter) params.set('unitFilter', unitFilter);
+      // Add unit filter from global header
+      if (activeUnit) params.set('unitFilter', activeUnit);
       
       // Add search filter
       if (debouncedSearch) params.set('search', debouncedSearch);
@@ -553,15 +554,15 @@ export function ServicesPage(): JSX.Element {
               </div>
 
               {/* Enhanced Active Filters Summary */}
-              {(unitFilter || categoryId || search || statusFilter) && (
+              {(activeUnit || categoryId || search || statusFilter) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
                       <div className="flex flex-wrap gap-2">
-                        {unitFilter && (
+                        {activeUnit && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {unitFilter}
+                            Unidad: {activeUnit}
                           </span>
                         )}
                         {categoryId && categories && (
@@ -583,7 +584,6 @@ export function ServicesPage(): JSX.Element {
                     </div>
                     <button
                       onClick={() => {
-                        setUnitFilter('');
                         setServiceCategoryId('');
                         setSearch('');
                         setStatusFilter('');

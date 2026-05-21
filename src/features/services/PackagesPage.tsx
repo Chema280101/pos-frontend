@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useUnitStore } from '../../store/unitStore';
 import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, XCircle, Scissors, ShoppingCart, Calendar, Users } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -28,7 +29,7 @@ export function PackagesPage(): JSX.Element {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { success, error } = useToast();
 
-  const [unitFilter, setUnitFilter] = useState<string>('');
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const [showFilters, setShowFilters] = useState(true);
 
   // Filter states
@@ -41,10 +42,12 @@ export function PackagesPage(): JSX.Element {
   const queryClient = useQueryClient();
 
   const { data: packages, isLoading } = useQuery({
-    queryKey: ['packages'],
+    queryKey: ['packages', activeUnit],
     queryFn: async (): Promise<Package[]> => {
       try {
-        const { data } = await api.get<{ data: Package[] }>('/api/packages');
+        const params = new URLSearchParams();
+        if (activeUnit) params.set('unit', activeUnit);
+        const { data } = await api.get<{ data: Package[] }>(`/api/packages?${params}`);
         console.log('Respuesta del backend:', data);
         // Validar que data.data exista y sea un array
         const packagesData = Array.isArray(data?.data) ? data.data : [];
@@ -369,15 +372,15 @@ export function PackagesPage(): JSX.Element {
               </div>
 
               {/* Enhanced Active Filters Summary */}
-              {(unitFilter || priceRangeFilter || statusFilter) && (
+              {(activeUnit || priceRangeFilter || statusFilter) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
                       <div className="flex flex-wrap gap-2">
-                        {unitFilter && (
+                        {activeUnit && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {unitFilter}
+                            Unidad: {activeUnit}
                           </span>
                         )}
                         {priceRangeFilter && (
@@ -394,7 +397,6 @@ export function PackagesPage(): JSX.Element {
                     </div>
                     <button
                       onClick={() => {
-                        setUnitFilter('');
                         setPriceRangeFilter('');
                         setStatusFilter('');
                       }}

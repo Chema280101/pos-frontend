@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useUnitStore } from '../../store/unitStore';
 import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, XCircle, Building2, RefreshCw, FileText } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -21,7 +22,7 @@ export function InventoryPage(): JSX.Element {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { success, error } = useToast();
   
-  const [unitFilter, setUnitFilter] = useState<string>('');
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const [showFilters, setShowFilters] = useState(true);
   
   // Additional filters (like appointments)
@@ -51,10 +52,10 @@ export function InventoryPage(): JSX.Element {
   const pageSize = 20;
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['inventory-products', unitFilter, currentPage, pageSize, categoryId, typeFilter, debouncedSearch],
+    queryKey: ['inventory-products', activeUnit, currentPage, pageSize, categoryId, typeFilter, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (unitFilter) params.set('unit', unitFilter);
+      if (activeUnit) params.set('unit', activeUnit);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
       
@@ -635,15 +636,15 @@ export function InventoryPage(): JSX.Element {
               </div>
 
               {/* Enhanced Active Filters Summary */}
-              {(unitFilter || categoryId || typeFilter || search) && (
+              {(activeUnit || categoryId || typeFilter || search) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
                       <div className="flex flex-wrap gap-2">
-                        {unitFilter && (
+                        {activeUnit && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {unitFilter}
+                            Unidad: {activeUnit}
                           </span>
                         )}
                         {categoryId && categories && (
@@ -667,7 +668,6 @@ export function InventoryPage(): JSX.Element {
                     </div>
                     <button
                       onClick={() => {
-                        setUnitFilter('');
                         setCategoryId('');
                         setTypeFilter('');
                         setSearch('');
