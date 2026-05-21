@@ -756,7 +756,7 @@ export function CashRegisterPage(): JSX.Element {
                         generateClosePdf(openRegister.id, unit, summary, quantities, closeSignature, closeNotes);
                       }
                     }}
-                      disabled={!closeSignature.trim() || closeMutation.isPending || (summary && Math.abs(totalDeclared - summary.expectedCash) > 50)}
+                      disabled={!closeSignature.trim() || closeMutation.isPending}
                       className="inline-flex items-center justify-center gap-2 rounded-[var(--unit-border-radius)] bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-3 text-sm font-semibold text-white shadow-[var(--unit-shadow)] transition-all hover:shadow-lg hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                       {closeMutation.isPending ? (
