@@ -9,6 +9,7 @@ import { DetailedReportsMetrics } from './DetailedReportsMetrics';
 import { Search, Filter, Download, Eye, Edit, DollarSign, User, Calendar, Building2, Package, Receipt, FileText, Users, Trash2, AlertCircle, ChevronDown, ChevronUp, BarChart3, TrendingUp, Clock, CheckCircle2, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
+import { useUnitStore } from '@/store/unitStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -51,7 +52,7 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
   const debouncedSearchTerm = useDebouncedValue(searchTerm.trim(), 300);
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [currentUnit, setCurrentUnit] = useState(unit);
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const [currentDateFrom, setCurrentDateFrom] = useState(dateFrom);
   const [currentDateTo, setCurrentDateTo] = useState(dateTo);
   const { success, error } = useToast();
@@ -61,18 +62,17 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
 
   // ✅ MEJORADO: Sync props with local state
   useEffect(() => {
-    setCurrentUnit(unit);
     setCurrentDateFrom(dateFrom);
     setCurrentDateTo(dateTo);
     setPage(1); // Reset page when filters change
-  }, [unit, dateFrom, dateTo]);
+  }, [dateFrom, dateTo]);
 
   // ✅ MEJORADO: Single unified query to new backend
   const { data: detailedData, isLoading } = useQuery({
-    queryKey: ['detailed-reports', currentUnit, currentDateFrom, currentDateTo, page, limit, selectedType, selectedStatus, debouncedSearchTerm],
+    queryKey: ['detailed-reports', activeUnit, currentDateFrom, currentDateTo, page, limit, selectedType, selectedStatus, debouncedSearchTerm],
     queryFn: async () => {
       const params = new URLSearchParams({
-        unit: currentUnit || '',
+        unit: activeUnit || '',
         from: currentDateFrom.toISOString(),
         to: currentDateTo.toISOString(),
         page: page.toString(),
@@ -394,7 +394,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
   const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
     try {
       const params = new URLSearchParams({
-        unit: currentUnit || '',
+        unit: activeUnit || '',
         from: currentDateFrom.toISOString(),
         to: currentDateTo.toISOString(),
         format,
@@ -457,7 +457,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
             selectedType={selectedType} 
             selectedStatus={selectedStatus} 
             searchTerm={searchTerm} 
-            unit={currentUnit} 
+            unit={activeUnit || ''} 
             dateFrom={currentDateFrom} 
             dateTo={currentDateTo} 
           />
@@ -523,9 +523,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
                 dateTo={currentDateTo}
                 onDateFromChange={(date: Date | null) => date && setCurrentDateFrom(date)}
                 onDateToChange={(date: Date | null) => date && setCurrentDateTo(date)}
-                unit={currentUnit}
-                onUnitChange={setCurrentUnit}
-                showUnitFilter={true}
+                showUnitFilter={false}
                 showStatusFilter={false}
                 className="rounded-xl"
               />
@@ -599,7 +597,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
               </div>
 
               {/* Enhanced Active Filters Summary */}
-              {(selectedType || selectedStatus || searchTerm || currentUnit) && (
+              {(selectedType || selectedStatus || searchTerm || activeUnit) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -620,9 +618,9 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
                             Búsqueda: {searchTerm}
                           </span>
                         )}
-                        {currentUnit && (
+                        {activeUnit && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {currentUnit === 'SPA' ? 'SPA' : 'Barbería'}
+                            Unidad: {activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
                           </span>
                         )}
                       </div>
@@ -632,7 +630,6 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
                         setSelectedType('');
                         setSelectedStatus('');
                         setSearchTerm('');
-                        setCurrentUnit('');
                       }}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
                     >
@@ -720,13 +717,13 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
             <span className="text-[var(--unit-text)]">
               {format(currentDateFrom, 'd MMM yyyy', { locale: es })} - {format(currentDateTo, 'd MMM yyyy', { locale: es })}
             </span>
-            {currentUnit && (
+            {activeUnit && (
               <>
                 <span className="text-[var(--unit-text-muted)]">•</span>
                 <Building2 className="h-4 w-4" />
                 <span className="font-medium">Unidad:</span>
                 <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] border border-[var(--unit-accent)]/20">
-                  {currentUnit === 'SPA' ? 'SPA' : 'Barbería'}
+                  {activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
                 </span>
               </>
             )}

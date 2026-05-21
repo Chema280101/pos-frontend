@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ReportOverview } from './ReportOverview';
 import { ReportsMetrics } from './ReportsMetrics';
+import { useUnitStore } from '@/store/unitStore';
 import { Download, Filter, ChevronDown, ChevronUp, BarChart3, DollarSign, Calendar, Users, Package, TrendingUp, Building2, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { startOfDay, endOfDay, subDays, format } from 'date-fns';
 import { api } from '@/lib/api';
@@ -62,7 +63,7 @@ export function ReportsPage(): JSX.Element {
     return 'overview'; // Default for main /reports page
   }, [pathname]);
 
-  const [unit, setUnit] = useState<string>('');
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const [dateFrom, setDateFrom] = useState(() => startOfDay(subDays(new Date(), 7)));
   const [dateTo, setDateTo] = useState(() => endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(true);
@@ -323,7 +324,7 @@ export function ReportsPage(): JSX.Element {
             reportType={detectedReportType} 
             dateFrom={dateFrom} 
             dateTo={dateTo} 
-            unit={unit} 
+            unit={activeUnit || ''} 
           />
 
           {/* Enhanced Action Buttons - Estilo ClientsPage */}
@@ -395,48 +396,27 @@ export function ReportsPage(): JSX.Element {
                 dateTo={dateTo}
                 onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
                 onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                unit={unit}
-                onUnitChange={setUnit}
-                showUnitFilter={true}
+                showUnitFilter={false}
                 showStatusFilter={false}
                 className="rounded-xl"
               />
 
-              {/* Additional Filter Controls - Solo Unidad */}
-              <div className="max-w-md">
-                {/* Unit Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Unidad</label>
-                  <select
-                    value={unit}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => setUnit(e.target.value)}
-                  >
-                    <option value="">Todas las unidades</option>
-                    <option value="SPA">SPA</option>
-                    <option value="BARBERIA">Barbería</option>
-                  </select>
-                </div>
-              </div>
 
               {/* Enhanced Active Filters Summary - Simplificado */}
-              {unit !== '' && (
+              {(activeUnit) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
                       <div className="flex flex-wrap gap-2">
-                        {unit && (
+                        {activeUnit && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Unidad: {unit === 'SPA' ? 'SPA' : 'Barbería'}
+                            Unidad: {activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
                           </span>
                         )}
                       </div>
                     </div>
                     <button
-                      onClick={() => {
-                        setUnit('');
-                      }}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
                     >
                       <X className="h-4 w-4" />
@@ -511,7 +491,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'overview' && (
                 <div className="space-y-4">
                   <ReportOverview
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
@@ -521,7 +501,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'sales' && (
                 <div className="space-y-4">
                   <SalesReport
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
@@ -531,7 +511,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'appointments' && (
                 <div className="space-y-4">
                   <AppointmentsReport
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
@@ -541,7 +521,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'clients' && (
                 <div className="space-y-4">
                   <ClientsReport
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
@@ -551,7 +531,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'inventory' && (
                 <div className="space-y-4">
                   <InventoryReport
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
@@ -561,7 +541,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'commissions' && (
                 <div className="space-y-4">
                   <CommissionsReport
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
@@ -571,7 +551,7 @@ export function ReportsPage(): JSX.Element {
               {detectedReportType === 'cash-register' && (
                 <div className="space-y-4">
                   <CashRegisterReport
-                    unit={unit}
+                    unit={activeUnit || ''}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
