@@ -34,31 +34,35 @@ interface DateRangeFilterProps {
 }
 
 const defaultQuickDateRanges = [
-  { label: 'Hoy', icon: <Sun className="h-3 w-3" />, action: (onDateFromChange: (date: Date) => void, onDateToChange: (date: Date) => void) => {
+  { label: 'Todos', icon: <Filter className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
+    onDateFromChange(null);
+    onDateToChange(null);
+  }},
+  { label: 'Hoy', icon: <Sun className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
     const today = new Date();
     onDateFromChange(new Date(today.setHours(0, 0, 0, 0)));
     onDateToChange(new Date(today.setHours(23, 59, 59, 999)));
   }},
-  { label: 'Ayer', icon: <Moon className="h-3 w-3" />, action: (onDateFromChange: (date: Date) => void, onDateToChange: (date: Date) => void) => {
+  { label: 'Ayer', icon: <Moon className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     onDateFromChange(new Date(yesterday.setHours(0, 0, 0, 0)));
     onDateToChange(new Date(yesterday.setHours(23, 59, 59, 999)));
   }},
-  { label: 'Últimos 7 días', icon: <RotateCcw className="h-3 w-3" />, action: (onDateFromChange: (date: Date) => void, onDateToChange: (date: Date) => void) => {
+  { label: 'Últimos 7 días', icon: <RotateCcw className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
     onDateFromChange(new Date(weekAgo.setHours(0, 0, 0, 0)));
     onDateToChange(new Date(today.setHours(23, 59, 59, 999)));
   }},
-  { label: 'Este mes', icon: <Calendar className="h-3 w-3" />, action: (onDateFromChange: (date: Date) => void, onDateToChange: (date: Date) => void) => {
+  { label: 'Este mes', icon: <Calendar className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     onDateFromChange(new Date(firstDay.setHours(0, 0, 0, 0)));
     onDateToChange(new Date(today.setHours(23, 59, 59, 999)));
   }},
-  { label: 'Mes pasado', icon: <Clock className="h-3 w-3" />, action: (onDateFromChange: (date: Date) => void, onDateToChange: (date: Date) => void) => {
+  { label: 'Mes pasado', icon: <Clock className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
     const today = new Date();
     const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
