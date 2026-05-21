@@ -130,15 +130,15 @@ export function ReportsPage(): JSX.Element {
       switch (detectedReportType) {
         case 'sales':
           endpoint = '/api/reports/sales/export';
-          headers = ['id', 'saleNumber', 'unit', 'total', 'status', 'createdAt', 'customerName', 'employeeName'];
+          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customer', 'createdBy'];
           break;
         case 'appointments':
           endpoint = '/api/reports/appointments/export';
-          headers = ['id', 'startTime', 'endTime', 'status', 'unit', 'customerName', 'employeeName', 'serviceName'];
+          headers = ['id', 'startTime', 'endTime', 'status', 'unit', 'customer', 'createdBy'];
           break;
         case 'clients':
           endpoint = '/api/reports/clients/export';
-          headers = ['id', 'name', 'phone', 'email', 'howFoundUs', 'createdAt', 'totalVisits'];
+          headers = ['id', 'name', 'phone', 'email', 'howFoundUs', 'createdAt'];
           break;
         case 'inventory':
           endpoint = '/api/reports/inventory/export';
@@ -146,16 +146,16 @@ export function ReportsPage(): JSX.Element {
           break;
         case 'commissions':
           endpoint = '/api/reports/commissions/export';
-          headers = ['id', 'userName', 'amount', 'status', 'createdAt', 'saleNumber'];
+          headers = ['id', 'user', 'amount', 'status', 'createdAt', 'sale'];
           break;
         case 'cash-register':
           endpoint = '/api/reports/cash-register/export';
-          headers = ['id', 'date', 'unit', 'openingAmount', 'closingAmount', 'status', 'employeeName'];
+          headers = ['id', 'date', 'unit', 'openingAmount', 'closingAmount', 'status', 'employee'];
           break;
         default:
           // Para overview, usar datos de ventas por defecto
           endpoint = '/api/reports/sales/export';
-          headers = ['id', 'saleNumber', 'unit', 'total', 'status', 'createdAt', 'customerName', 'employeeName'];
+          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customer', 'createdBy'];
       }
 
       // Llamar a la API para obtener datos reales
@@ -166,12 +166,59 @@ export function ReportsPage(): JSX.Element {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Reporte');
 
-      // Add header
-      worksheet.addRow(headers.map(h => h.charAt(0).toUpperCase() + h.slice(1)));
+      // Add header con nombres legibles
+      const headerLabels: Record<string, string> = {
+        'id': 'ID',
+        'saleNumber': 'Número de Venta',
+        'unit': 'Unidad',
+        'total': 'Total',
+        'paymentMethod': 'Método de Pago',
+        'closedAt': 'Fecha de Cierre',
+        'customer': 'Cliente',
+        'createdBy': 'Empleado',
+        'startTime': 'Hora Inicio',
+        'endTime': 'Hora Fin',
+        'status': 'Estado',
+        'name': 'Nombre',
+        'phone': 'Teléfono',
+        'email': 'Email',
+        'howFoundUs': 'Cómo nos encontró',
+        'createdAt': 'Fecha Creación',
+        'type': 'Tipo',
+        'category': 'Categoría',
+        'stock': 'Stock',
+        'minStock': 'Stock Mínimo',
+        'salePrice': 'Precio Venta',
+        'user': 'Empleado',
+        'amount': 'Monto',
+        'sale': 'Venta',
+        'date': 'Fecha',
+        'openingAmount': 'Monto Apertura',
+        'closingAmount': 'Monto Cierre',
+        'employee': 'Empleado'
+      };
+      worksheet.addRow(headers.map(h => headerLabels[h] || h));
 
-      // Add data rows
+      // Add data rows con transformación de campos anidados
       realData.forEach((row: any) => {
-        const rowData = headers.map(header => row[header] || '');
+        const rowData = headers.map(header => {
+          if (header === 'customer' && row.customer) {
+            return row.customer.name || '';
+          }
+          if (header === 'createdBy' && row.createdBy) {
+            return row.createdBy.name || '';
+          }
+          if (header === 'user' && row.user) {
+            return row.user.name || '';
+          }
+          if (header === 'employee' && row.employee) {
+            return row.employee.name || '';
+          }
+          if (header === 'sale' && row.sale) {
+            return row.sale.saleNumber || '';
+          }
+          return row[header] || '';
+        });
         worksheet.addRow(rowData);
       });
 
