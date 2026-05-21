@@ -10,6 +10,7 @@ import { Activity, Package, TrendingDown, TrendingUp, ArrowDownRight, ArrowUpRig
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { useUnitStore } from '@/store/unitStore';
 import { downloadExcelReport } from '@/lib/excelReport';
 import { downloadPdfReport } from '@/lib/pdfReport';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
@@ -37,6 +38,7 @@ export function StockMovementsPage(): JSX.Element {
   const [dateTo, setDateTo] = useState(() => endOfDay(new Date()));
   const [productId, setProductId] = useState('');
   const [search, setSearch] = useState('');
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   
   // Debounce hook para búsqueda
   function useDebouncedValue<T>(value: T, delay: number): T {
@@ -129,13 +131,14 @@ export function StockMovementsPage(): JSX.Element {
   };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['stock-movements', dateFrom, dateTo, productId, currentPage, debouncedSearch],
+    queryKey: ['stock-movements', dateFrom, dateTo, productId, currentPage, debouncedSearch, activeUnit],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
       if (productId) params.set('productId', productId);
       if (debouncedSearch) params.set('search', debouncedSearch);
+      if (activeUnit) params.set('unit', activeUnit);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
       
@@ -453,7 +456,7 @@ export function StockMovementsPage(): JSX.Element {
               </div>
 
               {/* Enhanced Active Filters Summary */}
-              {(productId || movementType || search) && (
+              {(productId || movementType || search || activeUnit) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -462,6 +465,11 @@ export function StockMovementsPage(): JSX.Element {
                         {productId && products && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 border border-sky-200">
                             Producto: {products.find((p: any) => p.id === productId)?.name}
+                          </span>
+                        )}
+                        {activeUnit && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
+                            Unidad: {activeUnit}
                           </span>
                         )}
                         {movementType && (
