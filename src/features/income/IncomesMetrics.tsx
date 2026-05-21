@@ -33,6 +33,11 @@ interface IncomesMetricsProps {
       date: string;
       total: number;
     };
+    // Comisiones pagadas (separadas de ingresos - son egresos)
+    todayCommissions?: number;
+    weekCommissions?: number;
+    monthCommissions?: number;
+    totalCommissions?: number;
   };
 }
 

@@ -35,8 +35,11 @@ interface DateRangeFilterProps {
 
 const defaultQuickDateRanges = [
   { label: 'Todos', icon: <Filter className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
-    onDateFromChange(null);
-    onDateToChange(null);
+    // Usar fechas muy lejanas para simular "todos" sin cambiar tipos
+    const veryFarPast = new Date('2000-01-01');
+    const veryFarFuture = new Date('2100-12-31');
+    onDateFromChange(veryFarPast);
+    onDateToChange(veryFarFuture);
   }},
   { label: 'Hoy', icon: <Sun className="h-3 w-3" />, action: (onDateFromChange: (date: Date | null) => void, onDateToChange: (date: Date | null) => void) => {
     const today = new Date();

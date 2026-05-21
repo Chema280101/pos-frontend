@@ -18,6 +18,8 @@ import {
 } from '@/types/cash';
 import { CashRegisterStatus } from './CashRegisterStatus';
 import { CashRegisterOperations } from './CashRegisterOperations';
+import { ExpenseModal } from './components/ExpenseModal';
+import { CashEntryModal } from './components/CashEntryModal';
 
 // Importar CashRegisterMetrics
 import { CashRegisterMetrics } from './CashRegisterMetrics';
@@ -1438,6 +1440,30 @@ export function CashRegisterPage(): JSX.Element {
             </div>
           </div>
         )}
+
+        {/* Expense Modal */}
+        <ExpenseModal
+          isOpen={showExpense}
+          onClose={() => setShowExpense(false)}
+          registerId={openRegister?.id || ''}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['cash-register-open', unit] });
+            queryClient.invalidateQueries({ queryKey: ['cash-summary', openRegister?.id] });
+          }}
+        />
+
+        {/* Cash Entry Modal */}
+        <CashEntryModal
+          isOpen={showCashEntry}
+          onClose={() => setShowCashEntry(false)}
+          unit={unit}
+          userId={user?.id}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['cash-register-open', unit] });
+            queryClient.invalidateQueries({ queryKey: ['cash-summary', openRegister?.id] });
+            queryClient.invalidateQueries({ queryKey: ['income'] });
+          }}
+        />
       </div>
     </div>
   );

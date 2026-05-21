@@ -1,8 +1,7 @@
 {
+  "/(app)/expenses/page": "app/(app)/expenses/page.js",
+  "/(app)/income/page": "app/(app)/income/page.js",
   "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(app)/pos/page": "app/(app)/pos/page.js",
-  "/(app)/clients/page": "app/(app)/clients/page.js",
-  "/(app)/appointments/page": "app/(app)/appointments/page.js",
-  "/(app)/commissions/page": "app/(app)/commissions/page.js"
+  "/(app)/admin/audit/page": "app/(app)/admin/audit/page.js",
+  "/(app)/services/page": "app/(app)/services/page.js"
 }
