@@ -65,7 +65,7 @@ export function ReportsPage(): JSX.Element {
   }, [pathname]);
 
   const activeUnit = useUnitStore((s) => s.activeUnit);
-  const [dateFrom, setDateFrom] = useState(() => startOfDay(subDays(new Date(), 7)));
+  const [dateFrom, setDateFrom] = useState(() => startOfDay(subDays(new Date(), 30)));
   const [dateTo, setDateTo] = useState(() => endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(true);
   
@@ -116,11 +116,18 @@ export function ReportsPage(): JSX.Element {
   // Export mutations
   const exportExcelMutation = useMutation({
     mutationFn: async () => {
+      // Verificar que haya una unidad seleccionada en el Header
+      if (!activeUnit || (activeUnit !== 'SPA' && activeUnit !== 'BARBERIA')) {
+        setNotification({type: 'error', message: 'Por favor selecciona una unidad (SPA o Barbería) en el Header superior antes de exportar'});
+        setShowExportModal(false);
+        throw new Error('Unidad no seleccionada');
+      }
+
       // Obtener datos reales del backend
       const params = new URLSearchParams({
         from: dateFrom.toISOString(),
         to: dateTo.toISOString(),
-        unit: activeUnit || '',
+        unit: activeUnit,
         format: 'csv'
       });
 
