@@ -13,6 +13,7 @@ import { startOfDay, endOfDay, subDays, format } from 'date-fns';
 import { api } from '@/lib/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as ExcelJS from 'exceljs';
 
 type BusinessUnit = 'SPA' | 'BARBERIA' | '';
 
@@ -115,30 +116,53 @@ export function ReportsPage(): JSX.Element {
   // Export mutations
   const exportExcelMutation = useMutation({
     mutationFn: async () => {
-      // Simulate Excel export with mock data
+      // Simulate Excel export with mock data using ExcelJS
       const mockData = [
         ['ID', 'Tipo', 'Fecha', 'Monto', 'Estado'],
         [1, detectedReportType, format(new Date(), 'dd/MM/yyyy'), 1500, 'Completado'],
         [2, detectedReportType, format(subDays(new Date(), 1), 'dd/MM/yyyy'), 2300, 'Pendiente'],
         [3, detectedReportType, format(subDays(new Date(), 2), 'dd/MM/yyyy'), 1800, 'Completado']
       ];
-      
-      // Create CSV content
-      const csvContent = mockData.map(row => row.join(',')).join('\n');
-      
+
+      // Create Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Reporte');
+
+      // Add data to worksheet
+      worksheet.addRow(mockData[0]); // Header
+      mockData.slice(1).forEach(row => worksheet.addRow(row)); // Data rows
+
+      // Style header
+      worksheet.getRow(1).font = { bold: true, size: 12 };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column) => {
+        if (column.header) {
+          column.width = column.header.toString().length + 10;
+        }
+      });
+
+      // Generate buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+
       // Create blob and download
-      const blob = new Blob([csvContent], { 
-        type: 'text/csv;charset=utf-8;' 
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `reporte-${detectedReportType}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      a.download = `reporte-${detectedReportType}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       setNotification({type: 'success', message: 'Reporte Excel exportado exitosamente'});
       setShowExportModal(false);
     },
