@@ -1,12 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, XCircle, Scissors, ShoppingCart, Calendar, Users } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
-import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/Button';
 import { EmptyStateData } from '@/components/ui/EmptyState';
@@ -30,9 +28,6 @@ export function PackagesPage(): JSX.Element {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { success, error } = useToast();
 
-  // Date range filter states (like services)
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
-  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(true);
 
@@ -339,18 +334,6 @@ export function PackagesPage(): JSX.Element {
           {/* Filter Content - Conditional Rendering */}
           {showFilters && (
             <div className="space-y-6">
-              {/* Date Range Filter */}
-              <DateRangeFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
-                onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                unit={unitFilter}
-                onUnitChange={setUnitFilter}
-                showUnitFilter={true}
-                showStatusFilter={false}
-                className="rounded-xl"
-              />
 
               {/* Additional Filter Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -414,8 +397,6 @@ export function PackagesPage(): JSX.Element {
                         setUnitFilter('');
                         setPriceRangeFilter('');
                         setStatusFilter('');
-                        setDateFrom(startOfDay(subDays(new Date(), 7)));
-                        setDateTo(endOfDay(new Date()));
                       }}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
                     >

@@ -1,14 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { Select, Button } from '@/components/ui';
 import { EmptyStateData } from '@/components/ui/EmptyState';
 import { Plus, Edit, Trash2, FolderPlus, Clock, DollarSign, Tag, Building2, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, TrendingDown, CheckCircle, Package } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
-import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { useToast } from '@/hooks/useToast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
@@ -46,9 +45,6 @@ export function ServicesPage(): JSX.Element {
     }
   }, [viewModal]);
   
-  // Date range filter states (like inventory)
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
-  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(true);
   
@@ -59,7 +55,7 @@ export function ServicesPage(): JSX.Element {
   const router = useRouter();
 
   const { data: servicesData, isLoading } = useQuery({
-    queryKey: ['services', unit, categoryId, unitFilter, dateFrom, dateTo, debouncedSearch, statusFilter, page],
+    queryKey: ['services', unit, categoryId, unitFilter, debouncedSearch, statusFilter, page],
     queryFn: async (): Promise<{ data: Service[], pagination: any }> => {
       const params = new URLSearchParams();
       if (unit) params.set('unit', unit);
@@ -69,10 +65,6 @@ export function ServicesPage(): JSX.Element {
       
       // Add unit filter from DateRangeFilter
       if (unitFilter) params.set('unitFilter', unitFilter);
-      
-      // Add date range filters
-      if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
-      if (dateTo) params.set('dateTo', dateTo.toISOString());
       
       // Add search filter
       if (debouncedSearch) params.set('search', debouncedSearch);
@@ -498,18 +490,6 @@ export function ServicesPage(): JSX.Element {
           {/* Filter Content - Conditional Rendering */}
           {showFilters && (
             <div className="space-y-6">
-              {/* Date Range Filter */}
-              <DateRangeFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
-                onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                unit={unitFilter}
-                onUnitChange={setUnitFilter}
-                showUnitFilter={true}
-                showStatusFilter={false}
-                className="rounded-xl"
-              />
 
               {/* Additional Filter Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -607,8 +587,6 @@ export function ServicesPage(): JSX.Element {
                         setServiceCategoryId('');
                         setSearch('');
                         setStatusFilter('');
-                        setDateFrom(startOfDay(subDays(new Date(), 7)));
-                        setDateTo(endOfDay(new Date()));
                       }}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
                     >

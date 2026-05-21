@@ -1,12 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, XCircle, Building2, RefreshCw, FileText } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
-import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/Button';
 import { EmptyStateData } from '@/components/ui/EmptyState';
@@ -23,9 +21,6 @@ export function InventoryPage(): JSX.Element {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { success, error } = useToast();
   
-  // Date range filter states (like appointments)
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 7)));
-  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
   const [unitFilter, setUnitFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(true);
   
@@ -56,16 +51,12 @@ export function InventoryPage(): JSX.Element {
   const pageSize = 20;
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['inventory-products', unitFilter, currentPage, pageSize, dateFrom, dateTo, categoryId, typeFilter, debouncedSearch],
+    queryKey: ['inventory-products', unitFilter, currentPage, pageSize, categoryId, typeFilter, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (unitFilter) params.set('unit', unitFilter);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
-      
-      // Add date range filters
-      if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
-      if (dateTo) params.set('dateTo', dateTo.toISOString());
       
       // Add category filter
       if (categoryId) params.set('categoryId', categoryId);
@@ -579,18 +570,6 @@ export function InventoryPage(): JSX.Element {
           {/* Filter Content - Conditional Rendering */}
           {showFilters && (
             <div className="space-y-6">
-              {/* Date Range Filter */}
-              <DateRangeFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
-                onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                unit={unitFilter}
-                onUnitChange={setUnitFilter}
-                showUnitFilter={true}
-                showStatusFilter={false}
-                className="rounded-xl"
-              />
 
               {/* Additional Filter Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -692,8 +671,6 @@ export function InventoryPage(): JSX.Element {
                         setCategoryId('');
                         setTypeFilter('');
                         setSearch('');
-                        setDateFrom(startOfDay(subDays(new Date(), 7)));
-                        setDateTo(endOfDay(new Date()));
                       }}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
                     >
