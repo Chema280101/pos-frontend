@@ -24,8 +24,8 @@ export function AdminCommissions(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const [searchFilter, setSearchFilter] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(new Date()));
-  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
+  const [dateFrom, setDateFrom] = useState<Date>(startOfDay(new Date('2020-01-01'))); // Fecha muy lejana para mostrar todas
+  const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date('2100-12-31'))); // Fecha muy futura para mostrar todas
   const [showFilters, setShowFilters] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
