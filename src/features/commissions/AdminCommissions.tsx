@@ -58,6 +58,8 @@ export function AdminCommissions(): JSX.Element {
       if (searchFilter) params.append('search', searchFilter);
       if (dateFrom) params.append('dateFrom', dateFrom.toISOString());
       if (dateTo) params.append('dateTo', dateTo.toISOString());
+      params.append('page', '1');
+      params.append('limit', '100'); // Obtener hasta 100 comisiones
       
       const response = await api.get(`/api/commissions/all?${params}`);
       return response.data;
