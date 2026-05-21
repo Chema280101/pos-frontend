@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useUnitStore } from '../../store/unitStore';
 import { useToastStore } from '../../store/toastStore';
 import { DollarSign, User, Calendar, Receipt, Building2, CheckCircle, Clock, XCircle, Eye, X, RefreshCw, Download, Search, Filter, ChevronDown, ChevronUp, AlertCircle, TrendingUp } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
@@ -21,7 +22,7 @@ export function AdminCommissions(): JSX.Element {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [unitFilter, setUnitFilter] = useState<string>('');
+  const activeUnit = useUnitStore((s) => s.activeUnit);
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfDay(new Date()));
@@ -49,11 +50,11 @@ export function AdminCommissions(): JSX.Element {
 
   // ✅ MEJORADO: Enviar filtros al backend
   const { data: commissionsResponse, isLoading, error } = useQuery({
-    queryKey: ['commissions', 'all', unitFilter, statusFilter, searchFilter, dateFrom, dateTo],
+    queryKey: ['commissions', 'all', activeUnit, statusFilter, searchFilter, dateFrom, dateTo],
     queryFn: async (): Promise<CommissionsResponse> => {
       const params = new URLSearchParams();
       if (statusFilter) params.append('status', statusFilter);
-      if (unitFilter) params.append('unit', unitFilter);
+      if (activeUnit) params.append('unit', activeUnit);
       if (searchFilter) params.append('search', searchFilter);
       if (dateFrom) params.append('dateFrom', dateFrom.toISOString());
       if (dateTo) params.append('dateTo', dateTo.toISOString());
@@ -1064,31 +1065,29 @@ export function AdminCommissions(): JSX.Element {
           {/* Filter Content - Conditional Rendering */}
           {showFilters && (
             <div className="space-y-6">
-              {/* Date Range Filter */}
+              {/* Date Range Filter - Sin filtro de unidad (usar Header) */}
               <DateRangeFilter
                 dateFrom={dateFrom}
                 dateTo={dateTo}
                 onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
                 onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                unit={unitFilter}
-                onUnitChange={setUnitFilter}
                 status={statusFilter}
                 onStatusChange={setStatusFilter}
-                showUnitFilter={true}
+                showUnitFilter={false}
                 showStatusFilter={true}
                 className="rounded-xl"
               />
 
               {/* Enhanced Active Filters Summary */}
-              {(unitFilter || statusFilter || searchFilter) && (
+              {(activeUnit || statusFilter || searchFilter) && (
                 <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
                       <div className="flex flex-wrap gap-2">
-                        {unitFilter && (
+                        {activeUnit && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {unitFilter}
+                            Unidad: {activeUnit}
                           </span>
                         )}
                         {statusFilter && (
@@ -1105,7 +1104,6 @@ export function AdminCommissions(): JSX.Element {
                     </div>
                     <button
                       onClick={() => {
-                        setUnitFilter('');
                         setStatusFilter('');
                         setSearchFilter('');
                         setDateFrom(startOfDay(subDays(new Date(), 7)));
