@@ -161,7 +161,10 @@ export function ReportsPage(): JSX.Element {
 
       // Llamar a la API para obtener datos reales
       const response = await api.get(`${endpoint}?${params}`);
+      console.log('API Response:', response.data);
       const realData = response.data.data || [];
+      console.log('Real data count:', realData.length);
+      console.log('First row:', realData[0]);
 
       // Create Excel workbook
       const workbook = new ExcelJS.Workbook();
