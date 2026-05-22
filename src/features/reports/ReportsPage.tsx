@@ -161,8 +161,29 @@ export function ReportsPage(): JSX.Element {
 
       // Llamar a la API para obtener datos reales
       const response = await api.get(`${endpoint}?${params}`);
+      console.log('API Response type:', typeof response.data);
       console.log('API Response:', response.data);
-      const realData = response.data.data || [];
+
+      let realData: any[] = [];
+      
+      // Si la respuesta es string (CSV), parsearla
+      if (typeof response.data === 'string') {
+        const lines = response.data.split('\n').filter((line: string) => line.trim());
+        const csvHeaders = lines[0]?.split(',').map((h: string) => h.replace(/"/g, '').trim()) || [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map((v: string) => v.replace(/"/g, '').trim());
+          const row: Record<string, string> = {};
+          csvHeaders.forEach((header: string, index: number) => {
+            row[header] = values[index] || '';
+          });
+          realData.push(row);
+        }
+      } else {
+        // Si es JSON, usar data directamente
+        realData = response.data.data || [];
+      }
+      
       console.log('Real data count:', realData.length);
       console.log('First row:', realData[0]);
 
