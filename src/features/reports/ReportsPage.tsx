@@ -167,9 +167,10 @@ export function ReportsPage(): JSX.Element {
       let realData: any[] = [];
       
       // Si la respuesta es string (CSV), parsearla
+      let csvHeaders: string[] = [];
       if (typeof response.data === 'string') {
         const lines = response.data.split('\n').filter((line: string) => line.trim());
-        const csvHeaders = lines[0]?.split(',').map((h: string) => h.replace(/"/g, '').trim()) || [];
+        csvHeaders = lines[0]?.split(',').map((h: string) => h.replace(/"/g, '').trim()) || [];
         
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',').map((v: string) => v.replace(/"/g, '').trim());
@@ -191,6 +192,9 @@ export function ReportsPage(): JSX.Element {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Reporte');
 
+      // Usar headers del CSV si existen, sino los headers fijos
+      const finalHeaders = csvHeaders.length > 0 ? csvHeaders : headers;
+      
       // Add header con nombres legibles
       const headerLabels: Record<string, string> = {
         'id': 'ID',
@@ -199,8 +203,12 @@ export function ReportsPage(): JSX.Element {
         'total': 'Total',
         'paymentMethod': 'Método de Pago',
         'closedAt': 'Fecha de Cierre',
+        'createdAt': 'Fecha de Creación',
         'customer': 'Cliente',
+        'customerName': 'Cliente',
         'createdBy': 'Empleado',
+        'employeeName': 'Empleado',
+        'userName': 'Empleado',
         'startTime': 'Hora Inicio',
         'endTime': 'Hora Fin',
         'status': 'Estado',
@@ -208,42 +216,30 @@ export function ReportsPage(): JSX.Element {
         'phone': 'Teléfono',
         'email': 'Email',
         'howFoundUs': 'Cómo nos encontró',
-        'createdAt': 'Fecha Creación',
         'type': 'Tipo',
         'category': 'Categoría',
         'stock': 'Stock',
         'minStock': 'Stock Mínimo',
         'salePrice': 'Precio Venta',
+        'costPrice': 'Precio Costo',
         'user': 'Empleado',
         'amount': 'Monto',
+        'pctApplied': '% Comisión',
         'sale': 'Venta',
         'date': 'Fecha',
         'openingAmount': 'Monto Apertura',
         'closingAmount': 'Monto Cierre',
+        'closingDeclared': 'Monto Declarado',
+        'closingExpected': 'Monto Esperado',
+        'difference': 'Diferencia',
+        'openedAt': 'Fecha Apertura',
         'employee': 'Empleado'
       };
-      worksheet.addRow(headers.map(h => headerLabels[h] || h));
+      worksheet.addRow(finalHeaders.map(h => headerLabels[h] || h));
 
-      // Add data rows con transformación de campos anidados
+      // Add data rows - los datos ya vienen planos del CSV
       realData.forEach((row: any) => {
-        const rowData = headers.map(header => {
-          if (header === 'customer' && row.customer) {
-            return row.customer.name || '';
-          }
-          if (header === 'createdBy' && row.createdBy) {
-            return row.createdBy.name || '';
-          }
-          if (header === 'user' && row.user) {
-            return row.user.name || '';
-          }
-          if (header === 'employee' && row.employee) {
-            return row.employee.name || '';
-          }
-          if (header === 'sale' && row.sale) {
-            return row.sale.saleNumber || '';
-          }
-          return row[header] || '';
-        });
+        const rowData = finalHeaders.map(header => row[header] || '');
         worksheet.addRow(rowData);
       });
 
