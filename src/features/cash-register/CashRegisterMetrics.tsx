@@ -33,7 +33,22 @@ export function CashRegisterMetrics({ cashRegisters }: CashRegisterMetricsProps)
     const expensesSum = expenses.reduce((eSum, e) => eSum + (e.amount || 0), 0);
     return sum + expensesSum;
   }, 0);
-  
+
+  // Calculate total sales from individual sales (cash + card + transfer + wallet + cash entries)
+  const totalSales = cashRegisters.reduce((sum, cr) => {
+    const sales = cr.sales || [];
+    const salesSum = sales.reduce((sSum, sale) => {
+      // Sum all payment methods and cash entries
+      const cash = sale.cash || 0;
+      const card = sale.card || 0;
+      const transfer = sale.transfer || 0;
+      const wallet = sale.wallet || 0;
+      const cashEntries = sale.cashEntries || 0;
+      return sSum + cash + card + transfer + wallet + cashEntries;
+    }, 0);
+    return sum + salesSum;
+  }, 0);
+
   // Average per register
   const averageOpening = total > 0 ? totalOpeningAmount / total : 0;
   
@@ -52,10 +67,7 @@ export function CashRegisterMetrics({ cashRegisters }: CashRegisterMetricsProps)
     const amount = Number(cr.openingAmount) || 0;
     return sum + amount;
   }, 0);
-  
-  // Calculate sales from register data (simplified)
-  const totalSales = totalClosingDeclared; // Simplified for now
-  
+
   // Cash percentage (simplified calculation)
   const cashPercentage = totalSales > 0 ? 100 : 0; // Simplified
 
@@ -93,18 +105,18 @@ export function CashRegisterMetrics({ cashRegisters }: CashRegisterMetricsProps)
           </div>
         </div>
 
-        {/* Total Opening Amount */}
+        {/* Total Profit */}
         <div className="relative overflow-hidden rounded-xl border-2 border-green-500/30 bg-gradient-to-br from-green-50 to-green-100 p-6 hover:shadow-lg transition-all duration-300 group">
           <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 to-green-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 border-2 border-green-600 shadow-lg group-hover:scale-110 transition-transform">
-                <DollarSign className="h-6 w-6 text-white" />
+                <TrendingUp className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xs font-bold text-green-800 bg-white px-3 py-1 rounded-full border border-green-300 shadow-sm">Apertura</span>
+              <span className="text-xs font-bold text-green-800 bg-white px-3 py-1 rounded-full border border-green-300 shadow-sm">Ganancia</span>
             </div>
-            <p className="text-3xl font-bold text-green-900 tabular-nums mb-2">S/{Number(totalOpeningAmount || 0).toFixed(2)}</p>
-            <p className="text-sm text-green-700 font-medium">Monto apertura</p>
+            <p className="text-3xl font-bold text-green-900 tabular-nums mb-2">S/{Number((totalSales || 0) - totalExpenses).toFixed(2)}</p>
+            <p className="text-sm text-green-700 font-medium">Ganancia neta</p>
           </div>
         </div>
 
