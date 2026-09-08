@@ -24,9 +24,13 @@ export function CashRegisterMetrics({ cashRegisters }: CashRegisterMetricsProps)
   }, 0);
   
   const totalExpenses = cashRegisters.reduce((sum, cr) => {
-    const expenses = cr.expenses || [];
-    const expensesSum = expenses.reduce((eSum, e) => eSum + (e.amount || 0), 0);
-    return sum + expensesSum;
+    const expenses = cr.expenses;
+    // The API may return expenses as a number (total) or as an array of objects
+    if (Array.isArray(expenses)) {
+      const expensesSum = expenses.reduce((eSum, e) => eSum + (e.amount || 0), 0);
+      return sum + expensesSum;
+    }
+    return sum + (Number(expenses) || 0);
   }, 0);
 
   const totalSales = cashRegisters.reduce((sum, cr) => {
