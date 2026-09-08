@@ -41,9 +41,10 @@ interface ExpensesMetricsProps {
 }
 
 export function ExpensesMetrics({ expenses }: ExpensesMetricsProps) {
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const safeExpenses = Array.isArray(expenses) ? expenses : [];
+  const total = safeExpenses.reduce((sum, e) => sum + e.amount, 0);
   const today = new Date();
-  const todayExpenses = expenses.filter(e => {
+  const todayExpenses = safeExpenses.filter(e => {
     const expenseDate = new Date(e.createdAt);
     return expenseDate.toDateString() === today.toDateString();
   });
@@ -52,20 +53,20 @@ export function ExpensesMetrics({ expenses }: ExpensesMetricsProps) {
   // This week (last 7 days)
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekExpenses = expenses.filter(e => new Date(e.createdAt) >= weekAgo);
+  const weekExpenses = safeExpenses.filter(e => new Date(e.createdAt) >= weekAgo);
   const weekTotal = weekExpenses.reduce((sum, e) => sum + e.amount, 0);
   
   // This month (last 30 days)
   const monthAgo = new Date();
   monthAgo.setDate(monthAgo.getDate() - 30);
-  const monthExpenses = expenses.filter(e => new Date(e.createdAt) >= monthAgo);
+  const monthExpenses = safeExpenses.filter(e => new Date(e.createdAt) >= monthAgo);
   const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
   
   // Additional metrics
-  const averageExpense = expenses.length > 0 ? total / expenses.length : 0;
+  const averageExpense = safeExpenses.length > 0 ? total / safeExpenses.length : 0;
   
   // Category breakdown
-  const categoryTotals = expenses.reduce((acc, expense) => {
+  const categoryTotals = safeExpenses.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
     return acc;
   }, {} as Record<string, number>);
@@ -75,7 +76,7 @@ export function ExpensesMetrics({ expenses }: ExpensesMetricsProps) {
   // Trend calculation (compare with previous period)
   const previousMonthAgo = new Date();
   previousMonthAgo.setDate(previousMonthAgo.getDate() - 60);
-  const previousMonthExpenses = expenses.filter(e => {
+  const previousMonthExpenses = safeExpenses.filter(e => {
     const date = new Date(e.createdAt);
     return date >= previousMonthAgo && date < monthAgo;
   });
@@ -83,7 +84,7 @@ export function ExpensesMetrics({ expenses }: ExpensesMetricsProps) {
   const trend = previousMonthTotal > 0 ? ((monthTotal - previousMonthTotal) / previousMonthTotal) * 100 : 0;
   
   // Worst day (highest expense day)
-  const dailyTotals = expenses.reduce((acc, expense) => {
+  const dailyTotals = safeExpenses.reduce((acc, expense) => {
     const date = new Date(expense.createdAt).toDateString();
     acc[date] = (acc[date] || 0) + expense.amount;
     return acc;
