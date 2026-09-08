@@ -5,6 +5,7 @@ export interface Product {
   unit: 'SPA' | 'BARBERIA';
   type: 'INTERNAL_USE' | 'FOR_SALE' | 'BOTH';
   category: { id: string; name: string } | null;
+  supplier?: { id: string; name: string } | null;
   measureUnit: string | null;
   salePrice: number | null;
   costPrice: number | null;

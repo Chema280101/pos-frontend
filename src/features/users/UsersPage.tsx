@@ -6,13 +6,16 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/ui/DataTable';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableBadge, getTableBadgeTypeForRole } from '@/components/ui/TableBadge';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
 import { UsersMetrics } from './UsersMetrics';
 import { format } from 'date-fns';
 import { t, getPlaceholder } from '@/lib/uiTranslations';
-import { Plus, Lock, RotateCcw, User as UserIcon, AlertTriangle, Eye, Edit, Trash2, AlertCircle, Users, Filter, ChevronDown, ChevronUp, X, Package, BarChart3, Clock, CheckCircle2, Building2, Calendar, TrendingUp, Activity, Shield, Key, UserCheck, UserX, Settings, Search } from 'lucide-react';
+import { Plus, Lock, Unlock, RotateCcw, User as UserIcon, AlertTriangle, Eye, Edit, Trash2, AlertCircle, Users, Filter, ChevronDown, ChevronUp, X, Package, BarChart3, Clock, CheckCircle2, Building2, Calendar, TrendingUp, Activity, Shield, Key, UserCheck, UserX, Settings, Search, Loader2, RefreshCw } from 'lucide-react';
 import type { UserRole, BusinessUnit, getRoleLabel, getStatusLabel } from '@/types/auth';
 import type { User, PaginatedUsersResponse } from '@/types/users';
 import { cn } from '@/lib/utils';
@@ -334,9 +337,9 @@ export function UsersPage(): JSX.Element {
       header: 'Email',
       sortable: true,
       render: (row: UserRow) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+        <TableBadge type="email">
           {row.email}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -344,24 +347,9 @@ export function UsersPage(): JSX.Element {
       header: 'Rol',
       sortable: true,
       render: (row: UserRow) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.role === 'ADMIN'
-            ? 'bg-red-100 text-red-800'
-            : row.role === 'RECEPTIONIST'
-            ? 'bg-blue-100 text-blue-800'
-            : row.role === 'SPA_SPECIALIST'
-            ? 'bg-green-100 text-green-800'
-            : row.role === 'BARBER'
-            ? 'bg-amber-100 text-amber-800'
-            : row.role === 'BEAUTICIAN'
-            ? 'bg-pink-100 text-pink-800'
-            : row.role === 'MANAGER'
-            ? 'bg-indigo-100 text-indigo-800'
-            : 'bg-gray-100 text-gray-800'
-        )}>
+        <TableBadge type={getTableBadgeTypeForRole(row.role)}>
           {getRoleLabelCentral(row.role)}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -369,42 +357,34 @@ export function UsersPage(): JSX.Element {
       header: 'Unidad',
       sortable: true,
       render: (row: UserRow) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.unit === 'SPA'
-            ? 'bg-purple-100 text-purple-800'
-            : row.unit === 'BARBERIA'
-            ? 'bg-red-100 text-red-800'
-            : 'bg-gray-100 text-gray-800'
-        )}>
+        <TableBadge type={row.unit === 'SPA' ? 'unit-spa' : row.unit === 'BARBERIA' ? 'unit-barberia' : 'status-default'}>
           {getUnitLabel(row.unit || '') || 'Sin unidad'}
-        </span>
+        </TableBadge>
       ),
     },
     {
       key: 'status',
       header: 'Estado',
       sortable: true,
-      render: (row: UserRow) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          !row.isActive
-            ? 'bg-red-100 text-red-800'
-            : row.isLocked
-            ? 'bg-amber-100 text-amber-800'
-            : row.mustChangePassword
-            ? 'bg-cyan-100 text-cyan-800'
-            : 'bg-green-100 text-green-800'
-        )}>
-          {!row.isActive
-            ? 'Inactivo'
-            : row.isLocked
-            ? 'Bloqueado'
-            : row.mustChangePassword
-            ? 'Cambiar contraseña'
-            : 'Activo'}
-        </span>
-      ),
+      render: (row: UserRow) => {
+        let statusType: 'status-active' | 'status-inactive' | 'status-pending' | 'status-default' = 'status-default';
+        if (!row.isActive) statusType = 'status-inactive';
+        else if (row.isLocked) statusType = 'status-pending';
+        else if (row.mustChangePassword) statusType = 'status-pending';
+        else statusType = 'status-active';
+        
+        return (
+          <TableBadge type={statusType}>
+            {!row.isActive
+              ? 'Inactivo'
+              : row.isLocked
+              ? 'Bloqueado'
+              : row.mustChangePassword
+              ? 'Cambiar contraseña'
+              : 'Activo'}
+          </TableBadge>
+        );
+      },
     },
   ];
 
@@ -412,39 +392,39 @@ export function UsersPage(): JSX.Element {
   const actions = [
     {
       label: t('view'),
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: UserRow) => setViewUser(row),
-      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: t('edit'),
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: UserRow) => {
         router.push(`/users/${row.id}`);
       },
-      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: UserRow) => row.role === 'ADMIN', // Prevent editing admin users
     },
     {
       label: 'Desbloquear',
-      icon: <Lock className="h-4 w-4" />,
+      variant: 'success' as const,
+      icon: <Unlock className="h-4 w-4" />,
       onClick: (row: UserRow) => setUnlockUser(row),
-      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
       disabled: (row: UserRow) => !row.isLocked,
     },
     {
       label: 'Resetear contraseña',
+      variant: 'refresh' as const,
       icon: <RotateCcw className="h-4 w-4" />,
       onClick: (row: UserRow) => {
         setResetUser(row);
       },
-      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Eliminar',
+      variant: 'delete' as const,
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: UserRow) => setDeleteUser(row),
-      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
       disabled: (row: UserRow) => row.role === 'ADMIN', // Prevent deleting admin users
     },
   ];
@@ -530,236 +510,124 @@ export function UsersPage(): JSX.Element {
   const lockedUsersCount = users?.filter((u: any) => u.isLocked).length ?? 0;
 
   return (
-    <div className="relative z-10">
-      <div className="relative max-w-7xl mx-auto">
-        {/* Enhanced Header - Idéntico a Inventory */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Sistema de Usuarios
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Seguridad & Accesos • {activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA'}
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Usuarios</h1>
-            <p className="text-[var(--unit-text-muted)]">
-              Gestiona empleados, desbloqueos y restablecimientos de contraseña con control total
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Gestión de Usuarios & Personal
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Administración de cuentas, roles de acceso, desbloqueos y restablecimiento de contraseñas
             </p>
           </div>
 
-          {/* Users Metrics */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--unit-accent)] border-t-transparent"></div>
-              <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
-            </div>
-          ) : (
-            <UsersMetrics users={users} />
-          )}
-
-          {/* Enhanced Action Buttons - Estilo Inventory */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 relative z-20">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {lockedUsersCount > 0 && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-300">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm font-bold">{lockedUsersCount} usuarios bloqueados</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-unit bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>{lockedUsersCount} bloqueados</span>
               </div>
             )}
+
+            <button
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit"
+              title="Actualizar datos"
+            >
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin text-[var(--unit-accent)]")} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
+
             <button
               onClick={() => {
                 router.push('/users/new');
               }}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
             >
-              <Plus className="h-5 w-5" />
-              {t('create')} usuario
+              <Plus className="h-4 w-4" />
+              Nuevo Usuario
             </button>
           </div>
         </div>
 
-        {/* Enhanced Users Filters - Premium Glassmorphism como Inventory */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="h-full w-full bg-repeat" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-            }}></div>
+        {/* Users Metrics */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--unit-accent)] border-t-transparent"></div>
+            <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
           </div>
-          
-          <div className="relative">
-            {/* Filter Header - Exacto estilo Inventory */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Filter className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--unit-text)">{t('filter')}s de Usuarios</h3>
-                    <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda de usuarios</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-                >
-                  {showFilters ? (
-                    <>
-                      <ChevronUp className="h-4 w-4" />
-                      Ocultar filtros
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4" />
-                      Mostrar filtros
-                    </>
-                  )}
-                </button>
+        ) : (
+          <UsersMetrics users={users} />
+        )}
+
+        {/* Unified TableToolbar */}
+        <TableToolbar
+          search={searchFilter}
+          onSearchChange={setSearchFilter}
+          searchPlaceholder={t('searchPlaceholder')}
+          chips={[
+            { id: '', label: 'Todos', count: users.length },
+            { id: 'ADMIN', label: 'Admin', count: users.filter((u: UserRow) => u.role === 'ADMIN').length, activeColor: 'bg-red-600 text-white' },
+            { id: 'RECEPTIONIST', label: 'Recepción', count: users.filter((u: UserRow) => u.role === 'RECEPTIONIST').length, activeColor: 'bg-blue-600 text-white' },
+            { id: 'BARBER', label: 'Barbero', count: users.filter((u: UserRow) => u.role === 'BARBER').length, activeColor: 'bg-amber-600 text-white' },
+            { id: 'SPA_SPECIALIST', label: 'Especialista', count: users.filter((u: UserRow) => u.role === 'SPA_SPECIALIST' || u.role === 'BEAUTICIAN').length, activeColor: 'bg-green-600 text-white' },
+          ]}
+          activeChip={roleFilter}
+          onChipChange={(id) => setRoleFilter(String(id))}
+          showAdvancedFiltersButton={true}
+          isAdvancedOpen={showFilters}
+          onToggleAdvanced={() => setShowFilters(!showFilters)}
+          activeFiltersCount={(roleFilter ? 1 : 0) + (isActiveFilter ? 1 : 0) + (unitFilter ? 1 : 0) + (searchFilter ? 1 : 0)}
+          onResetFilters={() => {
+            setRoleFilter('');
+            setIsActiveFilter('');
+            setUnitFilter('');
+            setSearchFilter('');
+            setPage(1);
+          }}
+          advancedFiltersContent={
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Select
+                  label="Estado"
+                  options={[
+                    { value: '', label: t('allStatuses') },
+                    { value: 'ACTIVE', label: 'Activo' },
+                    { value: 'INACTIVE', label: 'Inactivo' },
+                    { value: 'LOCKED', label: 'Bloqueado' }
+                  ]}
+                  value={isActiveFilter}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setIsActiveFilter(e.target.value)}
+                />
+              </div>
+              <div>
+                <Select
+                  label="Unidad"
+                  options={[
+                    { value: '', label: t('allUnits') },
+                    { value: 'SPA', label: 'SPA' },
+                    { value: 'BARBERIA', label: 'Barbería' }
+                  ]}
+                  value={unitFilter}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setUnitFilter(e.target.value)}
+                />
               </div>
             </div>
+          }
+        />
 
-            {/* Filter Content - Conditional Rendering */}
-            {showFilters && (
-              <div className="space-y-6">
-                {/* Additional Filter Controls - Estilo Inventory */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Role Filter */}
-                  <div>
-                    <Select
-                      label="Rol"
-                      options={[
-                        { value: '', label: t('allRoles') },
-                        { value: 'ADMIN', label: 'Administrador' },
-                        { value: 'RECEPTIONIST', label: 'Recepcionista' },
-                        { value: 'BARBER', label: 'Barbero' },
-                        { value: 'BEAUTICIAN', label: 'Esteticista' },
-                        { value: 'MANAGER', label: 'Gerente' }
-                      ]}
-                      value={roleFilter}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setRoleFilter(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Status Filter */}
-                  <div>
-                    <Select
-                      label="Estado"
-                      options={[
-                        { value: '', label: t('allStatuses') },
-                        { value: 'ACTIVE', label: 'Activo' },
-                        { value: 'INACTIVE', label: 'Inactivo' },
-                        { value: 'LOCKED', label: 'Bloqueado' }
-                      ]}
-                      value={isActiveFilter}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setIsActiveFilter(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Unit Filter */}
-                  <div>
-                    <Select
-                      label="Unidad"
-                      options={[
-                        { value: '', label: t('allUnits') },
-                        { value: 'SPA', label: 'SPA' },
-                        { value: 'BARBERIA', label: 'Barbería' }
-                      ]}
-                      value={unitFilter}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setUnitFilter(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Search Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">{t('search')}</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder={t('searchPlaceholder')}
-                      value={searchFilter}
-                      onChange={(e) => {
-  const value = e.target.value;
-  
-  // 🔥 Protección adicional: Validar que el valor venga de una interacción real del usuario
-  if (!document.hasFocus() && value === 'admin@barberiaspa.com') {
-    // Ignorar valor sin foco del documento
-    return;
-  }
-  
-  setSearchFilter(value);
-}}
-                      autoComplete="off"
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                    />
-                    {searchFilter && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchFilter('')}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                          <X className="h-3 w-3" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Enhanced Active Filters Summary */}
-                {(roleFilter || isActiveFilter || unitFilter || searchFilter) && (
-                  <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {roleFilter && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
-                              Rol: {roleFilter === 'ADMIN' ? 'Administrador' : roleFilter === 'RECEPTIONIST' ? 'Recepcionista' : roleFilter === 'BARBER' ? 'Barbero' : roleFilter === 'BEAUTICIAN' ? 'Esteticista' : 'Gerente'}
-                            </span>
-                          )}
-                          {isActiveFilter && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                              Estado: {isActiveFilter === 'ACTIVE' ? 'Activo' : isActiveFilter === 'INACTIVE' ? 'Inactivo' : 'Bloqueado'}
-                            </span>
-                          )}
-                          {unitFilter && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                              Unidad: {unitFilter === 'SPA' ? 'SPA' : 'Barbería'}
-                            </span>
-                          )}
-                          {searchFilter && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                              {t('search')}: {searchFilter}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setRoleFilter('');
-                          setIsActiveFilter('');
-                          setUnitFilter('');
-                          setSearchFilter('');
-                          setPage(1);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                      >
-                        <X className="h-4 w-4" />
-                        {t('clearFilters')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-              {/* Enhanced Users Table - Premium Glassmorphism como Inventory */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+        {/* Enhanced Users Table - Premium Glassmorphism como Inventory */}
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg p-6">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5">
             <div className="h-full w-full bg-repeat" style={{
@@ -769,11 +637,11 @@ export function UsersPage(): JSX.Element {
           
           <div className="relative">
             {/* Premium Table Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+            <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Users className="h-5 w-5 text-white" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                    <Users className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-[var(--unit-text)]">Lista de Usuarios</h3>
@@ -781,7 +649,7 @@ export function UsersPage(): JSX.Element {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                  <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/15 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-unit-sm">
                     {users.length} usuarios
                   </span>
                 </div>
@@ -812,7 +680,7 @@ export function UsersPage(): JSX.Element {
             </div>
             
             {/* Enhanced DataTable Container */}
-            <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
+            <div className="relative overflow-hidden rounded-unit border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
               {isLoading ? (
                 <TableSkeleton rows={10} columns={6} />
               ) : (
@@ -853,551 +721,168 @@ export function UsersPage(): JSX.Element {
           />
         )}
 
-        {/* Reset Password Modal - Estilo Eliminar Servicio */}
+        {/* Reset Password Modal */}
         {resetUser && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => {
-            if (e.target === e.currentTarget) {
+          <Modal
+            open={!!resetUser}
+            onClose={() => {
               setResetUser(null);
               setNewPassword('');
               setForceTemp(false);
-            }
-          }}>
-            <div className="relative overflow-hidden rounded-2xl border-2 border-blue-500/50 bg-gradient-to-br from-blue-50/95 to-blue-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern - Estilo Eliminar Gasto */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233B82F6' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
+            }}
+            title="Resetear Contraseña"
+            description={`Generar una nueva contraseña para ${resetUser.name}`}
+            headerIcon={<Key className="h-5 w-5" />}
+            size="md"
+          >
+            <div className="space-y-4">
+              <div className="p-3.5 rounded-unit border border-[var(--unit-accent)]/30 bg-[var(--unit-accent)]/10 text-xs text-[var(--unit-text)]">
+                Se actualizarán las credenciales de acceso para <strong>{resetUser.email}</strong>.
               </div>
-              
-              <div className="relative">
-                {/* Premium Header - Estándar consistente */}
-                <div className="relative mb-6 flex items-start justify-between gap-4">
-                  {/* Background gradient for header - Consistente con Modal.tsx */}
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                  
-                  <div className="relative z-10 flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                      <RotateCcw className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-blue-900">{t('update')} Contraseña</h3>
-                      <p className="text-sm text-blue-700">Crea una nueva contraseña temporal</p>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => {
-                      setResetUser(null);
-                      setNewPassword('');
-                      setForceTemp(false);
-                    }}
-                    className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                    aria-label="Cerrar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* Warning Content - Estilo Eliminar Servicio */}
-                <div className="space-y-6">
-                  {/* Info Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-100 to-blue-200 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20 mt-1">
-                        <Key className="h-4 w-4 text-[var(--unit-primary)]" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-900">
-                          ¿Estás seguro de que deseas resetear la contraseña?
-                        </p>
-                        <p className="text-xs text-blue-700 mt-1">
-                          Se generará una nueva contraseña temporal para el usuario {resetUser.name}.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* User Details */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-gray-500/30 bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Usuario</span>
-                        <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                          {resetUser.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Email</span>
-                        <span className="text-sm font-bold text-gray-900 truncate max-w-[200px]">
-                          {resetUser.email}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Form Fields */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">
-                        {t('password')} *
-                      </label>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-                        placeholder={getPlaceholder('password')}
-                      />
-                      {newPassword && newPassword.length < 6 && (
-                        <p className="mt-2 text-sm text-[var(--unit-error)] font-medium flex items-center gap-1">
-                          <AlertCircle className="h-4 w-4" />
-                          La contraseña debe tener al menos 6 caracteres
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-50 to-blue-100">
-                      <input
-                        type="checkbox"
-                        id="forceTemp"
-                        checked={forceTemp}
-                        onChange={(e) => setForceTemp(e.target.checked)}
-                        className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      <label htmlFor="forceTemp" className="text-sm font-medium text-blue-900 cursor-pointer">
-                        Forzar cambio de contraseña en próximo inicio
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* Premium Action Buttons - Estilo Eliminar Servicio */}
-                  <div className="flex gap-4 mt-6">
-                    <button
-                      onClick={() => {
-                        setResetUser(null);
-                        setNewPassword('');
-                        setForceTemp(false);
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold border-2 border-gray-300/50 transition-all hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (resetUser && newPassword && newPassword.length >= 6) {
-                          resetMutation.mutate({
-                            userId: resetUser.id,
-                            newPassword: newPassword.trim(),
-                            forceTemp,
-                          });
-                        }
-                      }}
-                      disabled={!newPassword || newPassword.length < 6 || resetMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {resetMutation.isPending ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                          Reseteando...
-                        </>
-                      ) : (
-                        <>
-                          <RotateCcw className="h-4 w-4" />
-                          Resetear Contraseña
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                  Nueva Contraseña *
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-unit border border-[var(--unit-border)]/60 px-4 py-2.5 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
+                  placeholder="Mínimo 6 caracteres"
+                />
+                {newPassword && newPassword.length < 6 && (
+                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    La contraseña debe tener al menos 6 caracteres
+                  </p>
+                )}
+              </div>
+
+              <label className="flex items-center gap-3 p-3 rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-border)]/20 transition-all cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="forceTemp"
+                  checked={forceTemp}
+                  onChange={(e) => setForceTemp(e.target.checked)}
+                  className="w-4 h-4 rounded text-[var(--unit-accent)]"
+                  style={{ accentColor: 'var(--unit-accent)' }}
+                />
+                <span className="text-xs font-semibold text-[var(--unit-text)]">
+                  Forzar cambio de contraseña en próximo inicio de sesión
+                </span>
+              </label>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetUser(null);
+                    setNewPassword('');
+                    setForceTemp(false);
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-sm font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-border)]/20 transition-all active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (resetUser && newPassword && newPassword.length >= 6) {
+                      resetMutation.mutate({
+                        userId: resetUser.id,
+                        newPassword: newPassword.trim(),
+                        forceTemp,
+                      });
+                    }
+                  }}
+                  disabled={!newPassword || newPassword.length < 6 || resetMutation.isPending}
+                  className="flex-1 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white font-bold shadow-unit shadow-[var(--unit-accent)]/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                >
+                  {resetMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-4 w-4" />
+                      Resetear
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-          </div>
+          </Modal>
         )}
 
-        {/* El modal de creación se eliminó - ahora redirige a /users/new */}
-
-        {/* View User Modal - Exacto estilo ServicesPage */}
+        {/* View User Modal */}
         {viewUser && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setViewUser(null);
-            }
-          }}>
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
+          <Modal
+            open={!!viewUser}
+            onClose={() => setViewUser(null)}
+            title="Detalles del Usuario"
+            description={viewUser.name}
+            headerIcon={<UserIcon className="h-5 w-5" />}
+            size="lg"
+          >
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 space-y-2">
+                  <span className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">Información Básica</span>
+                  <div className="text-sm space-y-1">
+                    <p className="font-semibold text-[var(--unit-text)]">{viewUser.name}</p>
+                    <p className="text-[var(--unit-text-muted)] text-xs">{viewUser.email}</p>
+                    <p className="text-[var(--unit-text-muted)] text-xs">{viewUser.phone || 'Sin teléfono'}</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 space-y-2">
+                  <span className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">Rol y Unidad</span>
+                  <div className="text-sm space-y-1">
+                    <p className="font-semibold text-[var(--unit-text)]">{getRoleLabelCentral(viewUser.role)}</p>
+                    <p className="text-[var(--unit-text-muted)] text-xs">{getUnitLabel(viewUser.unit || '') || 'Sin unidad'}</p>
+                    {viewUser.commissionPct != null && (
+                      <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs">Comisión: {viewUser.commissionPct}%</p>
+                    )}
+                  </div>
+                </div>
               </div>
-              
-              <div className="relative">
-                {/* Enhanced Header - Estándar consistente */}
-                <div className="relative mb-6 flex items-start justify-between gap-4">
-                  {/* Background gradient for header - Consistente con Modal.tsx */}
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                  
-                  <div className="relative z-10 flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <Eye className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[var(--unit-text)]">Detalles del Usuario</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">{viewUser.name}</p>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => setViewUser(null)}
-                    className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                    aria-label="Cerrar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
 
-                {/* Enhanced Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {/* Enhanced Basic Information - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <UserIcon className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
-                      </div>
-
-                      {/* Enhanced User Info List */}
-                      <div className="space-y-4">
-                        {/* Name */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Nombre</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
-                            {viewUser.name}
-                          </span>
-                        </div>
-
-                        {/* Email */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Email</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
-                            {viewUser.email}
-                          </span>
-                        </div>
-
-                        {/* Phone */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Teléfono</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {viewUser.phone || 'No registrado'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Role and Unit - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Settings className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Rol y Unidad</h4>
-                      </div>
-
-                      {/* Enhanced Role List */}
-                      <div className="space-y-4">
-                        {/* Role */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-[var(--unit-primary)]/30 bg-gradient-to-r from-[var(--unit-primary)]/5 to-[var(--unit-accent)]/5 hover:from-[var(--unit-primary)]/10 hover:to-[var(--unit-accent)]/10 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-[var(--unit-primary)]" />
-                            <span className="text-sm font-bold text-[var(--unit-primary)]">Rol</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-primary)] bg-white px-3 py-1 rounded-lg border-2 border-[var(--unit-primary)]/30 shadow-lg">
-                            {viewUser.role === 'ADMIN' ? 'Administrador' :
-                             viewUser.role === 'RECEPTIONIST' ? 'Recepcionista' :
-                             viewUser.role === 'BARBER' ? 'Barbero' :
-                             viewUser.role === 'SPA_SPECIALIST' ? 'Esteticista' : viewUser.role}
-                          </span>
-                        </div>
-
-                        {/* Unit */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Unidad</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {viewUser.unit === 'SPA' ? 'SPA' : viewUser.unit === 'BARBERIA' ? 'Barbería' : 'Sin unidad'}
-                          </span>
-                        </div>
-
-                        {/* Commission */}
-                        {viewUser.commissionPct && (
-                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 transition-all">
-                            <div className="flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4 text-emerald-600" />
-                              <span className="text-sm font-bold text-emerald-800">Comisión</span>
-                            </div>
-                            <span className="font-bold text-emerald-800 bg-white px-3 py-1 rounded-lg border-2 border-emerald-300/30 shadow-lg">
-                              {viewUser.commissionPct}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Status and Security - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Shield className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado y Seguridad</h4>
-                      </div>
-
-                      {/* Enhanced Status List */}
-                      <div className="space-y-4">
-                        {/* Status */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Estado</span>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
-                            viewUser.isActive && !viewUser.isLocked
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                              : viewUser.isLocked
-                              ? 'bg-red-100 text-red-800 border-red-200'
-                              : 'bg-gray-100 text-gray-800 border-gray-200'
-                          }`}>
-                            {viewUser.isActive && !viewUser.isLocked
-                              ? 'Activo'
-                              : viewUser.isLocked
-                              ? 'Bloqueado'
-                              : 'Inactivo'}
-                          </span>
-                        </div>
-
-                        {/* Created At */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Creado</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {format(new Date(viewUser.createdAt), 'dd/MM/yyyy')}
-                          </span>
-                        </div>
-
-                        {/* Failed Login Attempts */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Intentos Fallidos</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {viewUser.failedLoginAttempts}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Actions */}
-                <div className="flex justify-end gap-3 pt-6 border-t border-[var(--unit-border)]">
-                  <button
-                    onClick={() => {
-                      router.push(`/users/${viewUser.id}`);
-                      setViewUser(null);
-                    }}
-                    className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Editar Usuario
-                  </button>
-                  {viewUser.isLocked && (
-                    <button
-                      onClick={() => {
-                        setUnlockUser(viewUser);
-                        setViewUser(null);
-                      }}
-                      className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-lg border-2 border-amber-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Lock className="h-4 w-4" />
-                      Desbloquear
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setResetUser(viewUser);
-                      setViewUser(null);
-                    }}
-                    className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Resetear Contraseña
-                  </button>
-                  {viewUser.role !== 'ADMIN' && (
-                    <button
-                      onClick={() => {
-                        setDeleteUser(viewUser);
-                        setViewUser(null);
-                      }}
-                      className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar
-                    </button>
-                  )}
-                </div>
+              <div className="flex justify-end gap-3 pt-3 border-t border-[var(--unit-border)]/30">
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.push(`/users/${viewUser.id}`);
+                    setViewUser(null);
+                  }}
+                  className="px-4 py-2 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white font-semibold text-sm shadow-unit transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
+                </button>
               </div>
             </div>
-          </div>
+          </Modal>
         )}
 
-        {/* El modal de edición se eliminó - ahora redirige a /users/[id] */}
-
-        {/* Delete User Modal - Estilo Eliminar Servicio */}
+        {/* Delete User Confirm Dialog */}
         {deleteUser && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setDeleteUser(null);
-            }
-          }}>
-            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern - Estilo Eliminar Gasto */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23DC2626' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-              </div>
-              
-              <div className="relative">
-                {/* Premium Header - Estándar consistente */}
-                <div className="relative mb-6 flex items-start justify-between gap-4">
-                  {/* Background gradient for header - Consistente con Modal.tsx */}
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                  
-                  <div className="relative z-10 flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                      <Trash2 className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-red-900">Eliminar Usuario</h3>
-                      <p className="text-sm text-red-700">Esta acción es permanente</p>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => {
-                      setDeleteUser(null);
-                    }}
-                    className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                    aria-label="Cerrar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* Warning Content - Estilo Eliminar Servicio */}
-                <div className="space-y-6">
-                  {/* Warning Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-100 to-red-200 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20 mt-1">
-                        <AlertTriangle className="h-4 w-4 text-[var(--unit-error)]" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-red-900">
-                          ¿Estás seguro de que deseas eliminar al usuario "{deleteUser.name}"?
-                        </p>
-                        <p className="text-xs text-red-700 mt-1">
-                          Esta acción no se puede deshacer y el usuario será eliminado permanentemente del sistema.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* User Details */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-gray-500/30 bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Usuario</span>
-                        <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                          {deleteUser.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Email</span>
-                        <span className="text-sm font-bold text-gray-900 truncate max-w-[200px]">
-                          {deleteUser.email}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Rol</span>
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                          {deleteUser.role === 'ADMIN' ? 'Admin' : 
-                           deleteUser.role === 'RECEPTIONIST' ? 'Recepcionista' :
-                           deleteUser.role === 'SPA_SPECIALIST' ? 'Especialista SPA' : 'Barbero'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Premium Action Buttons - Eliminar siempre a la izquierda */}
-                  <div className="flex gap-4 mt-6">
-                    <button
-                      onClick={() => setDeleteUser(null)}
-                      className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (deleteUser) {
-                          deleteUserMutation.mutate(deleteUser.id);
-                        }
-                      }}
-                      disabled={deleteUserMutation.isPending}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                    >
-                      {deleteUserMutation.isPending ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                          Eliminando...
-                        </span>
-                      ) : (
-                        <span className="flex items-center justify-center gap-2">
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar Usuario
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ConfirmDialog
+            isOpen={!!deleteUser}
+            onClose={() => setDeleteUser(null)}
+            onConfirm={() => {
+              if (deleteUser) {
+                deleteUserMutation.mutate(deleteUser.id);
+              }
+            }}
+            title="Eliminar Usuario"
+            message={`¿Estás seguro de que deseas eliminar permanentemente a "${deleteUser.name}" (${deleteUser.email})? Esta acción no se puede deshacer.`}
+            type="danger"
+            confirmText="Eliminar permanentemente"
+            cancelText="Cancelar"
+            isLoading={deleteUserMutation.isPending}
+          />
         )}
       </div>
     </div>

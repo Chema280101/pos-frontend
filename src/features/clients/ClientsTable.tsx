@@ -37,53 +37,53 @@ export function ClientsTable({ clients, onClientSelect, onOpenDrawer }: ClientsT
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/60 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-[var(--unit-surface)] border-b border-[var(--unit-border)]/60">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">
                 Cliente
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">
                 Teléfono
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">
                 Crédito
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">
                 Estado
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">
                 Registro
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {clients.map((client) => (
-              <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={client.id} className="hover:bg-[var(--unit-surface)] transition-colors">
                 <td className="px-4 py-4">
                   <div>
-                    <div className="font-medium text-gray-900">{client.name}</div>
+                    <div className="font-medium text-[var(--unit-text)]">{client.name}</div>
                     {client.preferredEmployeeId && (
-                      <div className="text-sm text-gray-500">Empleado preferido</div>
+                      <div className="text-sm text-[var(--unit-text-muted)]">Empleado preferido</div>
                     )}
                   </div>
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-900">{client.phone}</span>
+                    <span className="text-sm text-[var(--unit-text)]">{client.phone}</span>
                   </div>
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-gray-400" />
                     <span className={`text-sm font-medium ${
-                      client.creditBalance > 0 ? 'text-green-600' : 'text-gray-500'
+                      client.creditBalance > 0 ? 'text-green-600' : 'text-[var(--unit-text-muted)]'
                     }`}>
                       S/{client.creditBalance.toFixed(2)}
                     </span>
@@ -103,7 +103,7 @@ export function ClientsTable({ clients, onClientSelect, onOpenDrawer }: ClientsT
                   )}
                 </td>
                 <td className="px-4 py-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-[var(--unit-text-muted)]">
                     <Calendar className="h-4 w-4" />
                     <span>
                       {formatDistanceToNow(new Date(client.createdAt), {
@@ -113,18 +113,22 @@ export function ClientsTable({ clients, onClientSelect, onOpenDrawer }: ClientsT
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-2">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
+                  <div className="inline-flex items-center justify-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => onOpenDrawer?.(client)}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-1.5 rounded-unit border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/40 transition-all hover:scale-105 active:scale-95 shadow-xs"
+                      title="Ver vista rápida"
+                      aria-label={`Ver vista rápida de ${client.name}`}
                     >
                       <Eye className="h-4 w-4" />
                     </button>
                     <Link
                       href={`/clients/${client.id}`}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-1.5 rounded-unit border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/40 transition-all hover:scale-105 active:scale-95 shadow-xs flex items-center justify-center"
+                      title="Ver perfil completo"
+                      aria-label={`Ver perfil de ${client.name}`}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Link>

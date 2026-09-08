@@ -1,115 +1,123 @@
+'use client';
+
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-import { useAuthStore } from '../../store/authStore';
-import { useUnitStore } from '../../store/unitStore';
-import { Edit, Trash2, Package, AlertTriangle, Plus, ArrowDownRight, ArrowUpRight, Eye, X, Home, AlertCircle, Filter, Search, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, Calendar, Sparkles, BarChart3, Activity, ShoppingCart, Loader2, CheckCircle, XCircle, Building2, RefreshCw, FileText } from 'lucide-react';
-import { DataTable } from '@/components/ui/DataTable';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Button } from '@/components/ui/Button';
-import { EmptyStateData } from '@/components/ui/EmptyState';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Package, 
+  AlertTriangle, 
+  Plus, 
+  ArrowUpRight, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Filter, 
+  Search, 
+  RefreshCw, 
+  ChevronDown, 
+  ChevronUp, 
+  DollarSign, 
+  Building2, 
+  Activity, 
+  CheckCircle2, 
+  XCircle, 
+  Barcode, 
+  Layers, 
+  Tag, 
+  Check, 
+  SlidersHorizontal,
+  Home
+} from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
+import { useUnitStore } from '@/store/unitStore';
+import { DataTable } from '@/components/ui/DataTable';
+import { TableToolbar, type QuickChip } from '@/components/ui/TableToolbar';
+import { TableBadge } from '@/components/ui/TableBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ProductDetailDrawer } from './ProductDetailDrawer';
 import { InventoryMetrics } from './InventoryMetrics';
-import type { Product } from '@/types/product';
 import { useToast } from '@/hooks/useToast';
+import { cn } from '@/lib/utils';
+import type { Product } from '@/types/product';
 
 export function InventoryPage(): JSX.Element {
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [viewModal, setViewModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { success, error } = useToast();
-  
-  const activeUnit = useUnitStore((s) => s.activeUnit);
-  const [showFilters, setShowFilters] = useState(true);
-  
-  // Additional filters (like appointments)
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [search, setSearch] = useState<string>('');
-  
-  // Debounce hook para búsqueda
-  function useDebouncedValue<T>(value: T, delay: number): T {
-    const [debounced, setDebounced] = useState(value);
-    useEffect(() => {
-      const t = setTimeout(() => setDebounced(value), delay);
-      return () => clearTimeout(t);
-    }, [value, delay]);
-    return debounced;
-  }
-  
-  const debouncedSearch = useDebouncedValue(search.trim(), 300);
-  
-  const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN'; // RECEPTIONIST can only view, not edit
   const router = useRouter();
   const queryClient = useQueryClient();
+  const activeUnit = useUnitStore((s) => s.activeUnit);
+  const user = useAuthStore((s) => s.user);
+  const canEdit = user?.role === 'ADMIN';
+  const { success, error: toastError } = useToast();
 
-  // ✅ MEJORADO: Query con paginación real
+  // Navigation tab: 'list' | 'low_stock' | 'metrics'
+  const [activeTab, setActiveTab] = useState<'list' | 'low_stock' | 'metrics'>('list');
+
+  // Filters state
+  const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [unitFilter, setUnitFilter] = useState<string>(activeUnit || '');
+
+  // Keep unitFilter synced when activeUnit changes
+  useEffect(() => {
+    if (activeUnit) {
+      setUnitFilter(activeUnit);
+    }
+  }, [activeUnit]);
+
+  // Drawer & Dialog states
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data: productsData, isLoading } = useQuery({
-    queryKey: ['inventory-products', activeUnit, currentPage, pageSize, categoryId, typeFilter, debouncedSearch],
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Main Products Query
+  const { 
+    data: productsData, 
+    isLoading, 
+    isFetching, 
+    refetch 
+  } = useQuery({
+    queryKey: ['inventory-products', unitFilter, currentPage, pageSize, categoryId, typeFilter, debouncedSearch, activeTab],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (activeUnit) params.set('unit', activeUnit);
+      if (unitFilter) params.set('unit', unitFilter);
       params.set('page', String(currentPage));
       params.set('limit', String(pageSize));
-      
-      // Add category filter
       if (categoryId) params.set('categoryId', categoryId);
-      
-      // Add type filter
       if (typeFilter) params.set('type', typeFilter);
-      
-      // Add search filter
       if (debouncedSearch) params.set('search', debouncedSearch);
-      
+      if (activeTab === 'low_stock') params.set('lowStock', 'true');
+
       const { data } = await api.get(`/api/inventory/products?${params}`);
       return data;
     },
+    staleTime: 2 * 60 * 1000,
   });
 
-  const { data: categories } = useQuery({
+  // Product categories query
+  const { data: categories = [] } = useQuery({
     queryKey: ['product-categories'],
     queryFn: async () => {
       const { data } = await api.get('/api/inventory/products/categories');
-      return data;
+      return data || [];
     },
   });
 
-  // Extract data from paginated response
-  const products = productsData?.data || [];
-  const pagination = productsData?.pagination || {
-    page: 1,
-    limit: pageSize,
-    total: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrev: false,
-  };
-
-  // Query for product movements
-  const [movementsPage, setMovementsPage] = useState(1);
-  const movementsPageSize = 10;
-
-  const { data: movementsData, isLoading: movementsLoading } = useQuery({
-    queryKey: ['product-movements', selectedProduct?.id, movementsPage],
-    queryFn: async () => {
-      if (!selectedProduct?.id) return { data: [], pagination: { page: 1, total: 0, totalPages: 0 } };
-      const { data } = await api.get(`/api/inventory/movements?productId=${selectedProduct.id}&limit=${movementsPageSize}&page=${movementsPage}`);
-      return data;
-    },
-    enabled: !!selectedProduct?.id && viewModal,
-  });
-
-  const movements = movementsData?.data || [];
-  const movementsPagination = movementsData?.pagination || { page: 1, total: 0, totalPages: 0 };
-
-  // ✅ MEJORADO: Delete mutation con backend real
+  // Delete / Toggle Active Mutation
   const deleteMutation = useMutation({
     mutationFn: async (productId: string) => {
       const { data } = await api.delete(`/api/inventory/products/${productId}`);
@@ -117,1150 +125,462 @@ export function InventoryPage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      success('Estado del producto actualizado');
       setShowDeleteDialog(false);
-      setSelectedProduct(null);
+      setProductToDelete(null);
     },
-    onError: (error: any) => {
-      error(error.message || 'Error al eliminar el producto');
+    onError: (err: any) => {
+      toastError(err?.response?.data?.error || err?.message || 'Error al modificar el producto');
     },
   });
 
-  // ✅ OPTIMIZADO: Helper functions with memoization
-  const lowStockCount = useMemo(() => {
-    return products.filter((p: Product) => p.stock < p.minStock).length;
-  }, [products]);
+  const products: Product[] = Array.isArray(productsData?.data) 
+    ? productsData.data 
+    : Array.isArray(productsData?.products)
+    ? productsData.products
+    : Array.isArray(productsData) 
+    ? productsData 
+    : [];
 
-  // ✅ NUEVO: Cálculo de valor del inventario
-  const totalInventoryValue = useMemo(() => {
-    return products.reduce((sum: number, p: Product) => sum + (p.costPrice || 0) * p.stock, 0);
-  }, [products]);
+  const pagination = productsData?.pagination || {
+    page: 1,
+    limit: pageSize,
+    total: products.length,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  };
 
-  // ✅ NUEVO: Cálculo de productos inactivos
-  const inactiveCount = useMemo(() => {
-    return products.filter((p: Product) => !p.isActive).length;
-  }, [products]);
+  // Summary Metrics calculations
+  const metrics = useMemo(() => {
+    const total = pagination.total || products.length;
+    const lowStock = products.filter((p) => (p.stock ?? 0) < (p.minStock ?? 0)).length;
+    const totalCostValue = products.reduce((sum, p) => sum + (Number(p.costPrice) || 0) * (Number(p.stock) || 0), 0);
+    const totalSaleValue = products.reduce((sum, p) => sum + (Number(p.salePrice) || 0) * (Number(p.stock) || 0), 0);
 
-  // ✅ REFACTORIZADO: Category color mapping object
-  const getCategoryColor = useCallback((name: string) => {
-    const lowerName = name.toLowerCase();
-    
-    // SPA Categories mapping
-    const spaCategories: Record<string, string> = {
-      'facial': 'bg-pink-100 text-pink-800',
-      'cara': 'bg-pink-100 text-pink-800',
-      'masaje': 'bg-purple-100 text-purple-800',
-      'relaj': 'bg-purple-100 text-purple-800',
-      'corporal': 'bg-purple-100 text-purple-800',
-      'manicur': 'bg-blue-100 text-blue-800',
-      'uña': 'bg-blue-100 text-blue-800',
-      'mano': 'bg-blue-100 text-blue-800',
-      'pedicur': 'bg-indigo-100 text-indigo-800',
-      'pie': 'bg-indigo-100 text-indigo-800',
-      'depil': 'bg-red-100 text-red-800',
-      'cera': 'bg-red-100 text-red-800',
-      'laser': 'bg-red-100 text-red-800',
-      'tratamient': 'bg-green-100 text-green-800',
-      'terapia': 'bg-green-100 text-green-800',
+    return {
+      total,
+      lowStock,
+      totalCostValue,
+      totalSaleValue,
     };
-    
-    // Barbería Categories mapping
-    const barberiaCategories: Record<string, string> = {
-      'corte': 'bg-amber-100 text-amber-800',
-      'cabello': 'bg-amber-100 text-amber-800',
-      'peinado': 'bg-amber-100 text-amber-800',
-      'barba': 'bg-orange-100 text-orange-800',
-      'bigote': 'bg-orange-100 text-orange-800',
-      'tinte': 'bg-teal-100 text-teal-800',
-      'color': 'bg-teal-100 text-teal-800',
-      'decap': 'bg-teal-100 text-teal-800',
-    };
-    
-    // Product Categories mapping
-    const productCategories: Record<string, string> = {
-      'shampoo': 'bg-cyan-100 text-cyan-800',
-      'acondicionador': 'bg-cyan-100 text-cyan-800',
-      'crema': 'bg-lime-100 text-lime-800',
-      'loción': 'bg-lime-100 text-lime-800',
-      'aceite': 'bg-emerald-100 text-emerald-800',
-      'serum': 'bg-emerald-100 text-emerald-800',
-      'máscara': 'bg-violet-100 text-violet-800',
-      'tratamiento': 'bg-violet-100 text-violet-800',
-    };
-    
-    // Check mappings in order of specificity
-    for (const [key, color] of Object.entries(spaCategories)) {
-      if (lowerName.includes(key)) return color;
-    }
-    for (const [key, color] of Object.entries(barberiaCategories)) {
-      if (lowerName.includes(key)) return color;
-    }
-    for (const [key, color] of Object.entries(productCategories)) {
-      if (lowerName.includes(key)) return color;
-    }
-    
-    // Default colors
-    if (lowerName === 'sin categoría') return 'bg-gray-100 text-gray-800';
-    return 'bg-sky-100 text-sky-800';
-  }, []);
+  }, [products, pagination.total]);
 
-  const getStockStatus = useCallback((product: Product) => {
-    if (product.stock === 0) return 'ZERO';
-    if (product.stock < product.minStock) return 'LOW';
-    if (product.maxStock && product.stock > product.maxStock) return 'HIGH';
-    return 'OK';
-  }, []);
+  // Force refresh handler
+  const handleRefresh = useCallback(() => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['product-categories'] });
+  }, [refetch, queryClient]);
 
-  const getPriceRange = useCallback((price: number | null) => {
-    if (!price) return '';
-    if (price < 10) return '0-10';
-    if (price < 50) return '10-50';
-    if (price < 100) return '50-100';
-    if (price < 500) return '100-500';
-    return '500+';
-  }, []);
+  // Quick Chips for Product Type
+  const typeChips: QuickChip[] = [
+    { id: '', label: 'Todos' },
+    { id: 'FOR_SALE', label: 'Venta' },
+    { id: 'INTERNAL_USE', label: 'Uso Interno' },
+    { id: 'BOTH', label: 'Venta & Uso' },
+  ];
 
-  // ✅ ELIMINADO: Client-side filtering - ahora se maneja en backend
-
+  // Table columns definition
   const columns = [
     {
       key: 'name',
-      header: 'Producto',
-      sortable: true,
+      header: 'Producto / SKU',
       render: (row: Product) => (
-        <div className="flex items-center gap-2">
-          <Package className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <span className="font-medium text-[var(--unit-text-muted)]">{row.name}</span>
-          {row.stock < row.minStock && (
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          )}
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-unit bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] flex items-center justify-center shrink-0">
+            <Package className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-[var(--unit-text)] text-sm">{row.name}</span>
+              {row.stock < row.minStock && (
+                <span title="Stock bajo el mínimo">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                </span>
+              )}
+            </div>
+            {row.barcode ? (
+              <span className="text-[11px] font-mono text-[var(--unit-text-muted)] flex items-center gap-1">
+                <Barcode className="h-3 w-3" />
+                {row.barcode}
+              </span>
+            ) : (
+              <span className="text-[11px] text-[var(--unit-text-muted)]">Sin código</span>
+            )}
+          </div>
         </div>
       ),
     },
     {
       key: 'category',
       header: 'Categoría',
-      sortable: true,
-      render: (row: Product) => {
-        const categoryName = row.category?.name || 'Sin categoría';
-        
-        if (categoryName === '—') {
-          return <span className="text-[var(--unit-text-muted)]">—</span>;
-        }
-        
-        return (
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            getCategoryColor(categoryName)
-          )}>
-            {categoryName}
-          </span>
-        );
-      },
+      render: (row: Product) => (
+        <TableBadge type="status-default">
+          {row.category?.name || 'Sin categoría'}
+        </TableBadge>
+      ),
     },
     {
       key: 'unit',
       header: 'Unidad',
       render: (row: Product) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.unit === 'SPA'
-            ? 'bg-purple-100 text-purple-800'
-            : 'bg-red-100 text-red-800'
-        )}>
+        <TableBadge type={row.unit === 'BARBERIA' ? 'unit-barberia' : 'unit-spa'}>
           {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-        </span>
+        </TableBadge>
       ),
     },
     {
       key: 'type',
       header: 'Tipo',
       render: (row: Product) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.type === 'INTERNAL_USE'
-            ? 'bg-orange-100 text-orange-800'
-            : row.type === 'FOR_SALE'
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-green-100 text-green-800'
-        )}>
-          {row.type === 'INTERNAL_USE' ? 'Uso interno' : 
-           row.type === 'FOR_SALE' ? 'Para venta' : 'Ambos'}
-        </span>
+        <TableBadge type={row.type === 'FOR_SALE' ? 'action-login' : row.type === 'INTERNAL_USE' ? 'status-pending' : 'status-active'}>
+          {row.type === 'FOR_SALE' ? 'Venta' : row.type === 'INTERNAL_USE' ? 'Uso Interno' : 'Venta & Uso'}
+        </TableBadge>
       ),
     },
     {
       key: 'stock',
-      header: 'Stock',
-      sortable: true,
-      render: (row: Product) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.stock === 0 
-            ? 'bg-red-100 text-red-800'
-            : row.stock < row.minStock 
-            ? 'bg-amber-100 text-amber-800' 
-            : 'bg-green-100 text-green-800'
-        )}>
-          {row.stock} {row.measureUnit}
-        </span>
-      ),
+      header: 'Stock Actual',
+      render: (row: Product) => {
+        const isLow = row.stock < row.minStock && row.stock > 0;
+        const isZero = row.stock === 0;
+
+        return (
+          <div className="flex flex-col">
+            <TableBadge type={isZero ? 'status-inactive' : isLow ? 'status-pending' : 'status-active'} className="font-mono w-fit">
+              {row.stock} {row.measureUnit}
+            </TableBadge>
+            <span className="text-[10px] text-[var(--unit-text-muted)] font-mono pl-1">
+              Mín: {row.minStock} {row.measureUnit}
+            </span>
+          </div>
+        );
+      },
     },
     {
-      key: 'minStock',
-      header: 'Mínimo',
-      sortable: true,
+      key: 'prices',
+      header: 'Precios (S/)',
       render: (row: Product) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
-          {row.minStock} {row.measureUnit}
-        </span>
+        <div className="flex flex-col text-xs font-mono">
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+            {row.salePrice != null ? `Venta: S/ ${Number(row.salePrice).toFixed(2)}` : 'Venta: —'}
+          </span>
+          <span className="text-[11px] text-[var(--unit-text-muted)]">
+            {row.costPrice != null ? `Costo: S/ ${Number(row.costPrice).toFixed(2)}` : 'Costo: —'}
+          </span>
+        </div>
       ),
-    },
-    {
-      key: 'salePrice',
-      header: 'Precio Venta',
-      sortable: true,
-      render: (row: Product) =>
-        row.salePrice ? (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
-            S/ {row.salePrice.toFixed(2)}
-          </span>
-        ) : (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
-            —
-          </span>
-        ),
     },
     {
       key: 'isActive',
       header: 'Estado',
       render: (row: Product) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.isActive
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-        )}>
+        <TableBadge type={row.isActive ? 'status-active' : 'status-inactive'}>
           {row.isActive ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-    {
-      key: 'timesVended',
-      header: 'Vendidos',
-      sortable: true,
-      render: (row: Product) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
-          {row.timesVended || 0}
-        </span>
+        </TableBadge>
       ),
     },
   ];
 
-  const filters = [
-    {
-      key: 'showInactive',
-      label: 'Mostrar inactivos',
-      type: 'checkbox' as const,
-    },
-    {
-      key: 'dateFilter',
-      label: 'Fecha',
-      type: 'select' as const,
-      options: [
-        { label: 'Todas', value: '' },
-        { label: 'Hoy', value: 'TODAY' },
-        { label: 'Esta semana', value: 'WEEK' },
-        { label: 'Este mes', value: 'MONTH' },
-      ],
-    },
-    {
-      key: 'unit',
-      label: 'Unidad',
-      type: 'select' as const,
-      options: [
-        { label: 'Todas', value: '' },
-        { label: 'SPA', value: 'SPA' },
-        { label: 'Barbería', value: 'BARBERIA' },
-      ],
-    },
-    {
-      key: 'type',
-      label: 'Tipo',
-      type: 'select' as const,
-      options: [
-        { label: 'Todos', value: '' },
-        { label: 'Productos', value: 'PRODUCT' },
-        { label: 'Servicios', value: 'SERVICE' },
-      ],
-    },
-    {
-      key: 'stockStatus',
-      label: 'Estado de Stock',
-      type: 'select' as const,
-      options: [
-        { label: 'Todos', value: '' },
-        { label: 'Sin stock', value: 'ZERO' },
-        { label: 'Stock bajo', value: 'LOW' },
-        { label: 'Stock normal', value: 'OK' },
-        { label: 'Stock excedente', value: 'HIGH' },
-      ],
-    },
-    {
-      key: 'priceRange',
-      label: 'Rango de Precio',
-      type: 'select' as const,
-      options: [
-        { label: 'Todos', value: '' },
-        { label: 'Menos de S/ 10', value: '0-10' },
-        { label: 'S/ 10 - S/ 50', value: '10-50' },
-        { label: 'S/ 50 - S/ 100', value: '50-100' },
-        { label: 'Más de S/ 100', value: '500+' },
-      ],
-    },
-    {
-      key: 'hasPrice',
-      label: 'Con precio definido',
-      type: 'checkbox' as const,
-    },
-    {
-      key: 'lowStock',
-      label: 'Stock crítico',
-      type: 'checkbox' as const,
-    },
-    {
-      key: 'hasBarcode',
-      label: 'Con código de barras',
-      type: 'checkbox' as const,
-    },
-  ];
-
+  // Table row actions
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver Ficha',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Product) => {
-        setSelectedProduct(row);
-        setMovementsPage(1); // Reset to first page
-        setViewModal(true);
+        setSelectedProductId(row.id);
+        setDrawerOpen(true);
       },
-      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Product) => {
         router.push(`/inventory/products/${row.id}/edit`);
       },
-      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
-      disabled: (row: Product) => !canEdit,
+      disabled: () => !canEdit,
     },
     {
-      label: 'Eliminar',
+      label: 'Eliminar / Desactivar',
+      variant: 'delete' as const,
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: Product) => {
-        if (row.isActive) {
-          setSelectedProduct(row);
-          setShowDeleteDialog(true);
-        } else {
-          // Reactivate inactive products
-          deleteMutation.mutate(row.id);
-        }
+        setProductToDelete(row);
+        setShowDeleteDialog(true);
       },
-      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
-      disabled: (row: Product) => !canEdit,
+      disabled: () => !canEdit,
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header - Idéntico a Appointments */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Sistema de Inventario
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Gestión de Stock • {activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA'}
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Productos</h1>
-            <p className="text-[var(--unit-text-muted)]">
-              Gestiona productos y servicios con control total
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Inventario & Productos
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Control de existencias, insumos profesionales y catálogo retail en tiempo real
             </p>
           </div>
 
-          {/* Inventory Metrics - Nueva sección de métricas espectaculares */}
-          <InventoryMetrics products={products} />
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Actualizar datos"
+            >
+              <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin text-[var(--unit-accent)]")} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
 
-          {/* Enhanced Action Buttons - Idéntico a Appointments pero adaptado para Inventario */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/inventory/entry"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+            >
+              <ArrowUpRight className="h-4 w-4 text-emerald-600" />
+              <span className="hidden sm:inline">Entrada Stock</span>
+            </Link>
+
+            <Link
+              href="/inventory/movements"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+            >
+              <Activity className="h-4 w-4 text-purple-600" />
+              <span className="hidden sm:inline">Movimientos</span>
+            </Link>
+
+            <Link
+              href="/inventory/suppliers"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+            >
+              <Building2 className="h-4 w-4 text-blue-600" />
+              <span className="hidden sm:inline">Proveedores</span>
+            </Link>
+
             {canEdit && (
-              <>
-                <Link href="/inventory/products/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <Plus className="h-5 w-5" />
-                  Nuevo Producto
-                </Link>
-                <Link href="/inventory/entry" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <ArrowUpRight className="h-5 w-5" />
-                  Entrada de Stock
-                </Link>
-                <Link href="/inventory/movements" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold shadow-lg border-2 border-purple-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <Activity className="h-5 w-5" />
-                  Movimientos
-                </Link>
-                <Link href="/inventory/alerts" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <AlertTriangle className="h-5 w-5" />
-                  Alertas
-                </Link>
-                <Link href="/inventory/suppliers" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                  <Building2 className="h-5 w-5" />
-                  Proveedores
-                </Link>
-                <button
-                  onClick={() => router.push('/inventory/use')}
-                  className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold shadow-lg border-2 border-orange-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Home className="h-5 w-5" />
-                  Uso Interno
-                </button>
-              </>
+              <Link
+                href="/inventory/products/new"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" />
+                Nuevo Producto
+              </Link>
             )}
           </div>
         </div>
 
-        {/* Enhanced Inventory Filters */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Inventario</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-              >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
-              </button>
+        {/* Ergonomic Micro Status Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+              <Package className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Total Productos</p>
+              <p className="text-lg font-bold text-[var(--unit-text)]">{metrics.total}</p>
             </div>
           </div>
 
-          {/* Filter Content - Conditional Rendering */}
-          {showFilters && (
-            <div className="space-y-6">
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Stock Bajo</p>
+              <p className={cn("text-lg font-bold", metrics.lowStock > 0 ? "text-amber-600" : "text-[var(--unit-text)]")}>
+                {metrics.lowStock}
+              </p>
+            </div>
+          </div>
 
-              {/* Additional Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Category Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Categoría</label>
-                  <select
-                    value={categoryId}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => setCategoryId(e.target.value)}
-                  >
-                    <option value="">Todas las categorías</option>
-                    {categories?.map((category: any) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name} ({category.unit})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+              <DollarSign className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Valor Costo</p>
+              <p className="text-lg font-bold text-[var(--unit-text)] font-mono">
+                S/ {metrics.totalCostValue.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
 
-                {/* Type Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Tipo</label>
-                  <select
-                    value={typeFilter}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                  >
-                    <option value="">Todos los tipos</option>
-                    <option value="INTERNAL_USE">Uso interno</option>
-                    <option value="FOR_SALE">Para venta</option>
-                    <option value="BOTH">Ambos</option>
-                  </select>
-                </div>
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+              <DollarSign className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Valor Venta</p>
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                S/ {metrics.totalSaleValue.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
 
-                {/* Search Bar */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Búsqueda</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar por nombre de producto..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                    />
-                    {search && (
-                      <button
-                        type="button"
-                        onClick={() => setSearch('')}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                          <X className="h-3 w-3" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Enhanced Active Filters Summary */}
-              {(activeUnit || categoryId || typeFilter || search) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {activeUnit && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {activeUnit}
-                          </span>
-                        )}
-                        {categoryId && categories && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 border border-sky-200">
-                            Categoría: {categories.find((c: any) => c.id === categoryId)?.name}
-                          </span>
-                        )}
-                        {typeFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 border border-red-200">
-                            Tipo: {typeFilter === 'INTERNAL_USE' ? 'Uso interno' : 
-                                   typeFilter === 'FOR_SALE' ? 'Para venta' : 
-                                   typeFilter === 'BOTH' ? 'Ambos' : typeFilter}
-                          </span>
-                        )}
-                        {search && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                            Búsqueda: {search}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setCategoryId('');
-                        setTypeFilter('');
-                        setSearch('');
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
-                  </div>
-                </div>
+        {/* View Switcher & Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          {/* Tab navigation pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-[var(--unit-surface-elevated)] rounded-unit-lg border border-[var(--unit-border)]/40 w-fit">
+            <button
+              onClick={() => setActiveTab('list')}
+              className={cn(
+                'px-4 py-2 rounded-unit text-xs font-bold transition-all flex items-center gap-2',
+                activeTab === 'list'
+                  ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                  : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
               )}
-            </div>
-          )}
+            >
+              <Package className="h-3.5 w-3.5" />
+              Catálogo / Lista
+            </button>
+
+            <button
+              onClick={() => setActiveTab('low_stock')}
+              className={cn(
+                'px-4 py-2 rounded-unit text-xs font-bold transition-all flex items-center gap-2',
+                activeTab === 'low_stock'
+                  ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                  : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
+              )}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Stock Crítico ({metrics.lowStock})
+            </button>
+
+            <button
+              onClick={() => setActiveTab('metrics')}
+              className={cn(
+                'px-4 py-2 rounded-unit text-xs font-bold transition-all flex items-center gap-2',
+                activeTab === 'metrics'
+                  ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                  : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
+              )}
+            >
+              <Activity className="h-3.5 w-3.5" />
+              Métricas Completas
+            </button>
+          </div>
         </div>
 
-        {/* Inventory Table */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-          {/* Table Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Package className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Lista de Productos</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Gestiona tu inventario</p>
-                </div>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                {products.length} productos
-              </span>
-            </div>
+        {/* Content Section */}
+        {activeTab === 'metrics' ? (
+          <div className="pt-2">
+            <InventoryMetrics products={products} />
           </div>
-
-          {/* Table */}
-          <DataTable
-            columns={columns}
-            data={products}
-            keyExtractor={(row) => row.id}
-            loading={isLoading}
-            searchPlaceholder="" // Hidden since we have custom search
-            filters={[]} // Hidden since we have custom filters
-            actions={actions}
-            emptyMessage="No se encontraron productos con los filtros aplicados."
-            disableInternalPagination={true}
-            pagination={pagination}
-            onPageChange={(page) => setCurrentPage(page)}
-          />
-        </div>
-
-        {/* Delete Confirmation Modal - Estilo Original Premium */}
-        {showDeleteDialog && selectedProduct && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDeleteDialog(false);
-              setSelectedProduct(null);
-            }
-          }}>
-            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-              </div>
-
-              {/* Header - Estándar consistente */}
-              <div className="relative mb-6 flex items-start justify-between gap-4">
-                {/* Background gradient for header - Consistente con Modal.tsx */}
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                
-                <div className="relative z-10 flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                    <Trash2 className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-red-900">Desactivar Producto</h3>
-                    <p className="text-sm text-red-700">Esta acción es reversible</p>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedProduct(null);
-                    setDeleteConfirm(null);
-                  }}
-                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                  aria-label="Cerrar"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="relative space-y-4">
-                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
-                      <AlertCircle className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-red-900">
-                        ¿Estás seguro de que deseas desactivar el producto "{selectedProduct.name}"?
-                      </p>
-                      <p className="text-sm text-red-700 mt-1">
-                        Esta acción se puede deshacer activando el producto nuevamente. El producto será marcado como inactivo pero no se eliminará permanentemente.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Product Info */}
-                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Producto</span>
-                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                        {selectedProduct.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Precio Venta</span>
-                      <span className="text-sm font-bold text-gray-900">
-                        S/ {selectedProduct.salePrice?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Stock Actual</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedProduct.stock} unidades
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Unidad</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedProduct.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-4 mt-6">
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedProduct(null);
-                  }}
-                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    deleteMutation.mutate(selectedProduct.id);
-                  }}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                >
-                  {deleteMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                      Desactivando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Trash2 className="h-4 w-4" />
-                      Desactivar Producto
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* View Details Modal - Exacto Estilo Detalles de Servicio */}
-        {viewModal && selectedProduct && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern - Exacto estilo Servicio */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-              </div>
-              
-              <div className="relative">
-                {/* Enhanced Header - Estándar consistente */}
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <Eye className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Producto</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedProduct.id}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setViewModal(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
-                    aria-label="Cerrar"
-                  >
-                    <X className="h-4 w-4 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors" />
-                  </button>
-                </div>
-
-                {/* Enhanced Content Grid - Exacto estilo Servicio */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Enhanced General Information - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Package className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
-                      </div>
-
-                      {/* Enhanced Product Info List */}
-                      <div className="space-y-4">
-                        {/* Name */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Nombre</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
-                            {selectedProduct.name}
-                          </span>
-                        </div>
-
-                        {/* Type */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Tipo</span>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
-                            selectedProduct.type === 'INTERNAL_USE' ? 'bg-orange-100 text-orange-700 border-orange-200' : 
-                            selectedProduct.type === 'FOR_SALE' ? 'bg-green-100 text-green-700 border-green-200' : 
-                            'bg-blue-100 text-blue-700 border-blue-200'
-                          }`}>
-                            {selectedProduct.type === 'INTERNAL_USE' ? (
-                              <>
-                                <Home className="h-3 w-3" />
-                                Uso interno
-                              </>
-                            ) : selectedProduct.type === 'FOR_SALE' ? (
-                              <>
-                                <ShoppingCart className="h-3 w-3" />
-                                Para venta
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="h-3 w-3" />
-                                Ambos
-                              </>
-                            )}
-                          </span>
-                        </div>
-
-                        {/* Unit */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Unidad</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {selectedProduct.unit}
-                          </span>
-                        </div>
-
-                        {/* Category */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Categoría</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {selectedProduct.category?.name || 'Sin categoría'}
-                          </span>
-                        </div>
-
-                        {/* Barcode */}
-                        {selectedProduct.barcode && (
-                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[var(--unit-text)]">Código Barras</span>
-                            </div>
-                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 font-mono text-xs">
-                              {selectedProduct.barcode}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Status */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Estado</span>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
-                            selectedProduct.isActive 
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                              : 'bg-gray-100 text-gray-800 border-gray-200'
-                          }`}>
-                            {selectedProduct.isActive ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Stock Information - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Package className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información de Stock</h4>
-                      </div>
-
-                      {/* Enhanced Stock List */}
-                      <div className="space-y-4">
-                        {/* Current Stock */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-emerald-600" />
-                            <span className="text-sm font-bold text-emerald-800">Stock Actual</span>
-                          </div>
-                          <div className="text-right">
-                            <span className={`font-bold text-emerald-800 bg-white px-3 py-1 rounded-lg border-2 border-emerald-300/30 shadow-lg tabular-nums ${
-                              selectedProduct.stock < selectedProduct.minStock ? 'text-amber-600 border-amber-300/30' : ''
-                            }`}>
-                              {selectedProduct.stock} {selectedProduct.measureUnit}
-                            </span>
-                            {selectedProduct.stock < selectedProduct.minStock && (
-                              <p className="text-xs text-amber-700 font-medium mt-1">⚠️ Stock crítico</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Min Stock */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-amber-500/30 bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-600" />
-                            <span className="text-sm font-bold text-amber-800">Stock Mínimo</span>
-                          </div>
-                          <span className="font-bold text-amber-800 bg-white px-3 py-1 rounded-lg border-2 border-amber-300/30 shadow-lg tabular-nums">
-                            {selectedProduct.minStock} {selectedProduct.measureUnit}
-                          </span>
-                        </div>
-
-                        {/* Max Stock */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-indigo-500/30 bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-indigo-600" />
-                            <span className="text-sm font-bold text-indigo-800">Stock Máximo</span>
-                          </div>
-                          <span className="font-bold text-indigo-800 bg-white px-3 py-1 rounded-lg border-2 border-indigo-300/30 shadow-lg tabular-nums">
-                            {selectedProduct.maxStock ? `${selectedProduct.maxStock} ${selectedProduct.measureUnit}` : 'Sin límite'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Price and Status - Glassmorphism Card */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precios y Estado</h4>
-                      </div>
-
-                      {/* Enhanced Price and Status List */}
-                      <div className="space-y-4">
-                        {/* Sale Price */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-green-500/30 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-bold text-green-800">Precio Venta</span>
-                          </div>
-                          <span className="font-bold text-green-800 bg-white px-3 py-1 rounded-lg border-2 border-green-300/30 shadow-lg tabular-nums">
-                            {selectedProduct.salePrice ? `S/ ${selectedProduct.salePrice.toFixed(2)}` : 'No definido'}
-                          </span>
-                        </div>
-
-                        {/* Cost Price */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-red-500/30 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-red-600" />
-                            <span className="text-sm font-bold text-red-800">Precio Costo</span>
-                          </div>
-                          <span className="font-bold text-red-800 bg-white px-3 py-1 rounded-lg border-2 border-red-300/30 shadow-lg tabular-nums">
-                            {selectedProduct.costPrice ? `S/ ${selectedProduct.costPrice.toFixed(2)}` : 'No definido'}
-                          </span>
-                        </div>
-
-                        {/* Status */}
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-purple-500/30 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-purple-600" />
-                            <span className="text-sm font-bold text-purple-800">Estado</span>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
-                            selectedProduct.isActive
-                              ? 'bg-green-100 text-green-700 border-green-200'
-                              : 'bg-red-100 text-red-700 border-red-200'
-                          }`}>
-                            {selectedProduct.isActive ? (
-                              <>
-                                <CheckCircle className="h-3 w-3" />
-                                Activo
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="h-3 w-3" />
-                                Inactivo
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Recent Movements - Glassmorphism Card */}
-                <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                  <div className="relative">
-                    {/* Enhanced Header */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Activity className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">
-                          Movimientos de Stock
-                        </h4>
-                      </div>
-                      <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                        {movements.length} movimientos
-                      </span>
-                    </div>
-
-                    {/* Enhanced Movements List */}
-                    <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                      {movements.length === 0 ? (
-                        <EmptyStateData
-                          title="No hay movimientos registrados"
-                          description="No se encontraron movimientos de stock para este producto. Los movimientos aparecerán aquí cuando se realicen entradas o salidas de inventario."
-                          action={
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => window.location.href = '/inventory/movements'}
-                            >
-                              Ver todos los movimientos
-                            </Button>
-                          }
-                        />
-                      ) : (
-                        movements.slice(0, 10).map((movement: any) => (
-                          <div key={movement.id} className="group/movement relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
-                            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/movement:opacity-100 transition-opacity rounded-xl"></div>
-                            <div className="relative">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${
-                                      movement.type === 'IN' 
-                                        ? 'bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30'
-                                        : 'bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/30'
-                                    }`}>
-                                      {movement.type === 'IN' ? (
-                                        <Package className="h-3 w-3 text-green-600" />
-                                      ) : (
-                                        <Package className="h-3 w-3 text-red-600" />
-                                      )}
-                                    </div>
-                                    <span className={`text-xs font-bold uppercase tracking-wider ${
-                                      movement.type === 'IN' ? 'text-green-800' : 'text-red-800'
-                                    }`}>
-                                      {movement.type === 'IN' ? 'Entrada' : 'Salida'}
-                                    </span>
-                                    {movement.referenceNumber && (
-                                      <span className="text-xs text-[var(--unit-text-muted)]">
-                                        #{movement.referenceNumber}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
-                                      <span className="text-[var(--unit-text-muted)]">
-                                        {new Date(movement.createdAt).toLocaleDateString('es-PE', {
-                                          day: '2-digit',
-                                          month: '2-digit',
-                                          year: 'numeric'
-                                        })}
-                                      </span>
-                                      <span className="text-[var(--unit-text-muted)]">a las</span>
-                                      <span className="text-[var(--unit-text-muted)]">
-                                        {new Date(movement.createdAt).toLocaleTimeString('es-PE', {
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <Users className="h-3 w-3 text-[var(--unit-text-muted)]" />
-                                      <span className="text-[var(--unit-text-muted)]">Usuario:</span>
-                                      <span className="font-medium text-[var(--unit-text)]">
-                                        {movement.user?.name || 'Sistema'}
-                                      </span>
-                                    </div>
-                                    
-                                    {movement.reason && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <FileText className="h-3 w-3 text-[var(--unit-text-muted)]" />
-                                        <span className="text-[var(--unit-text-muted)]">Motivo:</span>
-                                        <span className="font-medium text-[var(--unit-text)]">
-                                          {movement.reason}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className="text-right">
-                                  <div className="space-y-1">
-                                    <div className={`text-sm font-bold ${
-                                      movement.type === 'IN' ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                      {movement.type === 'IN' ? '+' : '-'}{movement.quantity} {movement.quantity === 1 ? 'unidad' : 'unidades'}
-                                    </div>
-                                    <div className="text-xs text-[var(--unit-text-muted)]">
-                                      Stock: {movement.stockAfter}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Footer Actions - Exacto estilo Servicio */}
-                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                        <Package className="h-4 w-4 text-[var(--unit-accent)]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--unit-text-muted)]">Resumen del Producto</p>
-                        <p className="text-sm font-bold text-[var(--unit-text)]">
-                          {selectedProduct.name} • {selectedProduct.stock} {selectedProduct.measureUnit} • {selectedProduct.unit}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setViewModal(false)}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+        ) : (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <TableToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Buscar producto o código..."
+              chips={typeChips}
+              activeChip={typeFilter}
+              onChipChange={(id) => setTypeFilter(id as string)}
+              showAdvancedFiltersButton={true}
+              isAdvancedOpen={showFilters}
+              onToggleAdvanced={() => setShowFilters(!showFilters)}
+              activeFiltersCount={(categoryId ? 1 : 0) + (unitFilter ? 1 : 0)}
+              onResetFilters={() => {
+                setCategoryId('');
+                setUnitFilter(activeUnit || '');
+              }}
+              advancedFiltersContent={
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Category Filter */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase">Categoría</label>
+                    <select
+                      value={categoryId}
+                      onChange={(e) => setCategoryId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] text-xs text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40"
                     >
-                      <CheckCircle className="h-4 w-4" />
-                      Cerrar Detalles
-                    </button>
+                      <option value="">Todas las categorías</option>
+                      {categories.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Unit Filter */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase">Unidad</label>
+                    <select
+                      value={unitFilter}
+                      onChange={(e) => setUnitFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] text-xs text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40"
+                    >
+                      <option value="">Todas las unidades</option>
+                      <option value="SPA">SPA</option>
+                      <option value="BARBERIA">Barbería</option>
+                    </select>
                   </div>
                 </div>
-              </div>
+              }
+            />
+
+            <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] overflow-hidden shadow-unit-sm">
+              <DataTable
+                data={products}
+                columns={columns}
+                actions={actions}
+                keyExtractor={(row) => row.id}
+                loading={isLoading}
+                searchPlaceholder=""
+                filters={[]}
+                emptyMessage="No se encontraron productos registrados para esta unidad o filtro."
+              />
             </div>
           </div>
         )}
+
+        {/* Product Detail Drawer */}
+        <ProductDetailDrawer
+          productId={selectedProductId}
+          open={drawerOpen}
+          onClose={() => {
+            setDrawerOpen(false);
+            setSelectedProductId(null);
+          }}
+          onEdit={(prod) => {
+            setDrawerOpen(false);
+            router.push(`/inventory/products/${prod.id}/edit`);
+          }}
+        />
+
+        {/* Confirm Delete Dialog */}
+        <ConfirmDialog
+          isOpen={showDeleteDialog}
+          onClose={() => {
+            setShowDeleteDialog(false);
+            setProductToDelete(null);
+          }}
+          onConfirm={() => {
+            if (productToDelete) {
+              deleteMutation.mutate(productToDelete.id);
+            }
+          }}
+          title={productToDelete?.isActive ? 'Desactivar Producto' : 'Reactivar Producto'}
+          message={`¿Estás seguro de que deseas ${productToDelete?.isActive ? 'desactivar' : 'reactivar'} el producto "${productToDelete?.name}"?`}
+          confirmText={productToDelete?.isActive ? 'Desactivar' : 'Reactivar'}
+          type={productToDelete?.isActive ? 'danger' : 'info'}
+          isLoading={deleteMutation.isPending}
+        />
       </div>
     </div>
   );

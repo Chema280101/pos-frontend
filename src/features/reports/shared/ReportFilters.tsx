@@ -70,7 +70,7 @@ export function ReportFilters({
   ];
 
   return (
-    <div className="bg-white rounded-lg border border-[var(--unit-border)] p-4 space-y-4">
+    <div className="bg-[var(--unit-surface-elevated)] rounded-unit-lg border border-[var(--unit-border)] p-4 space-y-4">
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Unit Filter */}
         <div className="flex-1">
@@ -80,7 +80,7 @@ export function ReportFilters({
           <select
             value={unit}
             onChange={(e) => onUnitChange(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
+            className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-unit-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
           >
             <option value="">Todas</option>
             <option value="SPA">SPA</option>
@@ -97,7 +97,7 @@ export function ReportFilters({
             type="date"
             value={dateFrom.toISOString().split('T')[0]}
             onChange={(e) => onDateFromChange(new Date(e.target.value))}
-            className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
+            className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-unit-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
           />
         </div>
 
@@ -109,7 +109,7 @@ export function ReportFilters({
             type="date"
             value={dateTo.toISOString().split('T')[0]}
             onChange={(e) => onDateToChange(new Date(e.target.value))}
-            className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
+            className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-unit-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
           />
         </div>
 
@@ -122,7 +122,7 @@ export function ReportFilters({
             <select
               value={reportType}
               onChange={(e) => onReportTypeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
+              className="w-full px-3 py-2 border border-[var(--unit-border)] rounded-unit-lg focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
             >
               {reportTypes.map(type => (
                 <option key={type.value} value={type.value}>
@@ -140,7 +140,7 @@ export function ReportFilters({
           <button
             key={index}
             onClick={range.action}
-            className="flex items-center gap-1 px-3 py-1 text-sm border border-[var(--unit-border)] rounded-lg hover:bg-[var(--unit-primary)]/10 transition-colors"
+            className="flex items-center gap-1 px-3 py-1 text-sm border border-[var(--unit-border)] rounded-unit-lg hover:bg-[var(--unit-primary)]/10 transition-colors"
           >
             {range.icon}
             {range.label}

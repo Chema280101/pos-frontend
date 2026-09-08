@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -33,6 +34,7 @@ interface InventoryReportProps {
 }
 
 export function InventoryReport({ unit, dateFrom, dateTo, compact = false }: InventoryReportProps): JSX.Element {
+  const router = useRouter();
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['report-inventory', unit, dateFrom, dateTo],
     queryFn: async (): Promise<Product[]> => {
@@ -93,7 +95,7 @@ export function InventoryReport({ unit, dateFrom, dateTo, compact = false }: Inv
           if (lowerName.includes('máscara') || lowerName.includes('tratamiento')) return 'bg-violet-100 text-violet-800';
           
           // Default colors
-          if (lowerName === 'sin categoría') return 'bg-gray-100 text-gray-800';
+          if (lowerName === 'sin categoría') return 'bg-gray-100 text-[var(--unit-text)]';
           return 'bg-sky-100 text-sky-800';
         };
         
@@ -218,20 +220,20 @@ export function InventoryReport({ unit, dateFrom, dateTo, compact = false }: Inv
 
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver en inventario',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Product) => {
-        // TODO: Implement view product functionality
+        router.push('/inventory');
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
     {
-      label: 'Editar',
+      label: 'Editar producto',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Product) => {
-        // TODO: Implement edit product functionality
+        router.push(`/inventory/products/${row.id}/edit`);
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
   ];
 

@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ interface CommissionsReportProps {
 }
 
 export function CommissionsReport({ unit, dateFrom, dateTo, compact = false }: CommissionsReportProps): JSX.Element {
+  const router = useRouter();
   const { data: commissions = [], isLoading } = useQuery({
     queryKey: ['report-commissions', unit, dateFrom, dateTo],
     queryFn: async (): Promise<Commission[]> => {
@@ -141,31 +143,23 @@ export function CommissionsReport({ unit, dateFrom, dateTo, compact = false }: C
 
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver en administración',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Commission) => {
-        // TODO: Implement view commission functionality
+        router.push('/commissions/admin');
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
     {
-      label: 'Pagar',
+      label: 'Liquidar comisión',
+      variant: 'success' as const,
       icon: <DollarSign className="h-4 w-4" />,
       onClick: (row: Commission) => {
         if (row.status === 'PENDING') {
-          // TODO: Implement pay commission functionality
+          router.push('/commissions/admin?status=PENDING');
         }
       },
-      className: 'text-green-600 hover:bg-green-100',
       disabled: (row: Commission) => row.status !== 'PENDING',
-    },
-    {
-      label: 'Editar',
-      icon: <Edit className="h-4 w-4" />,
-      onClick: (row: Commission) => {
-        // TODO: Implement edit commission functionality
-      },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
   ];
 

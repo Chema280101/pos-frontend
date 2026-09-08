@@ -75,7 +75,7 @@ export function useAppointmentReminders(enabled: boolean = true): void {
       if (addedIdsRef.current.has(reminderId)) continue;
 
       const customerName = apt.customer?.name ?? 'Cliente';
-      const serviceNames = apt.items?.map((i) => i.service?.name).filter(Boolean).join(', ') ?? 'Servicio';
+      const serviceNames = apt.items?.map((i: any) => i.service?.name).filter(Boolean).join(', ') ?? 'Servicio';
       const mins = Math.round(minUntil);
 
       useNotificationStore.getState().add({

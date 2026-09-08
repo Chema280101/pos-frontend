@@ -114,9 +114,8 @@ export function AppBreadcrumbs(): JSX.Element {
   if (items.length === 1) return <></>;
 
   return (
-    <div className="relative overflow-hidden border-2 border-[var(--unit-border)]/30 bg-gradient-to-r from-white/90 to-white/70 backdrop-blur-sm shadow-lg">
-      <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-50"></div>
-      <div className="relative px-6 py-4">
+    <div className="relative overflow-hidden sm:border-2 sm:border-[var(--unit-border)]/30 sm:bg-[var(--unit-surface)] sm:shadow-unit rounded-unit mb-2 sm:mb-0">
+      <div className="px-1 sm:px-6 py-2 sm:py-4">
         <Breadcrumbs items={items} />
       </div>
     </div>

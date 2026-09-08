@@ -64,17 +64,17 @@ export function ClientsFilters({
     }
   }, [debouncedSearch, setSearch]);
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+    <div className="bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/60 p-4 mb-6">
       {/* Filter Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-500" />
-          <span className="font-medium text-gray-700">Filtros</span>
+          <Filter className="h-4 w-4 text-[var(--unit-text-muted)]" />
+          <span className="font-medium text-[var(--unit-text)]">Filtros</span>
         </div>
         <button
           type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] hover:bg-gray-100 rounded-unit transition-colors"
         >
           {showFilters ? (
             <>
@@ -101,7 +101,7 @@ export function ClientsFilters({
               placeholder="Buscar clientes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-[var(--unit-border)] rounded-unit focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
 
@@ -157,9 +157,9 @@ export function ClientsFilters({
             <button
               type="button"
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-2 border border-[var(--unit-border)] rounded-unit hover:bg-[var(--unit-surface)] transition-colors"
             >
-              <ArrowUpDown className="h-4 w-4 text-gray-500" />
+              <ArrowUpDown className="h-4 w-4 text-[var(--unit-text-muted)]" />
             </button>
           </div>
 

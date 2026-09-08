@@ -85,7 +85,7 @@ export function StockEntryForm(): JSX.Element {
               Movimiento de inventario
             </span>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
+          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-unit">
             Entrada de Stock
           </h1>
           <p className="text-[var(--unit-text-muted)]">
@@ -94,11 +94,11 @@ export function StockEntryForm(): JSX.Element {
         </div>
 
         {/* Enhanced Form Container */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl">
+        <div className="relative overflow-hidden rounded-unit-lg border border-emerald-500/40 bg-[var(--unit-surface)] shadow-unit-lg">
           {/* Form Header */}
           <div className="relative bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 px-6 py-4 border-b border-emerald-500/30">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+              <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-unit">
                 <ArrowUpRight className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -110,9 +110,9 @@ export function StockEntryForm(): JSX.Element {
 
           {/* Enhanced Error Alert */}
           {mutation.error && (
-            <div className="mx-6 mt-4 rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
+            <div className="mx-6 mt-4 rounded-unit border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
+                <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-red-500 shadow-unit">
                   <AlertCircle className="h-4 w-4 text-white" />
                 </div>
                 <p className="font-medium text-red-800">
@@ -130,7 +130,7 @@ export function StockEntryForm(): JSX.Element {
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
               >
                 <option value="">Seleccionar producto...</option>
                 {(products ?? []).map((p) => (
@@ -140,7 +140,7 @@ export function StockEntryForm(): JSX.Element {
                 ))}
               </select>
               {selectedProduct && (
-                <div className="mt-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                <div className="mt-2 p-3 bg-emerald-50 rounded-unit border border-emerald-200">
                   <p className="text-sm text-emerald-700 font-medium">
                     📦 Stock actual: {selectedProduct.stock} {selectedProduct.measureUnit || 'unidades'}
                   </p>
@@ -157,10 +157,10 @@ export function StockEntryForm(): JSX.Element {
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="Ej: 10"
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
               />
               {selectedProduct && quantity && Number(quantity) > 0 && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mt-2 p-3 bg-blue-50 rounded-unit border border-blue-200">
                   <p className="text-sm text-blue-700 font-medium">
                     📈 Nuevo stock: {selectedProduct.stock + Number(quantity)} {selectedProduct.measureUnit || 'unidades'}
                   </p>
@@ -174,7 +174,7 @@ export function StockEntryForm(): JSX.Element {
               <select
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
               >
                 <option value="">Seleccionar proveedor (opcional)...</option>
                 {(suppliers ?? []).map((s) => (
@@ -193,10 +193,10 @@ export function StockEntryForm(): JSX.Element {
                 value={costPrice}
                 onChange={(e) => setCostPrice(e.target.value)}
                 placeholder="Costo por unidad (opcional)"
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
               />
               {selectedProduct && costPrice && Number(costPrice) > 0 && quantity && Number(quantity) > 0 && (
-                <div className="mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="mt-2 p-3 bg-amber-50 rounded-unit border border-amber-200">
                   <p className="text-sm text-amber-700 font-medium">
                     💰 Valor total: S/ {(Number(costPrice) * Number(quantity)).toFixed(2)}
                   </p>
@@ -213,7 +213,7 @@ export function StockEntryForm(): JSX.Element {
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                   placeholder="Ej: F-001-12345"
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                  className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
                 />
               </div>
               <div>
@@ -222,7 +222,7 @@ export function StockEntryForm(): JSX.Element {
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                  className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
                 />
               </div>
             </div>
@@ -235,7 +235,7 @@ export function StockEntryForm(): JSX.Element {
                 type="button" 
                 onClick={() => mutation.mutate()} 
                 disabled={!canSubmit || mutation.isPending} 
-                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                className="flex-1 px-6 py-3 rounded-unit bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-unit border-2 border-emerald-500/50 transition-all hover:shadow-unit-lg hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
               >
                 {mutation.isPending ? (
                   <span className="flex items-center justify-center gap-2">
@@ -252,7 +252,7 @@ export function StockEntryForm(): JSX.Element {
               <button 
                 type="button" 
                 onClick={() => window.history.back()} 
-                className="px-6 py-3 rounded-xl border-2 border-emerald-500/50 text-emerald-600 font-bold bg-white hover:bg-emerald-500 hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+                className="px-6 py-3 rounded-unit border-2 border-emerald-500/50 text-emerald-600 font-bold bg-[var(--unit-surface-elevated)] hover:bg-emerald-500 hover:text-white transition-all hover:shadow-unit active:scale-[0.98]"
               >
                 <span className="flex items-center gap-2">
                   <X className="h-4 w-4" />

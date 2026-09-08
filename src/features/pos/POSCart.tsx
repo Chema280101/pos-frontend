@@ -28,18 +28,11 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-
+    <div className="rounded-unit-lg border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)]">
       {/* Header */}
-      <div className="relative z-10 p-4 border-b border-[var(--unit-border)]/30 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5">
+      <div className="p-4 border-b border-[var(--unit-border)]/30">
         <h3 className="font-bold text-[var(--unit-text)] flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+          <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]">
             <ShoppingBag className="h-4 w-4 text-white" />
           </div>
           Carrito
@@ -55,7 +48,7 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
       <div className="relative z-10 max-h-96 overflow-y-auto">
         {/* Mensaje de aprobaciones pendientes */}
         {cart.some(item => item.requiresApproval) && (
-          <div className="mx-4 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200/50">
+          <div className="mx-4 mt-4 p-3 rounded-unit bg-amber-50 border border-amber-200/50">
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
@@ -68,7 +61,7 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
         
         {cart.length === 0 ? (
           <div className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-unit-lg bg-[var(--unit-accent)]/10 flex items-center justify-center">
               <ShoppingBag className="h-8 w-8 text-[var(--unit-accent)]" />
             </div>
             <p className="text-sm text-[var(--unit-text)] mb-4">Carrito vacío</p>
@@ -84,7 +77,7 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
                         {getItemIcon(item.itemType)}
                       </div>
                       <h4 className="font-medium text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] transition-colors">{item.name}</h4>
@@ -112,24 +105,26 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
                   
                   <div className="flex items-center gap-2">
                     {/* Quantity Controls */}
-                    <div className="flex items-center gap-1 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 shadow-sm">
+                    <div className="flex items-center gap-0.5 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-sm">
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.referenceId, item.itemType, item.employeeId, Math.max(1, item.quantity - 1))}
-                        className="p-1.5 text-[var(--unit-text-muted)] hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] rounded-l-xl transition-colors"
+                        className="h-8 w-8 flex items-center justify-center text-[var(--unit-text-muted)] hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] rounded-l-xl transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                         disabled={item.quantity <= 1}
+                        aria-label="Disminuir cantidad"
                       >
-                        <Minus className="h-3 w-3" />
+                        <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="px-2 py-1 text-sm font-medium text-[var(--unit-text)] min-w-[2rem] text-center">
+                      <span className="px-2 py-1 text-sm font-semibold text-[var(--unit-text)] min-w-[2.2rem] text-center tabular-nums">
                         {item.quantity}
                       </span>
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.referenceId, item.itemType, item.employeeId, item.quantity + 1)}
-                        className="p-1.5 text-[var(--unit-text-muted)] hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] rounded-r-xl transition-colors"
+                        className="h-8 w-8 flex items-center justify-center text-[var(--unit-text-muted)] hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] rounded-r-xl transition-colors"
+                        aria-label="Aumentar cantidad"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     
@@ -137,7 +132,8 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
                     <button
                       type="button"
                       onClick={() => onRemoveItem(item.referenceId, item.itemType, item.employeeId)}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-500/15 rounded-xl transition-all hover:scale-105"
+                      className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-unit transition-all md:opacity-0 md:group-hover:opacity-100"
+                      aria-label="Eliminar producto"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -150,10 +146,10 @@ export function POSCart({ cart, onUpdateQuantity, onRemoveItem, unit }: POSCartP
       </div>
       
       {/* Footer */}
-      <div className="relative z-10 p-4 border-t border-[var(--unit-border)]/30 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5">
+      <div className="p-4 border-t border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] rounded-b-2xl">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-[var(--unit-text-muted)]">Subtotal:</span>
-          <span className="font-bold text-lg text-[var(--unit-accent)] tabular-nums">
+          <span className="text-sm font-semibold text-[var(--unit-text-muted)]">Subtotal Carrito:</span>
+          <span className="font-bold text-xl text-[var(--unit-accent)] tabular-nums">
             S/ {cartTotals.subtotal.toFixed(2)}
           </span>
         </div>

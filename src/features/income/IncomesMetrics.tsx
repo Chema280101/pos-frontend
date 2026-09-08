@@ -1,4 +1,5 @@
-import { TrendingUp, Calendar, DollarSign, BarChart3, CreditCard, Wallet, Smartphone, ArrowUp, ArrowDown, Activity, Users } from 'lucide-react';
+import { TrendingUp, Calendar, DollarSign, BarChart3, Wallet, Activity, Award } from 'lucide-react';
+import { KPICard } from '@/components/ui/KPICard';
 
 interface Income {
   id: string;
@@ -19,7 +20,7 @@ interface Income {
 
 interface IncomesMetricsProps {
   incomes: Income[];
-  totalAmount?: number; // Total amount from backend
+  totalAmount?: number;
   aggregatedMetrics?: {
     todayTotal: number;
     weekTotal: number;
@@ -33,7 +34,6 @@ interface IncomesMetricsProps {
       date: string;
       total: number;
     };
-    // Comisiones pagadas (separadas de ingresos - son egresos)
     todayCommissions?: number;
     weekCommissions?: number;
     monthCommissions?: number;
@@ -42,10 +42,8 @@ interface IncomesMetricsProps {
 }
 
 export function IncomesMetrics({ incomes, totalAmount, aggregatedMetrics }: IncomesMetricsProps) {
-  // Use totalAmount from backend if available, otherwise calculate from paginated data
   const total = totalAmount ?? incomes.reduce((sum, i) => sum + i.total, 0);
   
-  // Use aggregated metrics from backend if available, otherwise calculate from paginated data
   const todayTotal = aggregatedMetrics?.todayTotal ?? (() => {
     const today = new Date();
     const todayIncomes = incomes.filter(i => {
@@ -69,21 +67,9 @@ export function IncomesMetrics({ incomes, totalAmount, aggregatedMetrics }: Inco
     return monthIncomes.reduce((sum, i) => sum + i.total, 0);
   })();
   
-  // Additional metrics
   const averageSale = total > 0 ? total / incomes.length : 0;
-  
-  // Debug: Log payment methods to see what's available
-  console.log('DEBUG - Incomes received:', incomes.length);
-  console.log('DEBUG - Payment methods in incomes:', incomes.map(i => i.paymentMethod));
-  console.log('DEBUG - Cash payments count:', incomes.filter(i => i.paymentMethod === 'Efectivo').length);
-  console.log('DEBUG - Aggregated metrics:', aggregatedMetrics);
-  
   const cashPayments = aggregatedMetrics?.cashPayments ?? incomes.filter(i => i.paymentMethod === 'Efectivo').length;
-  const cardPayments = aggregatedMetrics?.cardPayments ?? incomes.filter(i => i.paymentMethod === 'Tarjeta').length;
-  const transferPayments = aggregatedMetrics?.transferPayments ?? incomes.filter(i => i.paymentMethod === 'Transferencia').length;
-  const digitalPayments = aggregatedMetrics?.digitalPayments ?? incomes.filter(i => i.paymentMethod === 'Billetera Digital').length;
   
-  // Trend calculation
   const trend = aggregatedMetrics?.trend ?? (() => {
     const previousMonthAgo = new Date();
     previousMonthAgo.setDate(previousMonthAgo.getDate() - 60);
@@ -97,7 +83,6 @@ export function IncomesMetrics({ incomes, totalAmount, aggregatedMetrics }: Inco
     return previousMonthTotal > 0 ? ((monthTotal - previousMonthTotal) / previousMonthTotal) * 100 : 0;
   })();
   
-  // Best day
   const bestDay = aggregatedMetrics?.bestDay ?? (() => {
     const dailyTotals = incomes.reduce((acc, income) => {
       const date = new Date(income.createdAt).toDateString();
@@ -109,140 +94,85 @@ export function IncomesMetrics({ incomes, totalAmount, aggregatedMetrics }: Inco
       total > max[1] ? [date, total] : max, ['', 0]) as [string, number];
   })();
 
+  const bestDayDate = Array.isArray(bestDay) && bestDay[0] 
+    ? new Date(bestDay[0]).toLocaleDateString('es', { day: 'numeric', month: 'short' })
+    : !Array.isArray(bestDay) && bestDay.date 
+    ? new Date(bestDay.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })
+    : 'N/A';
+
+  const bestDayAmount = Array.isArray(bestDay) ? bestDay[1] : bestDay.total;
+
   return (
-    <>
+    <div className="space-y-4 mb-6">
       {/* First Row - 4 Primary Financial Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {/* Total Income */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-green-500/30 bg-gradient-to-br from-green-50 to-green-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 to-green-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 border-2 border-green-600 shadow-lg group-hover:scale-110 transition-transform">
-                <DollarSign className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-green-800 bg-white px-3 py-1 rounded-full border border-green-300 shadow-sm">Total</span>
-            </div>
-            <p className="text-3xl font-bold text-green-900 tabular-nums mb-2">S/{total.toFixed(2)}</p>
-            <p className="text-sm text-green-700 font-medium">Ingresos totales</p>
-          </div>
-        </div>
-
-        {/* Today's Income */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-50 to-blue-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-blue-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-600 shadow-lg group-hover:scale-110 transition-transform">
-                <Calendar className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-blue-800 bg-white px-3 py-1 rounded-full border border-blue-300 shadow-sm">Hoy</span>
-            </div>
-            <p className="text-3xl font-bold text-blue-900 tabular-nums mb-2">S/{todayTotal.toFixed(2)}</p>
-            <p className="text-sm text-blue-700 font-medium">Ingresos de hoy</p>
-          </div>
-        </div>
-
-        {/* Week Income */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-purple-500/30 bg-gradient-to-br from-purple-50 to-purple-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-purple-600 shadow-lg group-hover:scale-110 transition-transform">
-                <BarChart3 className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-purple-800 bg-white px-3 py-1 rounded-full border border-purple-300 shadow-sm">Semana</span>
-            </div>
-            <p className="text-3xl font-bold text-purple-900 tabular-nums mb-2">S/{weekTotal.toFixed(2)}</p>
-            <p className="text-sm text-purple-700 font-medium">Últimos 7 días</p>
-          </div>
-        </div>
-
-        {/* Month Income */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-amber-500/30 bg-gradient-to-br from-amber-50 to-amber-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 border-2 border-amber-600 shadow-lg group-hover:scale-110 transition-transform">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-amber-800 bg-white px-3 py-1 rounded-full border border-amber-300 shadow-sm">Mes</span>
-            </div>
-            <p className="text-3xl font-bold text-amber-900 tabular-nums mb-2">S/{monthTotal.toFixed(2)}</p>
-            <p className="text-sm text-amber-700 font-medium">Últimos 30 días</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Ingresos Totales"
+          value={total.toFixed(2)}
+          unit="S/"
+          description="Facturación global"
+          color="green"
+          icon={<DollarSign className="h-6 w-6 text-white" />}
+        />
+        <KPICard
+          title="Ingresos de Hoy"
+          value={todayTotal.toFixed(2)}
+          unit="S/"
+          description="Ventas de la fecha"
+          color="blue"
+          icon={<Calendar className="h-6 w-6 text-white" />}
+        />
+        <KPICard
+          title="Últimos 7 Días"
+          value={weekTotal.toFixed(2)}
+          unit="S/"
+          description="Total semanal"
+          color="purple"
+          icon={<BarChart3 className="h-6 w-6 text-white" />}
+        />
+        <KPICard
+          title="Últimos 30 Días"
+          value={monthTotal.toFixed(2)}
+          unit="S/"
+          description="Total mensual"
+          color="amber"
+          icon={<TrendingUp className="h-6 w-6 text-white" />}
+        />
       </div>
 
       {/* Second Row - 4 Additional Financial Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {/* Average Sale */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-100/50 to-indigo-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 border-2 border-indigo-600 shadow-lg group-hover:scale-110 transition-transform">
-                <Activity className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-indigo-800 bg-white px-3 py-1 rounded-full border border-indigo-300 shadow-sm">Promedio</span>
-            </div>
-            <p className="text-3xl font-bold text-indigo-900 tabular-nums mb-2">S/{averageSale.toFixed(2)}</p>
-            <p className="text-sm text-indigo-700 font-medium">Ticket promedio</p>
-          </div>
-        </div>
-
-        {/* Trend */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-100/50 to-emerald-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 border-2 border-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
-                {trend >= 0 ? <ArrowUp className="h-6 w-6 text-white" /> : <ArrowDown className="h-6 w-6 text-white" />}
-              </div>
-              <span className="text-xs font-bold text-emerald-800 bg-white px-3 py-1 rounded-full border border-emerald-300 shadow-sm">Tendencia</span>
-            </div>
-            <p className="text-3xl font-bold text-emerald-900 tabular-nums mb-2">
-              {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
-            </p>
-            <p className="text-sm text-emerald-700 font-medium">vs mes anterior</p>
-          </div>
-        </div>
-
-        {/* Cash Payments */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-orange-500/30 bg-gradient-to-br from-orange-50 to-orange-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-100/50 to-orange-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 border-2 border-orange-600 shadow-lg group-hover:scale-110 transition-transform">
-                <Wallet className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-orange-800 bg-white px-3 py-1 rounded-full border border-orange-300 shadow-sm">Efectivo</span>
-            </div>
-            <p className="text-3xl font-bold text-orange-900 tabular-nums mb-2">{cashPayments}</p>
-            <p className="text-sm text-orange-700 font-medium">Pagos en efectivo</p>
-          </div>
-        </div>
-
-        {/* Best Day */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-pink-500/30 bg-gradient-to-br from-pink-50 to-pink-100 p-6 hover:shadow-lg transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-r from-pink-100/50 to-pink-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 border-2 border-pink-600 shadow-lg group-hover:scale-110 transition-transform">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xs font-bold text-pink-800 bg-white px-3 py-1 rounded-full border border-pink-300 shadow-sm">Mejor</span>
-            </div>
-            <p className="text-lg font-bold text-pink-900 tabular-nums mb-1 truncate">
-              {Array.isArray(bestDay) && bestDay[0] ? new Date(bestDay[0]).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : 
-               !Array.isArray(bestDay) && bestDay.date ? new Date(bestDay.date).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : 'N/A'}
-            </p>
-            <p className="text-sm text-pink-700 font-medium">
-              S/{Array.isArray(bestDay) ? bestDay[1].toFixed(2) : bestDay.total.toFixed(2)}
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Ticket Promedio"
+          value={averageSale.toFixed(2)}
+          unit="S/"
+          description="Venta media por transacción"
+          color="indigo"
+          icon={<Activity className="h-6 w-6 text-white" />}
+        />
+        <KPICard
+          title="Crecimiento"
+          value={`${trend >= 0 ? '+' : ''}${trend.toFixed(1)}%`}
+          description="vs mes anterior"
+          color="teal"
+          icon={<TrendingUp className="h-6 w-6 text-white" />}
+        />
+        <KPICard
+          title="Pagos Efectivo"
+          value={cashPayments}
+          description="Transacciones en cash"
+          color="pink"
+          icon={<Wallet className="h-6 w-6 text-white" />}
+        />
+        <KPICard
+          title="Mejor Día"
+          value={bestDayDate}
+          subtitle={`S/ ${Number(bestDayAmount || 0).toFixed(2)}`}
+          description="Pico histórico de venta"
+          color="green"
+          icon={<Award className="h-6 w-6 text-white" />}
+        />
       </div>
-    </>
+    </div>
   );
 }

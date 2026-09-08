@@ -3,10 +3,9 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Button, Skeleton, DataTable } from '@/components/ui';
-import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { Button, Skeleton, DataTable, TableToolbar, TableBadge, DateRangeFilter } from '@/components/ui';
 import { AuditMetrics } from '@/features/audit/AuditMetrics';
-import { Download, Calendar, User, Activity, Database, Fingerprint, Monitor, AlertCircle, FileText, Filter, ChevronUp, ChevronDown, Search, X, Shield, Clock, TrendingUp, Eye, Settings } from 'lucide-react';
+import { Download, Calendar, User, Activity, Database, Fingerprint, Monitor, AlertCircle, FileText, Filter, ChevronUp, ChevronDown, Search, X, Shield, Clock, TrendingUp, Eye, Settings, DollarSign } from 'lucide-react';
 import { downloadExcelReport } from '@/lib/excelReport';
 import { downloadPdfReport } from '@/lib/pdfReport';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
@@ -22,7 +21,7 @@ export function AuditPage(): JSX.Element {
   const [action, setAction] = useState('');
   const [entity, setEntity] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [unitFilter, setUnitFilter] = useState('');
   const limit = 30;
 
@@ -109,26 +108,28 @@ export function AuditPage(): JSX.Element {
     );
   }, [dateFrom, dateTo, action, entity, searchFilter]);
 
-  // Define columns for DataTable - Estilo ServicesPage
+  // Define columns for DataTable
   const columns: Array<{
     key: string;
     header: string;
     sortable: boolean;
+    align?: 'left' | 'center' | 'right';
     render: (row: unknown) => React.ReactNode;
   }> = [
     {
       key: 'createdAt',
-      header: 'Fecha',
+      header: 'Fecha / Hora',
       sortable: true,
+      align: 'left',
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         const date = new Date(auditRow.createdAt);
         return (
-          <div className="flex flex-col gap-1">
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold text-[var(--unit-text)]">
               {date.toLocaleDateString('es-PE')}
             </span>
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
+            <span className="text-[11px] font-mono text-[var(--unit-text-muted)]">
               {date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
@@ -139,12 +140,13 @@ export function AuditPage(): JSX.Element {
       key: 'userName',
       header: 'Usuario',
       sortable: true,
+      align: 'left',
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         return (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+          <TableBadge type="user-name">
             {auditRow.userName}
-          </span>
+          </TableBadge>
         );
       },
     },
@@ -152,21 +154,20 @@ export function AuditPage(): JSX.Element {
       key: 'action',
       header: 'Acción',
       sortable: true,
+      align: 'center',
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
+        const actionType = 
+          auditRow.action === 'LOGIN' ? 'action-login' :
+          auditRow.action === 'LOGOUT' ? 'action-logout' :
+          auditRow.action.includes('CREATE') ? 'action-create' :
+          auditRow.action.includes('DELETE') ? 'action-delete' :
+          auditRow.action.includes('CANCEL') ? 'action-cancel' :
+          'action-update';
         return (
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            auditRow.action === 'LOGIN' || auditRow.action === 'LOGOUT'
-              ? 'bg-blue-100 text-blue-800'
-              : auditRow.action.includes('DELETE') || auditRow.action.includes('CANCEL')
-              ? 'bg-red-100 text-red-800'
-              : auditRow.action.includes('CREATE')
-              ? 'bg-green-100 text-green-800'
-              : 'bg-gray-100 text-gray-800'
-          )}>
+          <TableBadge type={actionType}>
             {getActionLabel(auditRow.action)}
-          </span>
+          </TableBadge>
         );
       },
     },
@@ -174,23 +175,22 @@ export function AuditPage(): JSX.Element {
       key: 'entity',
       header: 'Entidad',
       sortable: true,
+      align: 'center',
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
-        const entityLabel = getEntityLabel(auditRow.entity);
+        const entityType = 
+          auditRow.entity === 'User' ? 'entity-user' :
+          auditRow.entity === 'Sale' ? 'entity-sale' :
+          auditRow.entity === 'CashRegister' ? 'entity-cash-register' :
+          auditRow.entity === 'Product' ? 'entity-product' :
+          auditRow.entity === 'Service' ? 'entity-service' :
+          auditRow.entity === 'Commission' ? 'entity-commission' :
+          auditRow.entity === 'Expense' ? 'entity-expense' :
+          'status-neutral';
         return (
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            auditRow.entity === 'User' ? 'bg-purple-100 text-purple-800' :
-            auditRow.entity === 'Sale' ? 'bg-emerald-100 text-emerald-800' :
-            auditRow.entity === 'CashRegister' ? 'bg-amber-100 text-amber-800' :
-            auditRow.entity === 'Product' ? 'bg-blue-100 text-blue-800' :
-            auditRow.entity === 'Service' ? 'bg-green-100 text-green-800' :
-            auditRow.entity === 'Commission' ? 'bg-orange-100 text-orange-800' :
-            auditRow.entity === 'Expense' ? 'bg-red-100 text-red-800' :
-            'bg-gray-100 text-gray-800'
-          )}>
-            {entityLabel}
-          </span>
+          <TableBadge type={entityType}>
+            {getEntityLabel(auditRow.entity)}
+          </TableBadge>
         );
       },
     },
@@ -198,15 +198,13 @@ export function AuditPage(): JSX.Element {
       key: 'entityId',
       header: 'ID',
       sortable: true,
+      align: 'center',
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         return (
-          <span 
-            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 font-mono"
-            title={auditRow.entityId}
-          >
+          <TableBadge type="id" mono>
             {auditRow.entityId.slice(0, 8)}...
-          </span>
+          </TableBadge>
         );
       },
     },
@@ -214,16 +212,14 @@ export function AuditPage(): JSX.Element {
       key: 'device',
       header: 'IP / Dispositivo',
       sortable: true,
+      align: 'center',
       render: (row: unknown) => {
         const auditRow = row as AuditLog;
         const ipDisplay = auditRow.ipAddress ? auditRow.ipAddress.split('.').slice(0, 2).join('.') + '.*' : 'Sin IP';
         return (
-          <span 
-            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-cyan-100 text-cyan-800"
-            title={`${auditRow.ipAddress || 'N/A'} - ${auditRow.device || 'N/A'}`}
-          >
+          <TableBadge type="ip" mono>
             {ipDisplay}
-          </span>
+          </TableBadge>
         );
       },
     },
@@ -327,7 +323,7 @@ export function AuditPage(): JSX.Element {
                 Registro de Auditoría
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Auditoría del Sistema</h1>
+            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-unit">Auditoría del Sistema</h1>
             <p className="text-[var(--unit-text-muted)]">
               Monitoreo completo de todas las acciones del sistema
             </p>
@@ -341,66 +337,59 @@ export function AuditPage(): JSX.Element {
               dateTo={dateTo} 
             />
           )}
-
-          {/* Enhanced Action Buttons - Exacto estilo ReportsPage */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <button
-              onClick={exportExcel}
-              disabled={!data?.data?.length || isLoading}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Download className="h-5 w-5" />
-              Exportar Excel
-            </button>
-            <button
-              onClick={exportPdf}
-              disabled={!data?.data?.length || isLoading}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Download className="h-5 w-5" />
-              Exportar PDF
-            </button>
-          </div>
         </div>
 
-        {/* Enhanced Audit Filters - Exacto estilo ServicesPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Auditoría</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
+        {/* Unified TableToolbar */}
+        <TableToolbar
+          search={searchFilter}
+          onSearchChange={setSearchFilter}
+          searchPlaceholder="Buscar por usuario, acción, entidad, ID, IP o dispositivo..."
+          chips={[
+            { id: '', label: 'Todas las entidades' },
+            { id: 'Sale', label: 'Ventas', icon: <DollarSign className="h-3 w-3" /> },
+            { id: 'CashRegister', label: 'Caja', icon: <Database className="h-3 w-3" /> },
+            { id: 'User', label: 'Usuarios', icon: <User className="h-3 w-3" /> },
+            { id: 'Service', label: 'Servicios', icon: <Activity className="h-3 w-3" /> },
+            { id: 'Expense', label: 'Gastos', icon: <TrendingUp className="h-3 w-3" /> },
+          ]}
+          activeChip={entity}
+          onChipChange={(id) => setEntity(String(id))}
+          showAdvancedFiltersButton={true}
+          isAdvancedOpen={showFilters}
+          onToggleAdvanced={() => setShowFilters(!showFilters)}
+          activeFiltersCount={(entity ? 1 : 0) + (action ? 1 : 0) + (unitFilter ? 1 : 0) + (searchFilter ? 1 : 0)}
+          onResetFilters={() => {
+            setUnitFilter('');
+            setAction('');
+            setEntity('');
+            setSearchFilter('');
+            setDateFrom(startOfDay(subDays(new Date(), 7)));
+            setDateTo(endOfDay(new Date()));
+          }}
+          actions={
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
+                onClick={exportExcel}
+                disabled={!data?.data?.length || isLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-unit bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
               >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
+                <Download className="h-3.5 w-3.5" />
+                <span>Excel</span>
+              </button>
+              <button
+                onClick={exportPdf}
+                disabled={!data?.data?.length || isLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-unit bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>PDF</span>
               </button>
             </div>
-          </div>
-
-          {/* Filter Content - Conditional Rendering */}
-          {showFilters && (
-            <div className="space-y-6">
-              {/* Date Range Filter */}
+          }
+          advancedFiltersContent={
+            <div className="space-y-4">
               <DateRangeFilter
+                compact={true}
                 dateFrom={dateFrom}
                 dateTo={dateTo}
                 onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
@@ -409,18 +398,15 @@ export function AuditPage(): JSX.Element {
                 onUnitChange={setUnitFilter}
                 showUnitFilter={true}
                 showStatusFilter={false}
-                className="rounded-xl"
               />
-
-              {/* Additional Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Action Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Acción</label>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[var(--unit-border)]/30">
+                <div>
+                  <label className="block text-xs font-bold text-[var(--unit-text)] mb-1">Acción Específica</label>
                   <select
                     value={action}
                     onChange={(e) => setAction(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 px-3 text-xs text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:border-[var(--unit-accent)]"
                   >
                     <option value="">Todas las acciones</option>
                     {getUniqueActions().map((opt) => (
@@ -430,14 +416,12 @@ export function AuditPage(): JSX.Element {
                     ))}
                   </select>
                 </div>
-
-                {/* Entity Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Entidad</label>
+                <div>
+                  <label className="block text-xs font-bold text-[var(--unit-text)] mb-1">Entidad del Sistema</label>
                   <select
                     value={entity}
                     onChange={(e) => setEntity(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 px-3 text-xs text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:border-[var(--unit-accent)]"
                   >
                     <option value="">Todas las entidades</option>
                     {getUniqueEntities().map((opt) => (
@@ -447,117 +431,27 @@ export function AuditPage(): JSX.Element {
                     ))}
                   </select>
                 </div>
-
-                {/* Search Bar */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Búsqueda</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar por usuario, acción, entidad, ID, IP o dispositivo..."
-                      value={searchFilter}
-                      onChange={(e) => setSearchFilter(e.target.value)}
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                    />
-                    {searchFilter && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchFilter('')}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                          <X className="h-3 w-3" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-[var(--unit-text-muted)] italic">
-                    Busca en: nombre de usuario, acción, entidad, ID, dirección IP o dispositivo
-                  </p>
-                </div>
               </div>
-
-              {/* Enhanced Active Filters Summary */}
-              {(unitFilter || action || entity || searchFilter) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {unitFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {unitFilter}
-                          </span>
-                        )}
-                        {action && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 border border-sky-200">
-                            Acción: {getActionLabel(action as any)}
-                          </span>
-                        )}
-                        {entity && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Entidad: {getEntityLabel(entity)}
-                          </span>
-                        )}
-                        {searchFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                            Búsqueda: {searchFilter}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setUnitFilter('');
-                        setAction('');
-                        setEntity('');
-                        setSearchFilter('');
-                        setDateFrom(startOfDay(subDays(new Date(), 7)));
-                        setDateTo(endOfDay(new Date()));
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
-          )}
-        </div>
+          }
+        />
 
-        {/* Audit Table - Exacto estilo ServicesPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-          {/* Table Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Shield className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Registro de Auditoría</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Historial completo de acciones del sistema</p>
-                </div>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                {data?.data?.length || 0} registros
-              </span>
-            </div>
-          </div>
-
-          {/* Table */}
+        {/* Audit DataTable Container */}
+        <div className="mt-4">
           <DataTable
             data={filteredAuditData}
             columns={columns}
             loading={isLoading}
             keyExtractor={(row) => (row as AuditLog).id}
             emptyMessage="No se encontraron registros de auditoría con los filtros aplicados."
-            className="rounded-xl"
+            pageSize={20}
+            pageSizeOptions={[10, 20, 30, 50, 100]}
+            onResetFilters={() => {
+              setUnitFilter('');
+              setAction('');
+              setEntity('');
+              setSearchFilter('');
+            }}
           />
         </div>
       </div>

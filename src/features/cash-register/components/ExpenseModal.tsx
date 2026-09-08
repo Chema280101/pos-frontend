@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { TrendingDown, X, AlertCircle, Loader2 } from 'lucide-react';
+import { TrendingDown, X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { cn } from '@/lib/utils';
 
-interface ExpenseModalProps {
+export interface ExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   registerId: string;
@@ -21,7 +21,6 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [loading, setLoading] = useState(false);
 
-  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setAmount('');
@@ -31,7 +30,6 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
     }
   }, [isOpen]);
 
-  // Handle ESC key to close modal
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
@@ -61,7 +59,7 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
     setLoading(true);
 
     try {
-      const { data: result } = await api.post(
+      await api.post(
         `/api/cash-register/${registerId}/expense`,
         {
           amount: parsedAmount,
@@ -85,60 +83,56 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-30 pointer-events-none">
-          <div
-            className="h-full w-full bg-repeat"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            }}
-          />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity animate-in fade-in duration-200" 
+        onClick={onClose} 
+      />
+
+      {/* Modal Card */}
+      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] shadow-unit-lg p-6 sm:p-7 relative z-10 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+        {/* Ambient Top Glow */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent pointer-events-none" />
+
+        {/* Mobile handle */}
+        <div className="pt-1 pb-3 flex justify-center sm:hidden">
+          <div className="h-1.5 w-12 rounded-full bg-[var(--unit-border)]" />
         </div>
 
-        {/* Header - Estándar consistente */}
-        <div className="relative mb-6 flex items-start justify-between gap-4 px-6 pt-6">
-          {/* Background gradient for header */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/20 to-transparent" />
-
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-              <TrendingDown className="h-6 w-6 text-white" />
+        {/* Header */}
+        <div className="relative mb-5 flex items-start justify-between gap-4 border-b border-[var(--unit-border)]/30 pb-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-unit bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-unit shadow-red-500/20 shrink-0">
+              <TrendingDown className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[var(--unit-text)]">Registrar Gasto</h3>
-              <p className="text-sm text-[var(--unit-text-muted)]">Registra un egreso de caja</p>
+              <h3 className="font-heading text-lg sm:text-xl font-bold text-[var(--unit-text)]">Registrar Gasto</h3>
+              <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">Salida de dinero de la caja actual</p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+            className="shrink-0 rounded-unit border border-[var(--unit-border)]/60/80 dark:border-zinc-700/80 bg-[var(--unit-surface)]/50 hover:bg-[var(--unit-surface-elevated)] p-2 text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] transition-all focus:outline-none focus:ring-2 focus:ring-red-500/40 active:scale-95"
             aria-label="Cerrar"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="relative px-6 pb-6 space-y-5">
+        {/* Form Content */}
+        <div className="space-y-4">
           {/* Monto */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
               Monto (S/) <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span className="text-[var(--unit-text-muted)] font-bold">S/</span>
-              </div>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-[var(--unit-text-muted)]">
+                S/
+              </span>
               <input
                 type="number"
                 step="0.01"
@@ -146,103 +140,94 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all placeholder:text-[var(--unit-text-muted)]/50"
+                className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface-elevated)] focus:bg-[var(--unit-surface-elevated)]/70 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 pl-11 pr-4 py-2.5 text-sm text-[var(--unit-text)] font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500"
               />
             </div>
           </div>
 
-          {/* Categoría */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">
-              Categoría
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all appearance-none cursor-pointer"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239CA3AF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                backgroundSize: '1.5rem',
-              }}
-            >
-              <option value="Otros">Otros</option>
-              <option value="Insumos">Insumos</option>
-              <option value="Servicios">Servicios</option>
-              <option value="Mantenimiento">Mantenimiento</option>
-              <option value="Alquiler">Alquiler</option>
-              <option value="Servicios básicos">Servicios básicos</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Oficina">Oficina</option>
-            </select>
-          </div>
+          {/* Categoría & Método */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Categoría
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3.5 py-2.5 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface-elevated)] focus:bg-[var(--unit-surface-elevated)]/70 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all cursor-pointer"
+              >
+                <option value="Otros">Otros</option>
+                <option value="Insumos">Insumos</option>
+                <option value="Servicios">Servicios</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Alquiler">Alquiler</option>
+                <option value="Servicios básicos">Servicios básicos</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Oficina">Oficina</option>
+              </select>
+            </div>
 
-          {/* Método de Pago */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">
-              Método de Pago
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all appearance-none cursor-pointer"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239CA3AF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                backgroundSize: '1.5rem',
-              }}
-            >
-              <option value="CASH">Efectivo</option>
-              <option value="CARD">Tarjeta</option>
-              <option value="TRANSFER">Transferencia</option>
-              <option value="DIGITAL_WALLET">Billetera Digital</option>
-            </select>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Método de Pago
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3.5 py-2.5 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface-elevated)] focus:bg-[var(--unit-surface-elevated)]/70 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all cursor-pointer"
+              >
+                <option value="CASH">Efectivo</option>
+                <option value="CARD">Tarjeta</option>
+                <option value="TRANSFER">Transferencia</option>
+                <option value="DIGITAL_WALLET">Billetera Digital</option>
+              </select>
+            </div>
           </div>
 
           {/* Motivo */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">
-              Motivo <span className="text-red-500">*</span>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+              Motivo o Detalle <span className="text-red-500">*</span>
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ej: Compra de insumos, pago de servicios, etc."
+              placeholder="Ej: Compra de insumos de limpieza, pago de recibo, etc."
               rows={3}
-              className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all placeholder:text-[var(--unit-text-muted)]/50 resize-none"
+              className="w-full rounded-unit border border-[var(--unit-border)]/60 px-4 py-2.5 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface-elevated)] focus:bg-[var(--unit-surface-elevated)]/70 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500 resize-none"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3">
             <button
+              type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm font-medium text-[var(--unit-text)] bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
+              className="flex-1 rounded-unit border border-[var(--unit-border)]/60/80 dark:border-zinc-700/80 px-4 py-2.5 text-sm font-semibold text-[var(--unit-text)] dark:text-zinc-200 bg-slate-100/90 hover:bg-slate-200/90 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/90 transition-all active:scale-[0.98]"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={loading || !amount || !reason.trim()}
               className={cn(
-                'flex-1 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg border-2 transition-all',
-                'bg-gradient-to-r from-red-500 to-red-600 border-red-500/50',
-                'hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]',
-                'disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:hover:shadow-none'
+                'flex-1 rounded-unit px-4 py-2.5 text-sm font-bold text-white shadow-unit shadow-red-500/20 border border-red-500/30 transition-all',
+                'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700',
+                'active:scale-[0.98]',
+                'disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2'
               )}
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
+                <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Registrando...
-                </span>
+                </>
               ) : (
-                <span className="flex items-center justify-center gap-2">
+                <>
                   <TrendingDown className="h-4 w-4" />
                   Registrar gasto
-                </span>
+                </>
               )}
             </button>
           </div>

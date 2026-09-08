@@ -1,880 +1,407 @@
-import { useState, useMemo, useEffect } from 'react';
+'use client';
+
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-import { useAuthStore } from '../../store/authStore';
-import { useUnitStore } from '../../store/unitStore';
-import { Edit, Trash2, Plus, Clock, DollarSign, Package as PackageIcon, Tag, Eye, X, AlertCircle, Filter, Search, ChevronDown, ChevronUp, Activity, TrendingUp, CheckCircle, XCircle, Scissors, ShoppingCart, Calendar, Users } from 'lucide-react';
-import { DataTable } from '@/components/ui/DataTable';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Button } from '@/components/ui/Button';
-import { EmptyStateData } from '@/components/ui/EmptyState';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import type { Package } from '@/types/service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  RefreshCw, 
+  SlidersHorizontal, 
+  ChevronDown, 
+  ChevronUp, 
+  Clock, 
+  DollarSign, 
+  Tag, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Scissors, 
+  CheckCircle2, 
+  XCircle, 
+  Layers 
+} from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
+import { useUnitStore } from '@/store/unitStore';
+import { DataTable } from '@/components/ui/DataTable';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableBadge } from '@/components/ui/TableBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PackageDetailDrawer } from './PackageDetailDrawer';
 import { PackagesMetrics } from './PackagesMetrics';
 import { useToast } from '@/hooks/useToast';
+import { cn } from '@/lib/utils';
+import type { Package as PackageType } from '@/types/service';
 
 export function PackagesPage(): JSX.Element {
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [viewModal, setViewModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
-
-  // Reset modal states when closed
-  useEffect(() => {
-    if (!viewModal) {
-      setSelectedPackage(null);
-    }
-  }, [viewModal]);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { success, error } = useToast();
-
-  const activeUnit = useUnitStore((s) => s.activeUnit);
-  const [showFilters, setShowFilters] = useState(true);
-
-  // Filter states
-  const [priceRangeFilter, setPriceRangeFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-
-  const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN'; // RECEPTIONIST can only view, not edit
   const router = useRouter();
   const queryClient = useQueryClient();
+  const activeUnit = useUnitStore((s) => s.activeUnit);
+  const user = useAuthStore((s) => s.user);
+  const canEdit = user?.role === 'ADMIN';
+  const { success, error: toastError } = useToast();
 
-  const { data: packages, isLoading } = useQuery({
-    queryKey: ['packages', activeUnit],
-    queryFn: async (): Promise<Package[]> => {
-      try {
-        const params = new URLSearchParams();
-        if (activeUnit) params.set('unit', activeUnit);
-        const { data } = await api.get<{ data: Package[] }>(`/api/packages?${params}`);
-        console.log('Respuesta del backend:', data);
-        // Validar que data.data exista y sea un array
-        const packagesData = Array.isArray(data?.data) ? data.data : [];
-        console.log('Paquetes procesados:', packagesData);
-        if (packagesData.length > 0) {
-          console.log('Detalle del primer paquete:', packagesData[0]);
-          console.log('Servicios del primer paquete:', packagesData[0]?.services);
-          console.log('¿Tiene campo status?:', 'status' in packagesData[0]);
-          console.log('Valor de status:', packagesData[0]?.status);
-        }
-        return packagesData;
-      } catch (error) {
-        console.error('Error al cargar paquetes:', error);
-        return [];
-      }
-    },
-  });
+  // Navigation tab: 'all' | 'metrics'
+  const [activeTab, setActiveTab] = useState<'all' | 'metrics'>('all');
 
-  // Debug logging para DataTable
+  // Filters state
+  const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Drawer and Dialog state
+  const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [packageToDelete, setPackageToDelete] = useState<PackageType | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
-    console.log('useEffect - packages:', packages);
-    console.log('useEffect - isLoading:', isLoading);
-    console.log('useEffect - packages.length:', packages?.length);
-  }, [packages, isLoading]);
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  // Query for package movements
-  const { data: movements = [] } = useQuery({
-    queryKey: ['package-movements', selectedPackage?.id],
+  // Packages Query
+  const { 
+    data: packagesData, 
+    isLoading, 
+    isFetching, 
+    refetch 
+  } = useQuery({
+    queryKey: ['packages', activeUnit, debouncedSearch, statusFilter],
     queryFn: async () => {
-      if (!selectedPackage?.id) return [];
-      const { data } = await api.get(`/api/packages/${selectedPackage.id}/movements`);
-      return data;
+      const params = new URLSearchParams();
+      if (activeUnit) params.set('unit', activeUnit);
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (statusFilter) params.set('status', statusFilter);
+
+      const { data } = await api.get(`/api/packages?${params}`);
+      return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     },
-    enabled: !!selectedPackage?.id && viewModal,
+    staleTime: 2 * 60 * 1000,
   });
 
-  // Delete mutation
+  const packages: PackageType[] = Array.isArray(packagesData) ? packagesData : [];
+
+  // Delete Mutation
   const deleteMutation = useMutation({
-    mutationFn: async (packageId: string) => {
-      const { data } = await api.delete(`/api/packages/${packageId}`);
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/api/packages/${id}`);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
+      success('Paquete modificado exitosamente');
       setShowDeleteDialog(false);
-      setSelectedPackage(null);
+      setPackageToDelete(null);
     },
-    onError: (error: any) => {
-      error(error.message || 'Error al eliminar el paquete');
+    onError: (err: any) => {
+      toastError(err?.response?.data?.error || 'Error al modificar el paquete');
     },
   });
 
-  // Helper functions
-  const getPriceRange = (price: number) => {
-    const priceRanges = {
-      '0-100': { min: 0, max: 100 },
-      '100-200': { min: 100, max: 200 },
-      '200-500': { min: 200, max: 500 },
-      '500-1000': { min: 500, max: 1000 },
-      '1000+': { min: 1000, max: Infinity }
-    } as const;
+  // Summary Metrics
+  const metrics = useMemo(() => {
+    const total = packages.length;
+    const active = packages.filter((p) => p.status === 'ACTIVE' || (p as any).isActive).length;
+    const avgPrice = total > 0 ? (packages.reduce((sum, p) => sum + (Number(p.fixedPrice) || 0), 0) / total).toFixed(2) : '0.00';
+    const totalServices = packages.reduce((sum, p) => sum + (p.services?.length || 0), 0);
 
-    for (const [key, range] of Object.entries(priceRanges)) {
-      if (price >= range.min && price < range.max) {
-        return key;
-      }
-    }
+    return {
+      total,
+      active,
+      avgPrice,
+      totalServices,
+    };
+  }, [packages]);
 
-    return '1000+';
-  };
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
-  const getDurationRange = (duration: number) => {
-    const durationRanges = {
-      '0-60': { min: 0, max: 60 },
-      '60-120': { min: 60, max: 120 },
-      '120-180': { min: 120, max: 180 },
-      '180-240': { min: 180, max: 240 },
-      '240+': { min: 240, max: Infinity }
-    } as const;
-
-    for (const [key, range] of Object.entries(durationRanges)) {
-      if (duration >= range.min && duration < range.max) {
-        return key;
-      }
-    }
-
-    return '240+';
-  };
-
-  const getServiceCount = (pkg: Package) => {
-    console.log('getServiceCount - pkg:', pkg);
-    console.log('getServiceCount - services:', pkg.services);
-    console.log('getServiceCount - services.length:', pkg.services.length);
-    return pkg.services.length;
-  };
-
+  // Columns definition
   const columns = [
     {
       key: 'name',
-      header: 'Paquete',
-      sortable: true,
-      render: (row: Package) => {
-        try {
-          console.log('Column name - row:', row);
-          return (
-            <div>
-              <div className="flex items-center gap-2">
-                <PackageIcon className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                <span className="font-medium text-[var(--unit-text-muted)]">{row.name}</span>
-              </div>
-              {row.description && (
-                <div className="text-sm text-[var(--unit-text-muted)] mt-1">{row.description}</div>
-              )}
-            </div>
-          );
-        } catch (error) {
-          console.error('Error en columna name:', error);
-          return <span>Error</span>;
-        }
-      },
+      header: 'Paquete / Combo',
+      render: (row: PackageType) => (
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-unit bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+            <Package className="h-4 w-4" />
+          </div>
+          <div>
+            <span className="font-bold text-[var(--unit-text)] text-sm">{row.name}</span>
+            <p className="text-[11px] text-[var(--unit-text-muted)] truncate max-w-xs">{row.description || 'Sin descripción'}</p>
+          </div>
+        </div>
+      ),
     },
     {
-      key: 'fixedPrice',
-      header: 'Precio Fijo',
-      sortable: true,
-      render: (row: Package) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
-          S/ {row.fixedPrice.toFixed(2)}
+      key: 'services',
+      header: 'Servicios Incluidos',
+      render: (row: PackageType) => (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 border border-purple-500/20">
+          <Scissors className="h-3 w-3" />
+          {row.services?.length || 0} servicios
         </span>
       ),
     },
     {
-      key: 'durationMin',
-      header: 'Duración',
-      sortable: true,
-      render: (row: Package) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-          {row.durationMin} min
+      key: 'duration',
+      header: 'Duración Total',
+      render: (row: PackageType) => (
+        <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-[var(--unit-text)]">
+          <Clock className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+          {row.durationMin || 60} min
+        </span>
+      ),
+    },
+    {
+      key: 'price',
+      header: 'Precio Combo (S/)',
+      render: (row: PackageType) => (
+        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+          S/ {Number(row.fixedPrice || 0).toFixed(2)}
         </span>
       ),
     },
     {
       key: 'status',
       header: 'Estado',
-      render: (row: Package) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.status === 'ACTIVE'
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-        )}>
-          {row.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      render: (row: PackageType) => {
+        const isActive = row.status === 'ACTIVE' || (row as any).isActive;
+        return (
+          <TableBadge type={isActive ? 'status-active' : 'status-inactive'}>
+            {isActive ? 'Activo' : 'Inactivo'}
+          </TableBadge>
+        );
+      },
     },
-    {
-      key: 'services',
-      header: 'Servicios',
-      sortable: true,
-      render: (row: Package) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
-          {getServiceCount(row)} servicios
-        </span>
-      ),
-    },
-    {
-      key: 'serviceList',
-      header: 'Detalle de Servicios',
-      render: (row: Package) => (
-        <div className="max-w-xs">
-          <div className="flex flex-wrap gap-1">
-            {row.services.map((s) => (
-              <span key={s.serviceId} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
-                {s.service.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      ),
-    }
   ];
 
+  // Actions
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver Ficha',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
-      onClick: (row: Package) => {
+      onClick: (row: PackageType) => {
         setSelectedPackage(row);
-        setViewModal(true);
+        setDrawerOpen(true);
       },
-      className: 'text-[var(--unit-primary)] hover:bg-[var(--unit-primary)]/10',
     },
     {
       label: 'Editar',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
-      onClick: (row: Package) => {
+      onClick: (row: PackageType) => {
         router.push(`/packages/${row.id}/edit`);
       },
-      className: 'text-[var(--unit-warning)] hover:bg-[var(--unit-warning)]/10',
-      disabled: (row: Package) => !canEdit,
+      disabled: () => !canEdit,
     },
     {
-      label: 'Eliminar',
+      label: 'Desactivar / Activar',
+      variant: 'delete' as const,
       icon: <Trash2 className="h-4 w-4" />,
-      onClick: (row: Package) => {
-        setSelectedPackage(row);
+      onClick: (row: PackageType) => {
+        setPackageToDelete(row);
         setShowDeleteDialog(true);
       },
-      className: 'text-[var(--unit-error)] hover:bg-[var(--unit-error)]/10',
-      disabled: (row: Package) => !canEdit
+      disabled: () => !canEdit,
     },
-  ]
-
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Gestión de Paquetes
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Ofertas & Promociones • {activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA'}
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Paquetes / Combos</h1>
-            <p className="text-[var(--unit-text-muted)]">
-              Gestiona los paquetes y combos de servicios
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Paquetes & Combos Especiales
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Agrupación de múltiples servicios a precio cerrado con distribución de comisiones
             </p>
           </div>
 
-          {/* Packages Metrics */}
-          <PackagesMetrics packages={packages || []} />
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Actualizar datos"
+            >
+              <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin text-[var(--unit-accent)]")} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
 
-          {/* Enhanced Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
             {canEdit && (
-              <Link href="/packages/new" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                <Plus className="h-5 w-5" />
+              <Link
+                href="/packages/new"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" />
                 Nuevo Paquete
               </Link>
             )}
           </div>
         </div>
 
-        {/* Enhanced Packages Filters */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Paquetes</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-              >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
-              </button>
+        {/* Ergonomic Micro Status Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+              <Package className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Total Paquetes</p>
+              <p className="text-lg font-bold text-[var(--unit-text)]">{metrics.total}</p>
             </div>
           </div>
 
-          {/* Filter Content - Conditional Rendering */}
-          {showFilters && (
-            <div className="space-y-6">
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Activos</p>
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{metrics.active}</p>
+            </div>
+          </div>
 
-              {/* Additional Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                {/* Price Range Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Rango de Precio</label>
-                  <select
-                    value={priceRangeFilter}
-                    onChange={(e) => setPriceRangeFilter(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  >
-                    <option value="">Todos los precios</option>
-                    <option value="0-100">S/ 0 - 100</option>
-                    <option value="100-200">S/ 100 - 200</option>
-                    <option value="200-500">S/ 200 - 500</option>
-                    <option value="500+">S/ 500+</option>
-                  </select>
-                </div>
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+              <Scissors className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Servicios Incluidos</p>
+              <p className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">{metrics.totalServices}</p>
+            </div>
+          </div>
 
-                {/* Status Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="ACTIVE">Activos</option>
-                    <option value="INACTIVE">Inactivos</option>
-                  </select>
-                </div>
-              </div>
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+              <DollarSign className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Precio Promedio</p>
+              <p className="text-lg font-bold text-amber-600 font-mono">S/ {metrics.avgPrice}</p>
+            </div>
+          </div>
+        </div>
 
-              {/* Enhanced Active Filters Summary */}
-              {(activeUnit || priceRangeFilter || statusFilter) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {activeUnit && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {activeUnit}
-                          </span>
-                        )}
-                        {priceRangeFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
-                            Precio: {priceRangeFilter === '0-100' ? 'S/ 0 - 100' : priceRangeFilter === '100-200' ? 'S/ 100 - 200' : priceRangeFilter === '200-500' ? 'S/ 200 - 500' : 'S/ 500+'}
-                          </span>
-                        )}
-                        {statusFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Estado: {statusFilter === 'ACTIVE' ? 'Activos' : 'Inactivos'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setPriceRangeFilter('');
-                        setStatusFilter('');
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
-                  </div>
-                </div>
+        {/* View Switcher & Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          {/* Tab navigation pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-[var(--unit-surface-elevated)] rounded-unit-lg border border-[var(--unit-border)]/40 w-fit">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={cn(
+                'px-4 py-2 rounded-unit text-xs font-bold transition-all flex items-center gap-2',
+                activeTab === 'all'
+                  ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                  : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
               )}
-            </div>
-          )}
-        </div>
+            >
+              <Package className="h-3.5 w-3.5" />
+              Catálogo ({metrics.total})
+            </button>
 
-        {/* Packages Table */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <PackageIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Lista de Paquetes</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Gestiona tus paquetes y combos</p>
-                </div>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                {packages?.length || 0} paquetes
-              </span>
-            </div>
+            <button
+              onClick={() => setActiveTab('metrics')}
+              className={cn(
+                'px-4 py-2 rounded-unit text-xs font-bold transition-all flex items-center gap-2',
+                activeTab === 'metrics'
+                  ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                  : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
+              )}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Métricas & Análisis
+            </button>
           </div>
 
-          <DataTable
-            columns={columns}
-            data={packages ?? []}
-            keyExtractor={(row) => {
-              console.log('DataTable keyExtractor - row:', row);
-              return row.id;
-            }}
-            loading={isLoading}
-            searchPlaceholder=""
-            filters={[]}
-            actions={actions}
-            emptyMessage="No se encontraron paquetes con los filtros aplicados."
-            pageSize={15}
-            pageSizeOptions={[10, 15, 30, 50]}
-          />
         </div>
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteDialog && selectedPackage && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDeleteDialog(false);
-              setSelectedPackage(null);
+        {/* Content Section */}
+        {activeTab === 'metrics' ? (
+          <div className="pt-2">
+            <PackagesMetrics packages={packages} />
+          </div>
+        ) : (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <TableToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Buscar por nombre o descripción de paquete..."
+              chips={[
+                { id: '', label: 'Todos' },
+                { id: 'ACTIVE', label: 'Solo Activos' },
+                { id: 'INACTIVE', label: 'Solo Inactivos' },
+              ]}
+              activeChip={statusFilter}
+              onChipChange={(id) => setStatusFilter(id as string)}
+            />
+            
+            <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] overflow-hidden shadow-unit-sm">
+              <DataTable
+                data={packages}
+                columns={columns}
+                actions={actions}
+                keyExtractor={(row) => row.id}
+                loading={isLoading}
+                searchPlaceholder=""
+                filters={[]}
+                emptyMessage="No se encontraron paquetes registrados."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Package Detail Drawer */}
+        <PackageDetailDrawer
+          pkg={selectedPackage}
+          open={drawerOpen}
+          onClose={() => {
+            setDrawerOpen(false);
+            setSelectedPackage(null);
+          }}
+          onEdit={(p) => {
+            setDrawerOpen(false);
+            router.push(`/packages/${p.id}/edit`);
+          }}
+        />
+
+        {/* Confirm Delete Dialog */}
+        <ConfirmDialog
+          isOpen={showDeleteDialog}
+          onClose={() => {
+            setShowDeleteDialog(false);
+            setPackageToDelete(null);
+          }}
+          onConfirm={() => {
+            if (packageToDelete) {
+              deleteMutation.mutate(packageToDelete.id);
             }
-          }}>
-            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-              </div>
-
-              <div className="relative mb-6 flex items-start justify-between gap-4">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                <div className="relative z-10 flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                    <Trash2 className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-red-900">Eliminar Paquete</h3>
-                    <p className="text-sm text-red-700">Esta acción es permanente</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedPackage(null);
-                  }}
-                  className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                  aria-label="Cerrar"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="relative space-y-4">
-                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
-                      <AlertCircle className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-red-900">
-                        ¿Estás seguro de que deseas eliminar el paquete "{selectedPackage.name}"?
-                      </p>
-                      <p className="text-sm text-red-700 mt-1">
-                        Esta acción no se puede deshacer y el paquete será eliminado permanentemente del sistema.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Paquete</span>
-                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                        {selectedPackage.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Precio</span>
-                      <span className="text-sm font-bold text-gray-900">
-                        S/ {selectedPackage.fixedPrice?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Servicios</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedPackage.services?.length || 0} servicios
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-4 mt-6">
-                <button
-                  onClick={() => {
-                    deleteMutation.mutate(selectedPackage.id);
-                  }}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                >
-                  {deleteMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                      Eliminando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar Paquete
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setSelectedPackage(null);
-                  }}
-                  className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* View Details Modal */}
-        {viewModal && selectedPackage && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="absolute inset-0 opacity-5">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-              </div>
-
-              <div className="relative">
-                {/* Header Modal */}
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <PackageIcon className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-[var(--unit-text)]">Detalles del Paquete</h3>
-                      <p className="text-sm text-[var(--unit-text-muted)]">ID: {selectedPackage.id}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setViewModal(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border-2 border-[var(--unit-border)]/50 transition-all hover:scale-105"
-                    aria-label="Cerrar"
-                  >
-                    <X className="h-4 w-4 text-[var(--unit-text-muted)] hover:text-[var(--unit-accent)] transition-colors" />
-                  </button>
-                </div>
-
-                {/* Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {/* General Information */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <PackageIcon className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información General</h4>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Nombre</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
-                            {selectedPackage.name}
-                          </span>
-                        </div>
-
-                        {selectedPackage.description && (
-                          <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[var(--unit-text)]">Descripción</span>
-                            </div>
-                            <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30 max-w-xs truncate">
-                              {selectedPackage.description}
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Estado</span>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${selectedPackage.status === 'ACTIVE'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                              : 'bg-gray-100 text-gray-800 border-gray-200'
-                            }`}>
-                            {selectedPackage.status === 'ACTIVE' ? (
-                              <>
-                                <CheckCircle className="h-3 w-3" />
-                                Activo
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="h-3 w-3" />
-                                Inactivo
-                              </>
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Scissors className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                            <span className="text-sm font-medium text-[var(--unit-text)]">Servicios Incluidos</span>
-                          </div>
-                          <span className="font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-lg border border-[var(--unit-border)]/30">
-                            {selectedPackage.services.length}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pricing and Duration */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precios y Duración</h4>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-green-500/30 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-bold text-green-800">Precio Fijo</span>
-                          </div>
-                          <span className="font-bold text-green-800 bg-white px-3 py-1 rounded-lg border-2 border-green-300/30 shadow-lg tabular-nums">
-                            S/ {selectedPackage.fixedPrice.toFixed(2)}
-                          </span>
-                        </div>
-
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-blue-500/30 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-bold text-blue-800">Duración Total</span>
-                          </div>
-                          <span className="font-bold text-blue-800 bg-white px-3 py-1 rounded-lg border-2 border-blue-300/30 shadow-lg tabular-nums">
-                            {selectedPackage.durationMin} minutos
-                          </span>
-                        </div>
-
-                        <div className="group/item flex justify-between items-center py-3 px-4 rounded-xl border-2 border-purple-500/30 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-purple-600" />
-                            <span className="text-sm font-bold text-purple-800">Precio por Minuto</span>
-                          </div>
-                          <span className="font-bold text-purple-800 bg-white px-3 py-1 rounded-lg border-2 border-purple-300/30 shadow-lg tabular-nums">
-                            S/ {(selectedPackage.fixedPrice / selectedPackage.durationMin).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Services List */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                          <Scissors className="h-4 w-4 text-[var(--unit-accent)]" />
-                        </div>
-                        <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Servicios del Paquete</h4>
-                      </div>
-
-                      <div className="space-y-3 max-h-64 overflow-y-auto">
-                        {selectedPackage.services.map((serviceItem, index) => (
-                          <div key={serviceItem.serviceId} className="group/item flex justify-between items-center py-3 px-4 rounded-xl border border-[var(--unit-border)]/20 hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-surface)]/50 transition-all">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                                <span className="text-xs font-bold text-[var(--unit-accent)]">{index + 1}</span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-[var(--unit-text)]">{serviceItem.service.name}</p>
-                                {serviceItem.commissionShare && (
-                                  <p className="text-xs text-[var(--unit-text-muted)]">Comisión: {serviceItem.commissionShare}%</p>
-                                )}
-                              </div>
-                            </div>
-                            <Scissors className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recent Movements */}
-                  <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                            <Clock className="h-4 w-4 text-[var(--unit-accent)]" />
-                          </div>
-                          <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">
-                            Movimientos Recientes
-                          </h4>
-                        </div>
-                        <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-xs font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                          {movements.length} movimientos
-                        </span>
-                      </div>
-
-                      <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                        {movements.length === 0 ? (
-                          <EmptyStateData
-                            title="No hay movimientos registrados"
-                            description="No se encontraron movimientos de ventas para este paquete. Los movimientos aparecerán aquí cuando se realicen ventas."
-                            action={
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.location.href = '/reports'}
-                              >
-                                Ver reportes de ventas
-                              </Button>
-                            }
-                          />
-                        ) : (
-                          movements.slice(0, 10).map((movement: any) => (
-                            <div key={movement.id} className="group/movement relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/20 bg-gradient-to-br from-white to-[var(--unit-surface)] p-4 hover:border-[var(--unit-accent)]/30 hover:shadow-lg transition-all duration-300">
-                              <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover/movement:opacity-100 transition-opacity rounded-xl"></div>
-                              <div className="relative">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30">
-                                        <ShoppingCart className="h-3 w-3 text-green-600" />
-                                      </div>
-                                      <span className="text-xs font-bold text-green-800 uppercase tracking-wider">Venta</span>
-                                      <span className="text-xs text-[var(--unit-text-muted)]">#{movement.sale?.saleNumber}</span>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Calendar className="h-3 w-3 text-[var(--unit-text-muted)]" />
-                                        <span className="text-[var(--unit-text-muted)]">
-                                          {new Date(movement.createdAt).toLocaleDateString('es-PE', {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric'
-                                          })}
-                                        </span>
-                                        <span className="text-[var(--unit-text-muted)]">a las</span>
-                                        <span className="text-[var(--unit-text-muted)]">
-                                          {new Date(movement.createdAt).toLocaleTimeString('es-PE', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })}
-                                        </span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Users className="h-3 w-3 text-[var(--unit-text-muted)]" />
-                                        <span className="text-[var(--unit-text-muted)]">Cliente:</span>
-                                        <span className="font-medium text-[var(--unit-text)]">
-                                          {movement.sale?.customer?.name || 'Cliente general'}
-                                        </span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Tag className="h-3 w-3 text-[var(--unit-text-muted)]" />
-                                        <span className="text-[var(--unit-text-muted)]">Empleado:</span>
-                                        <span className="font-medium text-[var(--unit-text)]">
-                                          {movement.employee?.name || 'Sin asignar'}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="text-right">
-                                    <div className="space-y-1">
-                                      <div className="text-sm font-bold text-[var(--unit-text)]">
-                                        {movement.quantity} {movement.quantity === 1 ? 'unidad' : 'unidades'}
-                                      </div>
-                                      <div className="text-xs text-[var(--unit-text-muted)]">
-                                        S/ {Number(movement.unitPrice || 0).toFixed(2)} c/u
-                                      </div>
-                                      <div className="text-sm font-bold text-green-600">
-                                        S/ {Number(movement.subtotal || 0).toFixed(2)}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Actions Modal */}
-                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-t border-[var(--unit-border)]/30 -mx-8 -mb-8 mt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30">
-                        <PackageIcon className="h-4 w-4 text-[var(--unit-accent)]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--unit-text-muted)]">Resumen del Paquete</p>
-                        <p className="text-sm font-bold text-[var(--unit-text)]">
-                          {selectedPackage.name} • {selectedPackage.services.length} servicios • {selectedPackage.durationMin} min
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setViewModal(false)}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Cerrar Detalles
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          }}
+          title={(packageToDelete?.status === 'ACTIVE' || (packageToDelete as any)?.isActive) ? 'Desactivar Paquete' : 'Reactivar Paquete'}
+          message={`¿Estás seguro de que deseas cambiar el estado del paquete "${packageToDelete?.name}"?`}
+          confirmText="Confirmar"
+          type="danger"
+          isLoading={deleteMutation.isPending}
+        />
       </div>
     </div>
   );

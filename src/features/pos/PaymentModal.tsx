@@ -1,18 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Banknote, CreditCard, ArrowRightLeft, Smartphone, Layers, X, DollarSign, TrendingUp } from 'lucide-react';
+import { Banknote, CreditCard, ArrowRightLeft, Smartphone, Layers, X, DollarSign, CheckCircle, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'DIGITAL_WALLET' | 'MIXED';
+export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'DIGITAL_WALLET' | 'MIXED';
 
-interface MixedDetail {
+export interface MixedDetail {
   cash: number;
   card: number;
   transfer: number;
   wallet: number;
 }
 
-interface PaymentModalProps {
+export interface PaymentModalProps {
   saleTotal: number;
   isProcessing: boolean;
   onClose: () => void;
@@ -22,7 +23,7 @@ interface PaymentModalProps {
 const methods: { value: PaymentMethod; label: string; icon: typeof Banknote }[] = [
   { value: 'CASH', label: 'Efectivo', icon: Banknote },
   { value: 'CARD', label: 'Tarjeta', icon: CreditCard },
-  { value: 'TRANSFER', label: 'Transferencia', icon: ArrowRightLeft },
+  { value: 'TRANSFER', label: 'Transfer.', icon: ArrowRightLeft },
   { value: 'DIGITAL_WALLET', label: 'Billetera', icon: Smartphone },
   { value: 'MIXED', label: 'Mixto', icon: Layers },
 ];
@@ -39,14 +40,13 @@ export function PaymentModal({ saleTotal, isProcessing, onClose, onConfirm }: Pa
     setMixedDetail({ cash: 0, card: 0, transfer: 0, wallet: 0 });
   }, [saleTotal]);
 
-  // Reset form when modal closes
-  useEffect(() => {
-    if (!saleTotal) { // Modal is closed when saleTotal is 0 or undefined
-      setPaymentMethod('CASH');
-      setAmountPaid('0');
-      setMixedDetail({ cash: 0, card: 0, transfer: 0, wallet: 0 });
-    }
-  }, [saleTotal]);
+  // Quick cash suggestion amounts
+  const quickAmounts = [
+    saleTotal,
+    Math.ceil(saleTotal / 10) * 10,
+    Math.ceil(saleTotal / 50) * 50 > saleTotal ? Math.ceil(saleTotal / 50) * 50 : saleTotal + 50,
+    100 > saleTotal ? 100 : Math.ceil(saleTotal / 100) * 100,
+  ].filter((v, idx, arr) => arr.indexOf(v) === idx && v >= saleTotal).slice(0, 4);
 
   // Calculate change for cash payments
   const calculateChange = () => {
@@ -71,49 +71,55 @@ export function PaymentModal({ saleTotal, isProcessing, onClose, onConfirm }: Pa
     }
   };
 
-  const mixedInputClass = 'w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 px-4 py-3 text-sm text-[var(--unit-text)] tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50';
+  const mixedInputClass =
+    'w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface-elevated)] focus:bg-[var(--unit-surface-elevated)]/70 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 px-3.5 py-2 text-sm text-[var(--unit-text)] tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 focus:border-[var(--unit-accent)] transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-0 sm:p-4">
-      <div className="w-full max-w-md rounded-t-[calc(var(--unit-border-radius)*1.5)] sm:rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto relative overflow-hidden">
-        {/* Glassmorphism overlay pattern - Consistente con Modal.tsx */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="h-full w-full bg-repeat" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}></div>
-        </div>
-        
-        {/* Mobile handle - Consistente con Modal.tsx */}
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--unit-text)]/20 sm:hidden" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity animate-in fade-in duration-200" 
+        onClick={onClose} 
+      />
 
-        {/* Enhanced Header - Consistente con ClientModals */}
-        <div className="relative mb-6">
-          {/* Background gradient for header - Consistente con Modal.tsx */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-          
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                <DollarSign className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-[var(--unit-text)]">Cerrar venta</h3>
-                <p className="text-2xl font-bold text-[var(--unit-accent)] tabular-nums">S/ {saleTotal.toFixed(2)}</p>
-              </div>
+      {/* Modal Dialog Card */}
+      <div className="w-full max-w-md rounded-t-3xl sm:rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] shadow-unit-lg p-6 sm:p-7 relative z-10 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+        {/* Top ambient glow */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--unit-accent)]/40 to-transparent pointer-events-none" />
+
+        {/* Mobile handle */}
+        <div className="pt-1 pb-3 flex justify-center sm:hidden">
+          <div className="h-1.5 w-12 rounded-full bg-[var(--unit-border)]" />
+        </div>
+
+        {/* Header */}
+        <div className="relative mb-5 flex items-start justify-between gap-4 border-b border-[var(--unit-border)]/30 pb-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit shadow-[var(--unit-accent)]/20 shrink-0">
+              <DollarSign className="h-5 w-5" />
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div>
+              <h3 className="font-heading text-lg sm:text-xl font-bold text-[var(--unit-text)]">Cobrar Venta</h3>
+              <p className="text-xl sm:text-2xl font-bold text-[var(--unit-accent)] tabular-nums">
+                S/ {saleTotal.toFixed(2)}
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-unit border border-[var(--unit-border)]/60/80 dark:border-zinc-700/80 bg-[var(--unit-surface)]/50 hover:bg-[var(--unit-surface-elevated)] p-2 text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] transition-all active:scale-95"
+            aria-label="Cerrar"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Method selector */}
-        <div className="relative z-10 mb-5">
-          <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Método de pago</label>
+        <div className="mb-5 space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+            Método de pago
+          </label>
           <div className="grid grid-cols-5 gap-1.5">
             {methods.map((m) => {
               const active = paymentMethod === m.value;
@@ -121,15 +127,21 @@ export function PaymentModal({ saleTotal, isProcessing, onClose, onConfirm }: Pa
                 <button
                   key={m.value}
                   type="button"
-                  onClick={() => setPaymentMethod(m.value)}
-                  className={`relative z-20 flex flex-col items-center gap-1 rounded-xl border-2 p-2.5 text-[10px] font-semibold transition-all hover:scale-105 ${
+                  onClick={() => {
+                    setPaymentMethod(m.value);
+                    if (m.value !== 'MIXED') {
+                      setAmountPaid(String(saleTotal));
+                    }
+                  }}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-unit border p-2.5 text-[11px] font-semibold transition-all active:scale-95',
                     active
-                      ? 'border-[var(--unit-accent)] bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] text-white shadow-lg'
-                      : 'border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 text-[var(--unit-text-muted)] hover:border-[var(--unit-accent)]/50 hover:text-[var(--unit-accent)]'
-                  }`}
+                      ? 'border-[var(--unit-accent)] bg-[var(--unit-accent)] text-white shadow-unit shadow-[var(--unit-accent)]/20'
+                      : 'border-[var(--unit-border)]/60/70 bg-[var(--unit-surface)] hover:bg-slate-100 text-[var(--unit-text-muted)] dark:bg-zinc-800/60 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                  )}
                 >
                   <m.icon className="h-4 w-4" />
-                  {m.label}
+                  <span className="truncate w-full text-center">{m.label}</span>
                 </button>
               );
             })}
@@ -137,95 +149,169 @@ export function PaymentModal({ saleTotal, isProcessing, onClose, onConfirm }: Pa
         </div>
 
         {/* Amount inputs */}
-        <div className="relative z-10">
+        <div className="space-y-4">
           {paymentMethod === 'MIXED' ? (
-            <div className="mb-6 space-y-3">
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Efectivo</label>
-                <input type="number" min={0} step={0.01} value={mixedDetail.cash || ''} onChange={(e) => setMixedDetail((d) => ({ ...d, cash: Number(e.target.value) || 0 }))} className={mixedInputClass} placeholder="0.00" />
+            <div className="space-y-3 p-4 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)]">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--unit-text-muted)]">Efectivo</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={mixedDetail.cash || ''}
+                    onChange={(e) => setMixedDetail((d) => ({ ...d, cash: Number(e.target.value) || 0 }))}
+                    className={mixedInputClass}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--unit-text-muted)]">Tarjeta</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={mixedDetail.card || ''}
+                    onChange={(e) => setMixedDetail((d) => ({ ...d, card: Number(e.target.value) || 0 }))}
+                    className={mixedInputClass}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--unit-text-muted)]">Transferencia</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={mixedDetail.transfer || ''}
+                    onChange={(e) => setMixedDetail((d) => ({ ...d, transfer: Number(e.target.value) || 0 }))}
+                    className={mixedInputClass}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--unit-text-muted)]">Billetera</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={mixedDetail.wallet || ''}
+                    onChange={(e) => setMixedDetail((d) => ({ ...d, wallet: Number(e.target.value) || 0 }))}
+                    className={mixedInputClass}
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Tarjeta</label>
-                <input type="number" min={0} step={0.01} value={mixedDetail.card || ''} onChange={(e) => setMixedDetail((d) => ({ ...d, card: Number(e.target.value) || 0 }))} className={mixedInputClass} placeholder="0.00" />
-              </div>
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Transferencia</label>
-                <input type="number" min={0} step={0.01} value={mixedDetail.transfer || ''} onChange={(e) => setMixedDetail((d) => ({ ...d, transfer: Number(e.target.value) || 0 }))} className={mixedInputClass} placeholder="0.00" />
-              </div>
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Billetera</label>
-                <input type="number" min={0} step={0.01} value={mixedDetail.wallet || ''} onChange={(e) => setMixedDetail((d) => ({ ...d, wallet: Number(e.target.value) || 0 }))} className={mixedInputClass} placeholder="0.00" />
-              </div>
-              <div className="flex justify-between text-sm font-semibold text-[var(--unit-text)]">
-                <span>Suma</span>
-                <span className="font-heading tabular-nums">S/ {(mixedDetail.cash + mixedDetail.card + mixedDetail.transfer + mixedDetail.wallet).toFixed(2)}</span>
+
+              <div className="flex justify-between items-center pt-2 border-t border-[var(--unit-border)]/60 text-sm font-semibold text-[var(--unit-text)]">
+                <span>Total Mixto:</span>
+                <span
+                  className={cn(
+                    'tabular-nums font-bold text-base',
+                    mixedDetail.cash + mixedDetail.card + mixedDetail.transfer + mixedDetail.wallet === saleTotal
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  )}
+                >
+                  S/ {(mixedDetail.cash + mixedDetail.card + mixedDetail.transfer + mixedDetail.wallet).toFixed(2)}
+                </span>
               </div>
             </div>
           ) : (
             <>
-              <div className="mb-6">
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-[var(--unit-text-muted)]">Monto recibido</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.10}
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(e.target.value)}
-                  className="w-full rounded-[var(--unit-radius-sm)] border-2 border-[var(--unit-border)] bg-[var(--unit-surface)] px-4 py-3 text-center font-heading text-xl text-[var(--unit-text-muted)] tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]"
-                />
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                  Monto recibido (S/)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-[var(--unit-text-muted)]">
+                    S/
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(e.target.value)}
+                    className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface-elevated)] focus:bg-[var(--unit-surface-elevated)]/70 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 pl-11 pr-4 py-3 text-center font-heading text-2xl font-bold text-[var(--unit-text)] tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 focus:border-[var(--unit-accent)] transition-all"
+                  />
+                </div>
               </div>
 
-              {/* Enhanced Change display - Consistente con sistema */}
-              {paymentMethod === 'CASH' && change > 0 && (
-                <div className="mb-6 p-4 rounded-xl border-2 border-[var(--unit-accent)]/30 bg-gradient-to-br from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                        <TrendingUp className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-[var(--unit-text)]">Vuelto</p>
-                        <p className="text-xs text-[var(--unit-text-muted)]">Cantidad a devolver</p>
-                      </div>
+              {/* Quick Cash Suggestions */}
+              {paymentMethod === 'CASH' && (
+                <div className="flex gap-2">
+                  {quickAmounts.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setAmountPaid(String(q))}
+                      className="flex-1 py-1.5 px-2 rounded-unit border border-[var(--unit-border)]/60/80 bg-[var(--unit-surface)] hover:bg-slate-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 text-xs font-semibold text-[var(--unit-text)] dark:text-zinc-200 transition-all active:scale-95 tabular-nums"
+                    >
+                      S/ {q.toFixed(0)}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Change badge */}
+              {paymentMethod === 'CASH' && (
+                <div
+                  className={cn(
+                    'p-4 rounded-unit border flex items-center justify-between transition-all',
+                    change > 0
+                      ? 'border-emerald-500/30 bg-emerald-500/10'
+                      : 'border-[var(--unit-border)]/60 dark:border-zinc-800 bg-[var(--unit-surface)] dark:bg-zinc-800/40'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle
+                      className={cn('h-5 w-5', change > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-zinc-500')}
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Vuelto a devolver</p>
+                      <p className="text-xs text-[var(--unit-text-muted)]">
+                        {change > 0 ? 'Entrega el cambio correspondiente' : 'Pago exacto o pendiente'}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-[var(--unit-accent)] tabular-nums">S/ {change.toFixed(2)}</p>
-                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn('text-xl font-bold tabular-nums', change > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--unit-text)] dark:text-zinc-200')}>
+                      S/ {change.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               )}
             </>
           )}
 
-          {/* Enhanced Action Buttons - Consistente con ClientModals */}
-          <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30 -mx-6 -mb-6 mt-6">
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                disabled={isProcessing}
-                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-              >
-                {isProcessing ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <TrendingUp className="h-4 w-4 animate-spin" />
-                    Procesando...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <Banknote className="h-4 w-4" />
-                    Cobrar
-                  </span>
-                )}
-              </button>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-unit border border-[var(--unit-border)]/60/80 dark:border-zinc-700/80 text-[var(--unit-text)] dark:text-zinc-200 font-semibold bg-slate-100/90 hover:bg-slate-200/90 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/90 transition-all active:scale-[0.98] text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={isProcessing || (paymentMethod === 'CASH' && Number(amountPaid) < saleTotal)}
+              className="flex-1 px-4 py-3 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white font-semibold shadow-unit shadow-[var(--unit-accent)]/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 text-sm flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <Banknote className="h-4 w-4" />
+                  Confirmar Cobro
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

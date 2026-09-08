@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -8,26 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-
-// Custom Spanish tooltip formatter
-const SpanishTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0];
-    const total = payload.reduce((sum: number, entry: any) => sum + entry.value, 0);
-    const percentage = ((data.value / total) * 100).toFixed(1);
-    
-    return (
-      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-        <p className="font-semibold text-gray-800 mb-1">{data.name}</p>
-        <p className="text-sm text-gray-600">
-          Valor: {typeof data.value === 'number' ? `S/ ${data.value.toFixed(2)}` : data.value}
-        </p>
-        <p className="text-sm text-gray-500">{percentage}% del total</p>
-      </div>
-    );
-  }
-  return null;
-};
+import { ChartTooltip } from './ChartTooltip';
 
 export interface PieChartDatum {
   name: string;
@@ -41,6 +23,7 @@ export interface PieChartProps {
   showLegend?: boolean;
   innerRadius?: number;
   outerRadius?: number;
+  currencyFormat?: boolean;
   onSliceClick?: (entry: PieChartDatum, index: number) => void;
 }
 
@@ -49,22 +32,21 @@ export function PieChart({
   height = 300,
   showLegend = true,
   innerRadius = 0,
-  outerRadius = 100,
+  outerRadius = 90,
+  currencyFormat = false,
   onSliceClick,
 }: PieChartProps): JSX.Element {
-  // Empty state check
-  if (!data || data.length === 0) {
+  if (!data || data.length === 0 || data.every((d) => d.value === 0)) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] w-full text-center p-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 mb-4">
-          <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+      <div className="flex flex-col items-center justify-center h-[280px] w-full text-center p-6 rounded-unit border border-dashed border-[var(--unit-border)]/60">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--unit-surface)] mb-3 text-[var(--unit-text-muted)]">
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Sin datos para este período</h3>
-        <p className="text-sm text-gray-500 max-w-md">
-          No hay información disponible para mostrar en la gráfica. Intenta ajustar los filtros o seleccionar un período diferente.
+        <h4 className="text-sm font-semibold text-[var(--unit-text)]">Sin datos de distribución</h4>
+        <p className="text-xs text-[var(--unit-text-muted)] max-w-xs mt-1">
+          No hay suficiente información para representar la distribución.
         </p>
       </div>
     );
@@ -78,11 +60,11 @@ export function PieChart({
           dataKey="value"
           nameKey="name"
           cx="50%"
-          cy="50%"
+          cy="48%"
           innerRadius={innerRadius}
           outerRadius={outerRadius}
           paddingAngle={2}
-          animationDuration={600}
+          animationDuration={800}
           cursor={onSliceClick ? 'pointer' : undefined}
           onClick={
             onSliceClick
@@ -91,15 +73,26 @@ export function PieChart({
           }
         >
           {data.map((entry, idx) => (
-            <Cell key={`cell-${idx}`} fill={entry.color} />
+            <Cell key={`cell-${idx}`} fill={entry.color} stroke="transparent" />
           ))}
         </Pie>
-        <Tooltip content={<SpanishTooltip />} />
+        <Tooltip
+          content={
+            <ChartTooltip
+              currencyKey={currencyFormat ? ['value'] : []}
+              showPercentage={true}
+            />
+          }
+        />
         {showLegend && (
           <Legend
-            wrapperStyle={{ fontSize: 12 }}
+            verticalAlign="bottom"
+            wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+            iconType="circle"
             formatter={(value: string) => (
-              <span style={{ color: 'var(--unit-text)' }}>{value}</span>
+              <span className="text-[var(--unit-text-muted)] text-xs font-medium ml-1">
+                {value}
+              </span>
             )}
           />
         )}

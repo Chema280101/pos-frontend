@@ -5,46 +5,47 @@ import { usePathname } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableBadge } from '@/components/ui/TableBadge';
 import { ReportOverview } from './ReportOverview';
 import { ReportsMetrics } from './ReportsMetrics';
 import { useUnitStore } from '@/store/unitStore';
-import { Download, Filter, ChevronDown, ChevronUp, BarChart3, DollarSign, Calendar, Users, Package, TrendingUp, Building2, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Download, Filter, ChevronDown, ChevronUp, BarChart3, DollarSign, Calendar, Users, Package, TrendingUp, Building2, CheckCircle, AlertCircle, X, FileSpreadsheet, FileText } from 'lucide-react';
 import { startOfDay, endOfDay, subDays, format } from 'date-fns';
 import { api } from '@/lib/api';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as ExcelJS from 'exceljs';
+import { downloadExcelReport } from '@/lib/excelReport';
+import { downloadPdfReport } from '@/lib/pdfReport';
 
 type BusinessUnit = 'SPA' | 'BARBERIA' | '';
 
 // Lazy loading para componentes pesados
 const SalesReport = dynamic(() => import('./SalesReport').then(mod => ({ default: mod.SalesReport })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />,
+  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-unit-lg" />,
   ssr: false
 });
 
 const AppointmentsReport = dynamic(() => import('./AppointmentsReport').then(mod => ({ default: mod.AppointmentsReport })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />,
+  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-unit-lg" />,
   ssr: false
 });
 
 const ClientsReport = dynamic(() => import('./ClientsReport').then(mod => ({ default: mod.ClientsReport })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />,
+  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-unit-lg" />,
   ssr: false
 });
 
 const InventoryReport = dynamic(() => import('./InventoryReport').then(mod => ({ default: mod.InventoryReport })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />,
+  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-unit-lg" />,
   ssr: false
 });
 
 const CommissionsReport = dynamic(() => import('./CommissionsReport').then(mod => ({ default: mod.CommissionsReport })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />,
+  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-unit-lg" />,
   ssr: false
 });
 
 const CashRegisterReport = dynamic(() => import('./CashRegisterReport').then(mod => ({ default: mod.CashRegisterReport })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />,
+  loading: () => <div className="animate-pulse h-64 bg-gray-200 rounded-unit-lg" />,
   ssr: false
 });
 
@@ -65,6 +66,7 @@ export function ReportsPage(): JSX.Element {
   }, [pathname]);
 
   const activeUnit = useUnitStore((s) => s.activeUnit);
+  const setUnit = useUnitStore((s) => s.setUnit);
   const [dateFrom, setDateFrom] = useState(() => startOfDay(subDays(new Date(), 30)));
   const [dateTo, setDateTo] = useState(() => endOfDay(new Date()));
   const [showFilters, setShowFilters] = useState(true);
@@ -75,27 +77,6 @@ export function ReportsPage(): JSX.Element {
   
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
-  
-  // Export modal states
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel');
-  const [exportConfig, setExportConfig] = useState({
-    includeLogo: true,
-    includeTotals: true,
-    includeBorders: true,
-  });
-
-  // Sincronizar con filtros principales cuando se abre el modal
-  useEffect(() => {
-    if (showExportModal) {
-      setExportType('excel');
-      setExportConfig({
-        includeLogo: true,
-        includeTotals: true,
-        includeBorders: true,
-      });
-    }
-  }, [showExportModal]);
 
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -110,20 +91,12 @@ export function ReportsPage(): JSX.Element {
   // Export mutations
   const exportExcelMutation = useMutation({
     mutationFn: async () => {
-      // Verificar que haya una unidad seleccionada en el Header
-      if (!activeUnit || (activeUnit !== 'SPA' && activeUnit !== 'BARBERIA')) {
-        setNotification({type: 'error', message: 'Por favor selecciona una unidad (SPA o Barbería) en el Header superior antes de exportar'});
-        setShowExportModal(false);
-        throw new Error('Unidad no seleccionada');
-      }
-
-      // Obtener datos reales del backend
       const params = new URLSearchParams({
         from: dateFrom.toISOString(),
         to: dateTo.toISOString(),
-        unit: activeUnit,
         format: 'csv'
       });
+      if (activeUnit) params.set('unit', activeUnit);
 
       let endpoint = '';
       let headers: string[] = [];
@@ -131,7 +104,7 @@ export function ReportsPage(): JSX.Element {
       switch (detectedReportType) {
         case 'sales':
           endpoint = '/api/reports/sales/export';
-          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customer', 'createdBy'];
+          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customerName', 'employeeName'];
           break;
         case 'appointments':
           endpoint = '/api/reports/appointments/export';
@@ -154,24 +127,17 @@ export function ReportsPage(): JSX.Element {
           headers = ['id', 'date', 'unit', 'openingAmount', 'closingAmount', 'status', 'employee'];
           break;
         default:
-          // Para overview, usar datos de ventas por defecto
           endpoint = '/api/reports/sales/export';
-          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customer', 'createdBy'];
+          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customerName', 'employeeName'];
       }
 
-      // Llamar a la API para obtener datos reales
       const response = await api.get(`${endpoint}?${params}`);
-      console.log('API Response type:', typeof response.data);
-      console.log('API Response:', response.data);
-
       let realData: any[] = [];
-      
-      // Si la respuesta es string (CSV), parsearla
       let csvHeaders: string[] = [];
+      
       if (typeof response.data === 'string') {
         const lines = response.data.split('\n').filter((line: string) => line.trim());
         csvHeaders = lines[0]?.split(',').map((h: string) => h.replace(/"/g, '').trim()) || [];
-        
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',').map((v: string) => v.replace(/"/g, '').trim());
           const row: Record<string, string> = {};
@@ -180,30 +146,24 @@ export function ReportsPage(): JSX.Element {
           });
           realData.push(row);
         }
+      } else if (Array.isArray(response.data)) {
+        realData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        realData = response.data.data;
       } else {
-        // Si es JSON, usar data directamente
-        realData = response.data.data || [];
+        realData = [];
       }
-      
-      console.log('Real data count:', realData.length);
-      console.log('First row:', realData[0]);
 
-      // Create Excel workbook
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Reporte');
-
-      // Usar headers del CSV si existen, sino los headers fijos
       const finalHeaders = csvHeaders.length > 0 ? csvHeaders : headers;
       
-      // Add header con nombres legibles
       const headerLabels: Record<string, string> = {
         'id': 'ID',
-        'saleNumber': 'Número de Venta',
+        'saleNumber': 'N° Venta',
         'unit': 'Unidad',
-        'total': 'Total',
+        'total': 'Total (S/)',
         'paymentMethod': 'Método de Pago',
-        'closedAt': 'Fecha de Cierre',
-        'createdAt': 'Fecha de Creación',
+        'closedAt': 'Fecha Cierre',
+        'createdAt': 'Fecha Creación',
         'customer': 'Cliente',
         'customerName': 'Cliente',
         'createdBy': 'Empleado',
@@ -215,15 +175,15 @@ export function ReportsPage(): JSX.Element {
         'name': 'Nombre',
         'phone': 'Teléfono',
         'email': 'Email',
-        'howFoundUs': 'Cómo nos encontró',
+        'howFoundUs': 'Origen',
         'type': 'Tipo',
         'category': 'Categoría',
         'stock': 'Stock',
         'minStock': 'Stock Mínimo',
-        'salePrice': 'Precio Venta',
-        'costPrice': 'Precio Costo',
+        'salePrice': 'Precio Venta (S/)',
+        'costPrice': 'Precio Costo (S/)',
         'user': 'Empleado',
-        'amount': 'Monto',
+        'amount': 'Monto (S/)',
         'pctApplied': '% Comisión',
         'sale': 'Venta',
         'date': 'Fecha',
@@ -235,47 +195,39 @@ export function ReportsPage(): JSX.Element {
         'openedAt': 'Fecha Apertura',
         'employee': 'Empleado'
       };
-      worksheet.addRow(finalHeaders.map(h => headerLabels[h] || h));
-
-      // Add data rows - los datos ya vienen planos del CSV
-      realData.forEach((row: any) => {
-        const rowData = finalHeaders.map(header => row[header] || '');
-        worksheet.addRow(rowData);
-      });
-
-      // Style header
-      worksheet.getRow(1).font = { bold: true, size: 12 };
-      worksheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      };
-
-      // Auto-fit columns
-      worksheet.columns.forEach((column) => {
-        if (column.header) {
-          column.width = Math.max(column.header.toString().length + 5, 15);
+      
+      const readableHeaders = finalHeaders.map(h => headerLabels[h] || h);
+      const rowsData = realData.map((row: any) => finalHeaders.map(header => {
+        const val = row[header];
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'object') {
+          return val.name || val.label || val.id || JSON.stringify(val);
         }
-      });
+        return val;
+      }));
 
-      // Generate buffer
-      const buffer = await workbook.xlsx.writeBuffer();
+      const reportTitle = detectedReportType === 'overview' ? 'REPORTE GENERAL DE VENTAS' :
+                         detectedReportType === 'sales' ? 'REPORTE DE VENTAS' :
+                         detectedReportType === 'appointments' ? 'REPORTE DE CITAS' :
+                         detectedReportType === 'clients' ? 'REPORTE DE CLIENTES' :
+                         detectedReportType === 'inventory' ? 'REPORTE DE INVENTARIO' :
+                         detectedReportType === 'commissions' ? 'REPORTE DE COMISIONES' :
+                         'REPORTE DE CAJA';
 
-      // Create blob and download
-      const blob = new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `reporte-${detectedReportType}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      await downloadExcelReport(
+        `reporte-${detectedReportType}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+        reportTitle,
+        readableHeaders,
+        rowsData,
+        {
+          unit: activeUnit || 'General',
+          reportTitle,
+          periodInfo: { from: dateFrom, to: dateTo },
+          filterInfo: activeUnit ? `Unidad: ${activeUnit}` : undefined
+        }
+      );
 
-      setNotification({type: 'success', message: `Reporte Excel exportado con ${realData.length} registros`});
-      setShowExportModal(false);
+      setNotification({type: 'success', message: `Reporte Excel descargado con ${realData.length} registros`});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports-metrics'] });
@@ -287,139 +239,142 @@ export function ReportsPage(): JSX.Element {
 
   const exportPDFMutation = useMutation({
     mutationFn: async () => {
-      // Get unit colors for PDF styling
-      const unitColors = !activeUnit ? {
-        primary: '#4A0E0E',
-        accent: '#0028b3',
-        secondary: '#F8F5FF'
-      } : activeUnit === 'SPA' ? {
-        primary: '#6B46C1',
-        accent: '#9333EA',
-        secondary: '#F3E8FF'
-      } : {
-        primary: '#7A0A0A',
-        accent: '#7A0A0A',
-        secondary: '#FCFCFC'
+      const params = new URLSearchParams({
+        from: dateFrom.toISOString(),
+        to: dateTo.toISOString(),
+        format: 'csv'
+      });
+      if (activeUnit) params.set('unit', activeUnit);
+
+      let endpoint = '';
+      let headers: string[] = [];
+
+      switch (detectedReportType) {
+        case 'sales':
+          endpoint = '/api/reports/sales/export';
+          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customerName', 'employeeName'];
+          break;
+        case 'appointments':
+          endpoint = '/api/reports/appointments/export';
+          headers = ['id', 'startTime', 'endTime', 'status', 'unit', 'customer', 'createdBy'];
+          break;
+        case 'clients':
+          endpoint = '/api/reports/clients/export';
+          headers = ['id', 'name', 'phone', 'email', 'howFoundUs', 'createdAt'];
+          break;
+        case 'inventory':
+          endpoint = '/api/reports/inventory/export';
+          headers = ['id', 'name', 'type', 'unit', 'category', 'stock', 'minStock', 'salePrice'];
+          break;
+        case 'commissions':
+          endpoint = '/api/reports/commissions/export';
+          headers = ['id', 'user', 'amount', 'status', 'createdAt', 'sale'];
+          break;
+        case 'cash-register':
+          endpoint = '/api/reports/cash-register/export';
+          headers = ['id', 'date', 'unit', 'openingAmount', 'closingAmount', 'status', 'employee'];
+          break;
+        default:
+          endpoint = '/api/reports/sales/export';
+          headers = ['id', 'saleNumber', 'unit', 'total', 'paymentMethod', 'closedAt', 'customerName', 'employeeName'];
+      }
+
+      const response = await api.get(`${endpoint}?${params}`);
+      let realData: any[] = [];
+      let csvHeaders: string[] = [];
+
+      if (typeof response.data === 'string') {
+        const lines = response.data.split('\n').filter((line: string) => line.trim());
+        csvHeaders = lines[0]?.split(',').map((h: string) => h.replace(/"/g, '').trim()) || [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map((v: string) => v.replace(/"/g, '').trim());
+          const row: Record<string, string> = {};
+          csvHeaders.forEach((header: string, index: number) => {
+            row[header] = values[index] || '';
+          });
+          realData.push(row);
+        }
+      } else if (Array.isArray(response.data)) {
+        realData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        realData = response.data.data;
+      } else {
+        realData = [];
+      }
+
+      const finalHeaders = csvHeaders.length > 0 ? csvHeaders : headers;
+      const headerLabels: Record<string, string> = {
+        'id': 'ID',
+        'saleNumber': 'N° Venta',
+        'unit': 'Unidad',
+        'total': 'Total (S/)',
+        'paymentMethod': 'Método Pago',
+        'closedAt': 'Fecha Cierre',
+        'createdAt': 'Fecha Creación',
+        'customer': 'Cliente',
+        'customerName': 'Cliente',
+        'createdBy': 'Empleado',
+        'employeeName': 'Empleado',
+        'userName': 'Empleado',
+        'startTime': 'Hora Inicio',
+        'endTime': 'Hora Fin',
+        'status': 'Estado',
+        'name': 'Nombre',
+        'phone': 'Teléfono',
+        'email': 'Email',
+        'howFoundUs': 'Origen',
+        'type': 'Tipo',
+        'category': 'Categoría',
+        'stock': 'Stock',
+        'minStock': 'Stock Mín.',
+        'salePrice': 'Precio Venta (S/)',
+        'costPrice': 'Precio Costo (S/)',
+        'user': 'Empleado',
+        'amount': 'Monto (S/)',
+        'pctApplied': '% Com.',
+        'sale': 'Venta',
+        'date': 'Fecha',
+        'openingAmount': 'Monto Apertura',
+        'closingAmount': 'Monto Cierre',
+        'closingDeclared': 'Monto Declarado',
+        'closingExpected': 'Monto Esperado',
+        'difference': 'Diferencia',
+        'openedAt': 'Fecha Apertura',
+        'employee': 'Empleado'
       };
 
-      // Create professional PDF with jsPDF
-      const doc = new jsPDF();
-      
-      // Set font to support Spanish characters
-      doc.setFont('helvetica');
-      
-      // Get page dimensions
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Header Section
-      let currentY = 20;
-      
-      // Title
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      const reportTitle = detectedReportType === 'overview' ? 'REPORTE GENERAL' :
-                       detectedReportType === 'sales' ? 'REPORTE DE VENTAS' :
-                       detectedReportType === 'appointments' ? 'REPORTE DE CITAS' :
-                       detectedReportType === 'clients' ? 'REPORTE DE CLIENTES' :
-                       detectedReportType === 'inventory' ? 'REPORTE DE INVENTARIO' :
-                       detectedReportType === 'commissions' ? 'REPORTE DE COMISIONES' :
-                       'REPORTE DE CAJA';
-      doc.text(reportTitle, pageWidth / 2, currentY, { align: 'center' });
-      
-      // Unit name
-      currentY += 10;
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
-      const unitName = !activeUnit ? 'TODAS LAS UNIDADES' : 
-                      activeUnit === 'SPA' ? 'SPA' : 'BARBERÍA';
-      doc.text(`Unidad: ${unitName}`, pageWidth / 2, currentY, { align: 'center' });
-      
-      // Date and period info (right aligned)
-      currentY += 8;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const dateStr = format(new Date(), 'dd/MM/yyyy');
-      const periodStr = `${format(dateFrom, 'dd/MM/yyyy')} al ${format(dateTo, 'dd/MM/yyyy')}`;
-      doc.text(`Fecha: ${dateStr}`, pageWidth - 60, currentY);
-      currentY += 6;
-      doc.text(`Período: ${periodStr}`, pageWidth - 60, currentY);
-      
-      // Logo placeholder if enabled
-      if (exportConfig.includeLogo) {
-        currentY += 15;
-        doc.setDrawColor(unitColors.primary.replace('#', ''));
-        doc.setFillColor(unitColors.secondary.replace('#', ''));
-        doc.rect(pageWidth / 2 - 30, currentY, 60, 20, 'F');
-        doc.setDrawColor(0);
-        doc.text('LOGO', pageWidth / 2, currentY + 12, { align: 'center' });
-        currentY += 25;
-      } else {
-        currentY += 15;
-      }
-      
-      // Prepare table data
-      const tableData = [
-        [1, detectedReportType, format(new Date(), 'dd/MM/yyyy'), 'S/ 1500.00', 'Completado'],
-        [2, detectedReportType, format(subDays(new Date(), 1), 'dd/MM/yyyy'), 'S/ 2300.00', 'Pendiente'],
-        [3, detectedReportType, format(subDays(new Date(), 2), 'dd/MM/yyyy'), 'S/ 1800.00', 'Completado']
-      ];
-      
-      // Calculate totals
-      const totalAmount = tableData.reduce((sum, row) => sum + parseFloat(String(row[3]).replace('S/ ', '').replace(',', '')), 0);
-      
-      // Add table with autoTable
-      autoTable(doc, {
-        head: [['ID', 'Tipo', 'Fecha', 'Monto', 'Estado']],
-        body: tableData,
-        startY: currentY,
-        theme: 'grid',
-        styles: {
-          font: 'helvetica',
-          fontSize: 9,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [parseInt(unitColors.primary.slice(1, 3), 16), 
-                     parseInt(unitColors.primary.slice(3, 5), 16), 
-                     parseInt(unitColors.primary.slice(5, 7), 16)],
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center',
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 15 }, // ID
-          1: { cellWidth: 40 }, // Tipo
-          2: { halign: 'center', cellWidth: 25 }, // Fecha
-          3: { halign: 'right', cellWidth: 30 }, // Monto
-          4: { halign: 'center', cellWidth: 25 }, // Estado
-        },
-        foot: [[
-          { content: `TOTAL GENERAL`, colSpan: 4, styles: { fillColor: unitColors.secondary.replace('#', ''), textColor: unitColors.primary.replace('#', ''), fontStyle: 'bold' } },
-          { content: `S/ ${totalAmount.toFixed(2)}`, styles: { halign: 'right', fillColor: unitColors.secondary.replace('#', ''), textColor: unitColors.primary.replace('#', ''), fontStyle: 'bold' } }
-        ]],
-        footStyles: {
-          fillColor: unitColors.secondary.replace('#', ''),
-          textColor: unitColors.primary.replace('#', ''),
-          fontStyle: 'bold',
-          lineWidth: 0.1,
-        },
-      });
-      
-      // Add page numbers (simplified for compatibility)
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Página 1 de 1', pageWidth / 2, pageHeight - 10, { align: 'center' });
-      
-      // Save the PDF
-      const fileName = `reporte_${detectedReportType}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-      doc.save(fileName);
-      
-      setNotification({type: 'success', message: 'Reporte PDF exportado exitosamente'});
-      setShowExportModal(false);
+      const readableHeaders = finalHeaders.map(h => headerLabels[h] || h);
+      const rowsData = realData.map((row: any) => finalHeaders.map(header => {
+        const val = row[header];
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'object') {
+          return val.name || val.label || val.id || JSON.stringify(val);
+        }
+        return val;
+      }));
+
+      const reportTitle = detectedReportType === 'overview' ? 'REPORTE GENERAL DE VENTAS' :
+                         detectedReportType === 'sales' ? 'REPORTE DE VENTAS' :
+                         detectedReportType === 'appointments' ? 'REPORTE DE CITAS' :
+                         detectedReportType === 'clients' ? 'REPORTE DE CLIENTES' :
+                         detectedReportType === 'inventory' ? 'REPORTE DE INVENTARIO' :
+                         detectedReportType === 'commissions' ? 'REPORTE DE COMISIONES' :
+                         'REPORTE DE CAJA';
+
+      downloadPdfReport(
+        `reporte_${detectedReportType}_${format(new Date(), 'yyyy-MM-dd')}.pdf`,
+        reportTitle,
+        activeUnit || 'Todas las unidades',
+        readableHeaders,
+        rowsData,
+        {
+          unit: activeUnit || 'General',
+          periodInfo: { from: dateFrom, to: dateTo },
+          filterInfo: activeUnit ? `Unidad: ${activeUnit}` : undefined
+        }
+      );
+
+      setNotification({type: 'success', message: `Reporte PDF descargado con ${realData.length} registros`});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports-metrics'] });
@@ -430,142 +385,113 @@ export function ReportsPage(): JSX.Element {
   });
 
   return (
-    <div className="min-h-screen bg-[var(--unit-surface)] p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Enhanced Header - Exacto estilo ClientsPage */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Sistema de Reportes
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Inteligencia de Negocio • {activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA'}
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Reportes</h1>
-            <p className="text-[var(--unit-text-muted)]">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Reportes & Analítica Operativa
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
               {detectedReportType === 'overview' 
-                ? 'Resumen general de todas las áreas del sistema'
-                : `Reporte detallado de ${detectedReportType === 'sales' ? 'ventas' : 
-                             detectedReportType === 'appointments' ? 'citas' : 
-                             detectedReportType === 'clients' ? 'clientes' : 
-                             detectedReportType === 'inventory' ? 'inventario' : 
-                             detectedReportType === 'commissions' ? 'comisiones' : 'cajas'}`
+                ? 'Resumen integral de rendimiento comercial, financiero y operativo'
+                : `Métricas y análisis detallado de ${detectedReportType === 'sales' ? 'ventas' : 
+                             detectedReportType === 'appointments' ? 'citas y agendamiento' : 
+                             detectedReportType === 'clients' ? 'cartera de clientes' : 
+                             detectedReportType === 'inventory' ? 'rotación de inventario' : 
+                             detectedReportType === 'commissions' ? 'comisiones de especialistas' : 'flujo de caja'}`
               }
             </p>
           </div>
 
-          {/* Reports Metrics */}
-          <ReportsMetrics 
-            reportType={detectedReportType} 
-            dateFrom={dateFrom} 
-            dateTo={dateTo} 
-            unit={activeUnit || ''} 
-          />
-
-          {/* Enhanced Action Buttons - Estilo ClientsPage */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
-              onClick={() => {
-                setExportType('excel');
-                setShowExportModal(true);
-              }}
-              disabled={exportExcelMutation.isPending}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['reports-metrics'] })}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Actualizar datos"
             >
-              <Download className="h-5 w-5" />
-              {exportExcelMutation.isPending ? 'Exportando...' : 'Exportar Excel'}
+              <BarChart3 className="h-4 w-4 text-[var(--unit-accent)]" />
+              <span className="hidden sm:inline">Actualizar</span>
             </button>
+
             <button
-              onClick={() => {
-                setExportType('pdf');
-                setShowExportModal(true);
-              }}
-              disabled={exportPDFMutation.isPending}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              onClick={() => exportExcelMutation.mutate()}
+              disabled={exportExcelMutation.isPending || exportPDFMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm disabled:opacity-50"
+              title="Exportar a Excel"
             >
-              <Download className="h-5 w-5" />
-              {exportPDFMutation.isPending ? 'Exportando...' : 'Exportar PDF'}
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span>{exportExcelMutation.isPending ? 'Generando...' : 'Exportar Excel'}</span>
+            </button>
+
+            <button
+              onClick={() => exportPDFMutation.mutate()}
+              disabled={exportExcelMutation.isPending || exportPDFMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm disabled:opacity-50"
+              title="Exportar a PDF"
+            >
+              <FileText className="h-4 w-4 text-rose-600" />
+              <span>{exportPDFMutation.isPending ? 'Generando...' : 'Exportar PDF'}</span>
             </button>
           </div>
         </div>
 
-        {/* Enhanced Reports Filters - Exacto estilo ClientsPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header - Exacto estilo ClientsPage */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Reportes</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-              >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+        {/* Reports Metrics */}
+        <ReportsMetrics 
+          reportType={detectedReportType} 
+          dateFrom={dateFrom} 
+          dateTo={dateTo} 
+          unit={activeUnit || ''} 
+        />
 
-          {/* Filter Content - Exacto estilo ClientsPage */}
-          {showFilters && (
-            <div className="space-y-6">
-              {/* Date Range Filter */}
-              <DateRangeFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
-                onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                showUnitFilter={false}
-                showStatusFilter={false}
-                className="rounded-xl"
-              />
-
-
-              {/* Enhanced Active Filters Summary - Simplificado */}
-              {(activeUnit) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {activeUnit && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Unidad: {activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
+        {/* Enhanced Reports Filters using TableToolbar */}
+        <div className="mb-8">
+          <TableToolbar
+            showSearch={false}
+            showAdvancedFiltersButton={true}
+            isAdvancedOpen={showFilters}
+            onToggleAdvanced={() => setShowFilters(!showFilters)}
+            activeFiltersCount={activeUnit ? 1 : 0}
+            onResetFilters={() => {
+              setUnit(null);
+              setDateFrom(startOfDay(subDays(new Date(), 30)));
+              setDateTo(endOfDay(new Date()));
+            }}
+            advancedFiltersContent={
+              <div className="space-y-4">
+                <DateRangeFilter
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
+                  onDateToChange={(date: Date | null) => date && setDateTo(date)}
+                  showUnitFilter={false}
+                  showStatusFilter={false}
+                  className="rounded-unit"
+                />
+                {activeUnit && (
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--unit-border)]/30">
+                    <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
+                    <TableBadge type={activeUnit === 'SPA' ? 'unit-spa' : 'unit-barberia'}>
+                      Unidad: {activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
+                    </TableBadge>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            }
+          />
         </div>
 
         {/* Enhanced Reports Table - Premium Glassmorphism */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8">
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg p-8">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5">
             <div className="h-full w-full bg-repeat" style={{
@@ -575,11 +501,11 @@ export function ReportsPage(): JSX.Element {
           
           <div className="relative">
             {/* Premium Table Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
+            <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-8 -mt-8 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <Download className="h-5 w-5 text-white" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                    <Download className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-[var(--unit-text)]">Lista de Reportes</h3>
@@ -587,7 +513,7 @@ export function ReportsPage(): JSX.Element {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                  <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/15 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-unit-sm">
                     {detectedReportType === 'overview' ? 'Resumen General' : `Reporte de ${detectedReportType === 'sales' ? 'Ventas' : 
                                detectedReportType === 'appointments' ? 'Citas' : 
                                detectedReportType === 'clients' ? 'Clientes' : 
@@ -599,7 +525,7 @@ export function ReportsPage(): JSX.Element {
             </div>
 
             {/* Report Content - Enhanced Container */}
-            <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6">
+            <div className="relative overflow-hidden rounded-unit border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6">
               {/* Report Type Indicator */}
               <div className="flex items-center gap-2 mb-4">
                 <div className={`h-2 w-2 rounded-full animate-pulse ${
@@ -700,7 +626,7 @@ export function ReportsPage(): JSX.Element {
       {/* Enhanced Loading State */}
       {loading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-accent)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-8 max-w-sm w-full">
+          <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg p-8 max-w-sm w-full">
             <div className="flex flex-col items-center gap-4">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--unit-accent)]/20 border-t-[var(--unit-accent)]"></div>
               <div className="text-center">
@@ -714,7 +640,7 @@ export function ReportsPage(): JSX.Element {
       
       {/* Toast Notifications */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl border-2 shadow-lg animate-pulse ${
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-unit border-2 shadow-unit animate-pulse ${
           notification.type === 'success' 
             ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
             : 'bg-red-50 border-red-200 text-red-800'
@@ -722,191 +648,6 @@ export function ReportsPage(): JSX.Element {
           <div className="flex items-center gap-2">
             {notification.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
             <span className="font-medium">{notification.message}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Export Configuration Modal - Estilo Premium como Expenses */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setShowExportModal(false);
-          }
-        }}>
-          <div className={`relative overflow-hidden rounded-2xl border-2 ${exportType === 'excel' ? 'border-green-500/50 bg-gradient-to-br from-green-50/95 to-green-100/85' : 'border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85'} backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto`}>
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-30 pointer-events-none">
-              <div className="h-full w-full bg-repeat" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23${exportType === 'excel' ? '10b981' : 'ef4444'}' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-              }}></div>
-            </div>
-
-            {/* Header - Estándar consistente */}
-            <div className="relative mb-6 flex items-start justify-between gap-4">
-              {/* Background gradient for header - Consistente con Modal.tsx */}
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-              
-              <div className="relative z-10 flex items-center gap-3">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${exportType === 'excel' ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'} shadow-lg`}>
-                  <Download className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Configura tu reporte personalizado</p>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setShowExportModal(false)}
-                className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                aria-label="Cerrar"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="relative space-y-4">
-              {/* Información Actual */}
-              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
-                <label className="block text-sm font-medium text-[var(--unit-text)] mb-3">
-                  Configuración Actual
-                </label>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-[var(--unit-text-muted)]">Unidad:</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {!activeUnit ? 'Todas' : activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-[var(--unit-text-muted)]">Período:</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {format(dateFrom, 'dd/MM/yyyy')} - {format(dateTo, 'dd/MM/yyyy')}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-[var(--unit-text-muted)] mt-2">
-                  Usa los filtros de la página para cambiar estos valores
-                </p>
-              </div>
-
-              {/* Include Logo */}
-              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="includeLogo"
-                    checked={exportConfig.includeLogo}
-                    onChange={(e) => setExportConfig((prev: any) => ({ ...prev, includeLogo: e.target.checked }))}
-                    className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
-                  />
-                  <label htmlFor="includeLogo" className="text-sm font-medium text-[var(--unit-text)]">
-                    Incluir logo del negocio
-                  </label>
-                </div>
-              </div>
-
-              {/* Additional Options */}
-              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-200/50' : 'border-red-200/50'} bg-gradient-to-br from-white/70 to-white/50 p-4`}>
-                <label className="block text-sm font-medium text-[var(--unit-text)] mb-3">
-                  Opciones Adicionales
-                </label>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="includeTotals"
-                      checked={exportConfig.includeTotals}
-                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, includeTotals: e.target.checked }))}
-                      className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
-                    />
-                    <label htmlFor="includeTotals" className="text-sm font-medium text-[var(--unit-text)]">
-                      Incluir totales y resúmenes
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="includeBorders"
-                      checked={exportConfig.includeBorders}
-                      onChange={(e) => setExportConfig((prev: any) => ({ ...prev, includeBorders: e.target.checked }))}
-                      className={`h-4 w-4 ${exportType === 'excel' ? 'text-green-600 border-green-300/50 focus:ring-green-500/50' : 'text-red-600 border-red-300/50 focus:ring-red-500/50'} rounded`}
-                    />
-                    <label htmlFor="includeBorders" className="text-sm font-medium text-[var(--unit-text)]">
-                      Incluir bordes en todas las celdas
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div className={`rounded-xl border-2 ${exportType === 'excel' ? 'border-green-300/50 bg-gradient-to-br from-green-50 to-green-100' : 'border-red-300/50 bg-gradient-to-br from-red-50 to-red-100'} p-4`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`h-2 w-2 rounded-full ${exportType === 'excel' ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-                  <span className="text-xs font-medium text-[var(--unit-text-muted)] uppercase tracking-wider">Vista Previa</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Unidad</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {!activeUnit ? 'Todas' : activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Período</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {format(dateFrom, 'dd/MM/yyyy')} - {format(dateTo, 'dd/MM/yyyy')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Logo</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {exportConfig.includeLogo ? 'Incluido' : 'No incluido'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Totales</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {exportConfig.includeTotals ? 'Incluidos' : 'No incluidos'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[var(--unit-text-muted)]">Bordes</span>
-                    <span className="text-sm font-medium text-[var(--unit-text)]">
-                      {exportConfig.includeBorders ? 'Incluidos' : 'No incluidos'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-4 mt-6">
-              <button
-                onClick={() => exportType === 'excel' ? exportExcelMutation.mutate() : exportPDFMutation.mutate()}
-                disabled={exportExcelMutation.isPending || exportPDFMutation.isPending}
-                className={`flex-1 rounded-xl bg-gradient-to-r ${exportType === 'excel' ? 'from-green-600 to-green-700 border-green-500/50' : 'from-red-600 to-red-700 border-red-500/50'} text-white font-bold shadow-lg border-2 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
-              >
-                {(exportExcelMutation.isPending || exportPDFMutation.isPending) ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                    Exportando...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Exportar {exportType === 'excel' ? 'Excel' : 'PDF'}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setShowExportModal(false)}
-                className={`flex-1 rounded-xl border-2 ${exportType === 'excel' ? 'border-green-300/50 text-green-700 hover:bg-green-50' : 'border-red-300/50 text-red-700 hover:bg-red-50'} px-6 py-3 text-sm font-medium bg-white/80 transition-all hover:shadow-lg active:scale-[0.98]`}
-              >
-                Cancelar
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -5,8 +5,10 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button, Skeleton, DataTable } from '@/components/ui';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableBadge } from '@/components/ui/TableBadge';
 import { AuditMetrics } from './AuditMetrics';
-import { Download, Calendar, User, Activity, Database, Fingerprint, Monitor, AlertCircle, FileText, Filter, ChevronUp, ChevronDown, Search, X } from 'lucide-react';
+import { Download, Calendar, User, Activity, Database, Fingerprint, Monitor, AlertCircle, FileText, FileSpreadsheet, Filter, ChevronUp, ChevronDown, Search, X } from 'lucide-react';
 import { downloadExcelReport } from '@/lib/excelReport';
 import { downloadPdfReport } from '@/lib/pdfReport';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
@@ -188,20 +190,15 @@ export function AuditLogPage(): JSX.Element {
       header: 'Acción',
       sortable: true,
       render: (row: AuditRow) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.action === 'LOGIN' || row.action === 'LOGOUT'
-            ? 'bg-blue-100 text-blue-800'
-            : row.action === 'CREATE'
-            ? 'bg-green-100 text-green-800'
-            : row.action === 'UPDATE'
-            ? 'bg-amber-100 text-amber-800'
-            : row.action === 'DELETE'
-            ? 'bg-red-100 text-red-800'
-            : 'bg-gray-100 text-gray-800'
-        )}>
+        <TableBadge type={
+          row.action === 'LOGIN' || row.action === 'LOGOUT' ? 'role-receptionist' :
+          row.action === 'CREATE' ? 'status-active' :
+          row.action === 'UPDATE' ? 'status-pending' :
+          row.action === 'DELETE' ? 'status-inactive' :
+          'status-neutral'
+        }>
           {row.action}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -211,24 +208,17 @@ export function AuditLogPage(): JSX.Element {
       render: (row: AuditRow) => (
         <div className="flex items-center gap-2">
           <Database className="h-4 w-4 text-[var(--unit-text-muted)]" />
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            row.entity === 'USER'
-              ? 'bg-purple-100 text-purple-800'
-              : row.entity === 'CLIENT'
-              ? 'bg-blue-100 text-blue-800'
-              : row.entity === 'PRODUCT' || row.entity === 'SERVICE'
-              ? 'bg-green-100 text-green-800'
-              : row.entity === 'SALE'
-              ? 'bg-amber-100 text-amber-800'
-              : row.entity === 'APPOINTMENT'
-              ? 'bg-pink-100 text-pink-800'
-              : row.entity === 'CASH_REGISTER'
-              ? 'bg-indigo-100 text-indigo-800'
-              : 'bg-gray-100 text-gray-800'
-          )}>
+          <TableBadge type={
+            row.entity === 'USER' ? 'role-admin' :
+            row.entity === 'CLIENT' ? 'role-receptionist' :
+            row.entity === 'PRODUCT' || row.entity === 'SERVICE' ? 'status-active' :
+            row.entity === 'SALE' ? 'status-pending' :
+            row.entity === 'APPOINTMENT' ? 'role-spa-specialist' :
+            row.entity === 'CASH_REGISTER' ? 'unit-barberia' :
+            'status-neutral'
+          }>
             {row.entity}
-          </span>
+          </TableBadge>
         </div>
       ),
     },
@@ -327,177 +317,146 @@ export function AuditLogPage(): JSX.Element {
 }).length ?? 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Sistema de Auditoría
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Seguridad & Trazabilidad
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Auditoría</h1>
-            <p className="text-[var(--unit-text-muted)]">
-              Registro de acciones sensibles y actividad del sistema
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Registro de Auditoría & Logs
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Trazabilidad en tiempo real de operaciones sensibles, inicios de sesión y modificaciones de datos
             </p>
           </div>
 
-          {/* Audit Metrics */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--unit-accent)] border-t-transparent"></div>
-              <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
-            </div>
-          ) : (
-            <AuditMetrics data={data?.data || []} dateFrom={dateFrom} dateTo={dateTo} />
-          )}
-
-          {/* Enhanced Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={exportExcel}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow-lg border-2 border-green-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Exportar a Excel"
             >
-              <Download className="h-5 w-5" />
-              Exportar Excel
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span>Exportar Excel</span>
             </button>
+
             <button
               type="button"
               onClick={exportPdf}
               disabled={!data?.data?.length}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm disabled:opacity-50"
+              title="Exportar a PDF"
             >
-              <Download className="h-5 w-5" />
-              Exportar PDF
+              <FileText className="h-4 w-4 text-rose-600" />
+              <span>Exportar PDF</span>
             </button>
           </div>
         </div>
 
-        {/* Enhanced Audit Filters */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Auditoría</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/80 hover:bg-white border border-[var(--unit-border)]/50 transition-all hover:scale-105"
-              >
-                {showFilters ? <ChevronUp className="h-4 w-4 text-[var(--unit-text)]" /> : <ChevronDown className="h-4 w-4 text-[var(--unit-text)]" />}
-              </button>
-            </div>
+        {/* Audit Metrics */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--unit-accent)] border-t-transparent"></div>
+            <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
           </div>
+        ) : (
+          <AuditMetrics data={data?.data || []} dateFrom={dateFrom} dateTo={dateTo} />
+        )}
 
-          {showFilters && (
-            <div className="space-y-6">
-              {/* Date Range Filter */}
-              <DateRangeFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
-                onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                showUnitFilter={false}
-                showStatusFilter={false}
-              />
-
-              {/* Additional Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                {/* Action Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Acción</label>
-                  <select
-                    value={action}
-                    onChange={(e) => setAction(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-white/90 px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 backdrop-blur-sm"
-                  >
-                    <option value="">Todas las acciones</option>
-                    <option value="CREATE">Creación</option>
-                    <option value="UPDATE">Actualización</option>
-                    <option value="DELETE">Eliminación</option>
-                    <option value="LOGIN">Inicio de sesión</option>
-                    <option value="LOGOUT">Cierre de sesión</option>
-                    <option value="UNLOCK">Desbloqueo</option>
-                    <option value="RESET_PASSWORD">Reseteo de contraseña</option>
-                  </select>
-                </div>
-
-                {/* Entity Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Entidad</label>
-                  <select
-                    value={entity}
-                    onChange={(e) => setEntity(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-white/90 px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 backdrop-blur-sm"
-                  >
-                    <option value="">Todas las entidades</option>
-                    <option value="USER">Usuario</option>
-                    <option value="SALE">Venta</option>
-                    <option value="APPOINTMENT">Cita</option>
-                    <option value="CASH_REGISTER">Caja</option>
-                    <option value="PRODUCT">Producto</option>
-                    <option value="SERVICE">Servicio</option>
-                    <option value="CLIENT">Cliente</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Search Bar */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Búsqueda</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Buscar en auditoría (usuario, acción, entidad, IP, dispositivo...)"
-                    value={searchFilter}
-                    onChange={(e) => setSearchFilter(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                  />
-                  {searchFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchFilter('')}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center"
+        {/* Enhanced Audit Filters */}
+        <div className="mb-8">
+          <TableToolbar
+            search={searchFilter}
+            onSearchChange={setSearchFilter}
+            searchPlaceholder="Buscar en auditoría (usuario, acción, entidad, IP...)"
+            chips={[
+              { id: '', label: 'Todas las acciones', count: data?.data?.length || 0 },
+              { id: 'CREATE', label: 'Creaciones', activeColor: 'bg-emerald-600 text-white' },
+              { id: 'UPDATE', label: 'Actualizaciones', activeColor: 'bg-amber-500 text-white' },
+              { id: 'DELETE', label: 'Eliminaciones', activeColor: 'bg-red-600 text-white' },
+              { id: 'LOGIN', label: 'Inicios de sesión', activeColor: 'bg-blue-600 text-white' },
+            ]}
+            activeChip={action}
+            onChipChange={(id) => setAction(String(id))}
+            showAdvancedFiltersButton={true}
+            isAdvancedOpen={showFilters}
+            onToggleAdvanced={() => setShowFilters(!showFilters)}
+            activeFiltersCount={(action ? 1 : 0) + (entity ? 1 : 0) + (searchFilter ? 1 : 0)}
+            onResetFilters={() => {
+              setAction('');
+              setEntity('');
+              setSearchFilter('');
+              setDateFrom(startOfDay(subDays(new Date(), 7)));
+              setDateTo(endOfDay(new Date()));
+            }}
+            advancedFiltersContent={
+              <div className="space-y-6">
+                <DateRangeFilter
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
+                  onDateToChange={(date: Date | null) => date && setDateTo(date)}
+                  showUnitFilter={false}
+                  showStatusFilter={false}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Acción (Manual)</label>
+                    <select
+                      value={action}
+                      onChange={(e) => setAction(e.target.value)}
+                      className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-4 py-2.5 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all cursor-pointer"
                     >
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                        <X className="h-3 w-3" />
-                      </div>
-                    </button>
-                  )}
+                      <option value="">Todas las acciones</option>
+                      <option value="CREATE">Creación</option>
+                      <option value="UPDATE">Actualización</option>
+                      <option value="DELETE">Eliminación</option>
+                      <option value="LOGIN">Inicio de sesión</option>
+                      <option value="LOGOUT">Cierre de sesión</option>
+                      <option value="UNLOCK">Desbloqueo</option>
+                      <option value="RESET_PASSWORD">Reseteo de contraseña</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Entidad</label>
+                    <select
+                      value={entity}
+                      onChange={(e) => setEntity(e.target.value)}
+                      className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-4 py-2.5 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all cursor-pointer"
+                    >
+                      <option value="">Todas las entidades</option>
+                      <option value="USER">Usuario</option>
+                      <option value="SALE">Venta</option>
+                      <option value="APPOINTMENT">Cita</option>
+                      <option value="CASH_REGISTER">Caja</option>
+                      <option value="PRODUCT">Producto</option>
+                      <option value="SERVICE">Servicio</option>
+                      <option value="CLIENT">Cliente</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            }
+          />
         </div>
 
         {/* Enhanced Audit Table */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6">
           {/* Table Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+          <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <FileText className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                  <FileText className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--unit-text)]">Registro de Auditoría</h3>
@@ -506,7 +465,7 @@ export function AuditLogPage(): JSX.Element {
                   </p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/10 px-3 py-1 text-xs font-medium text-[var(--unit-accent)] border border-[var(--unit-accent)]/30">
+              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/15 px-3 py-1 text-xs font-medium text-[var(--unit-accent)] border border-[var(--unit-accent)]/30">
                 Página {page} de {totalPages}
               </span>
             </div>

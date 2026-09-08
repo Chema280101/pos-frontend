@@ -207,13 +207,13 @@ export default function ChangePasswordPage(): JSX.Element {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl"
+          className="relative overflow-hidden rounded-2xl border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-2xl"
         >
           {/* Form Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">
+          <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                <Lock className="h-5 w-5 text-white" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--unit-accent)] text-white shadow-md">
+                <Lock className="h-5 w-5" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[var(--unit-text)]">Actualización de seguridad</h2>
@@ -242,7 +242,7 @@ export default function ChangePasswordPage(): JSX.Element {
               <div className="relative">
                 <input 
                   type={showPasswords.current ? 'text' : 'password'}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 pr-12 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
+                  className="w-full rounded-xl border border-[var(--unit-border)]/60 px-4 py-2.5 pr-12 text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all text-sm" 
                   placeholder="Ingresa tu contraseña actual"
                   {...register('currentPassword')} 
                 />

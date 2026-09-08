@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import { useState } from 'react';
 import type { Commission, CommissionsResponse } from '@/types/commission';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableBadge } from '@/components/ui/TableBadge';
 
 export function MyCommissions(): JSX.Element {
   const user = useAuthStore((s) => s.user);
@@ -78,7 +80,7 @@ export function MyCommissions(): JSX.Element {
       header: 'Venta',
       sortable: true,
       render: (row: Commission) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+        <span className="font-semibold text-[var(--unit-text)]">
           {row.sale?.saleNumber ?? 'Sin venta'}
         </span>
       ),
@@ -88,9 +90,9 @@ export function MyCommissions(): JSX.Element {
       header: 'Monto',
       sortable: true,
       render: (row: Commission) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+        <TableBadge type="amount" bold mono>
           S/ {row.amount.toFixed(2)}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -98,34 +100,33 @@ export function MyCommissions(): JSX.Element {
       header: '% Comisión',
       sortable: true,
       render: (row: Commission) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800">
+        <TableBadge type="status-neutral">
           {row.pctApplied}%
-        </span>
+        </TableBadge>
       ),
     },
     {
       key: 'status',
       header: 'Estado',
-      render: (row: Commission) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.status === 'PAID'
-            ? 'bg-green-100 text-green-800'
-            : row.status === 'APPROVED'
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-gray-100 text-gray-800'
-        )}>
-          {getCommissionStatusLabel(row.status)}
-        </span>
-      ),
+      render: (row: Commission) => {
+        const statusType = 
+          row.status === 'PAID' ? 'status-paid' :
+          row.status === 'APPROVED' ? 'status-active' :
+          row.status === 'PENDING' ? 'status-pending' : 'status-neutral';
+        return (
+          <TableBadge type={statusType}>
+            {getCommissionStatusLabel(row.status)}
+          </TableBadge>
+        );
+      },
     },
     {
       key: 'paidAt',
       header: 'Fecha de Pago',
       sortable: true,
       render: (row: Commission) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-800">
-          {row.paidAt ? format(new Date(row.paidAt), "d MMM yyyy", { locale: es }) : 'Sin pago'}
+        <span className="text-sm font-medium text-[var(--unit-text-muted)]">
+          {row.paidAt ? format(new Date(row.paidAt), "d MMM yyyy", { locale: es }) : '—'}
         </span>
       ),
     },
@@ -134,224 +135,137 @@ export function MyCommissions(): JSX.Element {
       header: 'Total Venta',
       sortable: true,
       render: (row: Commission) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+        <TableBadge type="amount">
           {row.sale ? `S/ ${row.sale.total.toFixed(2)}` : 'Sin venta'}
-        </span>
+        </TableBadge>
       ),
     },
   ];
 
+  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
+  const [viewModal, setViewModal] = useState(false);
+
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver detalle',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Commission) => {
-        // TODO: Implement view commission details
+        setSelectedCommission(row);
+        setViewModal(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header - Exacto estilo ServicesPage */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Mis Comisiones
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Mi Rendimiento Individual
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Mis Comisiones</h1>
-            <p className="text-[var(--unit-text-muted)]">
-              Gestiona y revisa tus comisiones generadas
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Mis Comisiones Ganadas
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Registro personal de servicios prestados, ventas y estado de liquidación
             </p>
           </div>
 
-          {/* Personal Commissions Metrics */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--unit-accent)] border-t-transparent"></div>
-              <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
-            </div>
-          ) : (
-            <PersonalCommissionsMetrics commissions={commissions} />
-          )}
-
-          {/* Enhanced Action Buttons - Exacto estilo ServicesPage */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* Action Links */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {canViewAllCommissions && (
-              <Link href="/commissions/admin" className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                <Eye className="h-5 w-5" />
-                Todas las Comisiones (Admin)
+              <Link 
+                href="/commissions/admin" 
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
+              >
+                <Eye className="h-4 w-4" />
+                Panel Administrador
               </Link>
             )}
           </div>
         </div>
 
-        {/* Enhanced Commissions Filters - Exacto estilo ServicesPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Comisiones</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-              >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
-              </button>
-            </div>
+        {/* Personal Commissions Metrics */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--unit-accent)] border-t-transparent"></div>
+            <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
           </div>
+        ) : (
+          <PersonalCommissionsMetrics commissions={commissions} />
+        )}
 
-          {/* Filter Content - Conditional Rendering */}
-          {showFilters && (
-            <div className="space-y-6">
-              {/* Additional Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Status Filter */}
+        {/* Enhanced Commissions Filters */}
+        <div className="mb-8">
+          <TableToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Buscar por venta, estado o monto..."
+            chips={[
+              { id: '', label: 'Todas', count: commissions.length },
+              { id: 'PENDING', label: 'Pendientes', activeColor: 'bg-amber-500 text-white' },
+              { id: 'APPROVED', label: 'Aprobadas', activeColor: 'bg-indigo-600 text-white' },
+              { id: 'PAID', label: 'Pagadas', activeColor: 'bg-emerald-600 text-white' },
+            ]}
+            activeChip={statusFilter}
+            onChipChange={(id) => setStatusFilter(String(id))}
+            showAdvancedFiltersButton={true}
+            isAdvancedOpen={showFilters}
+            onToggleAdvanced={() => setShowFilters(!showFilters)}
+            activeFiltersCount={(statusFilter ? 1 : 0) + (search ? 1 : 0)}
+            onResetFilters={() => {
+              setStatusFilter('');
+              setSearch('');
+              setDateFrom(startOfDay(subDays(new Date(), 30)));
+              setDateTo(endOfDay(new Date()));
+            }}
+            advancedFiltersContent={
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="PENDING">Pendientes</option>
-                    <option value="APPROVED">Aprobadas</option>
-                    <option value="PAID">Pagadas</option>
-                  </select>
+                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Fecha Desde</label>
+                  <input
+                    type="date"
+                    value={dateFrom ? dateFrom.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setDateFrom(e.target.value ? new Date(e.target.value) : dateFrom)}
+                    className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3 py-2 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                  />
                 </div>
-
-                {/* Date Range Filter */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Rango de Fechas</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="date"
-                      value={dateFrom ? dateFrom.toISOString().split('T')[0] : ''}
-                      onChange={(e) => setDateFrom(e.target.value ? new Date(e.target.value) : dateFrom)}
-                      className="rounded-xl border-2 border-[var(--unit-border)]/50 px-3 py-2 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    />
-                    <input
-                      type="date"
-                      value={dateTo ? dateTo.toISOString().split('T')[0] : ''}
-                      onChange={(e) => setDateTo(e.target.value ? new Date(e.target.value) : dateTo)}
-                      className="rounded-xl border-2 border-[var(--unit-border)]/50 px-3 py-2 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Search Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Búsqueda</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar por venta, estado..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                    />
-                    {search && (
-                      <button
-                        type="button"
-                        onClick={() => setSearch('')}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                          <X className="h-3 w-3" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
+                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Fecha Hasta</label>
+                  <input
+                    type="date"
+                    value={dateTo ? dateTo.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setDateTo(e.target.value ? new Date(e.target.value) : dateTo)}
+                    className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3 py-2 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                  />
                 </div>
               </div>
-
-              {/* Enhanced Active Filters Summary */}
-              {(statusFilter || search) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {statusFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Estado: {getCommissionStatusLabel(statusFilter)}
-                          </span>
-                        )}
-                        {search && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                            Búsqueda: {search}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setStatusFilter('');
-                        setSearch('');
-                        setDateFrom(startOfDay(subDays(new Date(), 30)));
-                        setDateTo(endOfDay(new Date()));
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            }
+          />
         </div>
 
-        {/* Commissions Table - Exacto estilo ServicesPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+        {/* Commissions Table */}
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6">
           {/* Table Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+          <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <DollarSign className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                  <DollarSign className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--unit-text)]">Mis Comisiones</h3>
                   <p className="text-sm text-[var(--unit-text-muted)]">Revisa tus comisiones generadas</p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+              <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/15 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-unit-sm">
                 {filteredCommissions?.length || 0} comisiones
               </span>
             </div>
@@ -371,6 +285,104 @@ export function MyCommissions(): JSX.Element {
             pageSizeOptions={[10, 15, 30, 50]}
           />
         </div>
+
+        {/* View Commission Details Modal */}
+        {viewModal && selectedCommission && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg p-6 sm:p-8 max-w-lg w-full">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[var(--unit-border)]/30">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                    <Eye className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--unit-text)]">Detalle de Comisión</h3>
+                    <p className="text-xs text-[var(--unit-text-muted)]">ID: {selectedCommission.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewModal(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-unit border border-[var(--unit-border)]/40 hover:bg-[var(--unit-surface-elevated)] transition-all"
+                >
+                  <X className="h-4 w-4 text-[var(--unit-text-muted)]" />
+                </button>
+              </div>
+
+              {/* Details Content */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 p-4 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/30">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--unit-text-muted)]">Monto Comisión</span>
+                    <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      S/ {Number(selectedCommission.amount).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--unit-text-muted)]">Porcentaje</span>
+                    <p className="text-xl font-extrabold text-[var(--unit-text)] mt-0.5">
+                      {selectedCommission.pctApplied}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 text-sm">
+                  <div className="flex items-center justify-between py-1.5 border-b border-[var(--unit-border)]/20">
+                    <span className="text-[var(--unit-text-muted)]">Estado:</span>
+                    <TableBadge type={
+                      selectedCommission.status === 'PAID' ? 'status-paid' :
+                      selectedCommission.status === 'APPROVED' ? 'status-active' :
+                      'status-pending'
+                    }>
+                      {getCommissionStatusLabel(selectedCommission.status)}
+                    </TableBadge>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1.5 border-b border-[var(--unit-border)]/20">
+                    <span className="text-[var(--unit-text-muted)]">Número de Venta:</span>
+                    <span className="font-semibold text-[var(--unit-text)]">
+                      {selectedCommission.sale?.saleNumber || selectedCommission.sale?.id || 'N/A'}
+                    </span>
+                  </div>
+
+                  {selectedCommission.sale?.total != null && (
+                    <div className="flex items-center justify-between py-1.5 border-b border-[var(--unit-border)]/20">
+                      <span className="text-[var(--unit-text-muted)]">Total de la Venta:</span>
+                      <span className="font-semibold text-[var(--unit-text)]">
+                        S/ {Number(selectedCommission.sale.total).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between py-1.5 border-b border-[var(--unit-border)]/20">
+                    <span className="text-[var(--unit-text-muted)]">Fecha de Generación:</span>
+                    <span className="text-[var(--unit-text)]">
+                      {selectedCommission.createdAt ? format(new Date(selectedCommission.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : '—'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-[var(--unit-text-muted)]">Fecha de Liquidación:</span>
+                    <span className="text-[var(--unit-text)] font-medium">
+                      {selectedCommission.paidAt ? format(new Date(selectedCommission.paidAt), "dd/MM/yyyy HH:mm", { locale: es }) : 'Pendiente de pago'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-[var(--unit-border)]/30 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setViewModal(false)}
+                  className="px-5 py-2 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/50 text-sm font-semibold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 transition-all"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

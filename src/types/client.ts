@@ -2,6 +2,7 @@ export interface Client {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
   gender: string | null;
   howFoundUs: string | null;
   preferenceNotes: string | null;

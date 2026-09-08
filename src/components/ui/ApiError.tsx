@@ -98,7 +98,7 @@ export function ApiError({ error, onRetry, message, className }: ApiErrorProps):
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+      <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-unit">
         <div className="flex-shrink-0 text-red-600">
           {errorDetails.icon}
         </div>

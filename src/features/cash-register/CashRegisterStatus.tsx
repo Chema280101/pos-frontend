@@ -26,7 +26,7 @@ export function CashRegisterStatus({ unit, onOpenRegister, onCloseRegister }: Ca
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/60 shadow-unit-sm p-6">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 rounded mb-4"></div>
           <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -37,20 +37,20 @@ export function CashRegisterStatus({ unit, onOpenRegister, onCloseRegister }: Ca
 
   if (!openRegister) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/60 shadow-unit-sm p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
               <Lock className="h-6 w-6 text-red-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Caja Cerrada</h3>
-              <p className="text-sm text-gray-600">No hay una caja abierta para {unit}</p>
+              <h3 className="text-lg font-semibold text-[var(--unit-text)]">Caja Cerrada</h3>
+              <p className="text-sm text-[var(--unit-text-muted)]">No hay una caja abierta para {unit}</p>
             </div>
           </div>
           <button
             onClick={onOpenRegister}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-unit hover:bg-green-600 transition-colors"
           >
             <Banknote className="h-4 w-4" />
             Abrir Caja
@@ -61,15 +61,15 @@ export function CashRegisterStatus({ unit, onOpenRegister, onCloseRegister }: Ca
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <div className="bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/60 shadow-unit-sm p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
             <Unlock className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Caja Abierta</h3>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <h3 className="text-lg font-semibold text-[var(--unit-text)]">Caja Abierta</h3>
+            <div className="flex items-center gap-4 text-sm text-[var(--unit-text-muted)]">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 {new Date(openRegister.openedAt).toLocaleDateString()}
@@ -87,7 +87,7 @@ export function CashRegisterStatus({ unit, onOpenRegister, onCloseRegister }: Ca
         </div>
         <button
           onClick={onCloseRegister}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-unit hover:bg-red-600 transition-colors"
         >
           <Lock className="h-4 w-4" />
           Cerrar Caja

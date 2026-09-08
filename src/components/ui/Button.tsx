@@ -18,21 +18,21 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'border-2 border-[var(--unit-accent)]/50 bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white shadow-lg shadow-[var(--unit-accent)]/25 hover:shadow-xl hover:shadow-[var(--unit-accent)]/30 focus:ring-[var(--unit-accent)]/50',
-  secondary: 'border-2 border-[var(--unit-primary)]/50 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] text-[var(--unit-text)] shadow-md hover:shadow-lg focus:ring-[var(--unit-primary)]/50',
+  primary: 'border-2 border-[var(--unit-accent)]/50 bg-[var(--unit-accent)] text-white shadow-unit shadow-[var(--unit-accent)]/25 hover:shadow-unit-lg hover:shadow-[var(--unit-accent)]/30 hover:bg-[var(--unit-accent-hover)] focus:ring-[var(--unit-accent)]/50',
+  secondary: 'border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] text-[var(--unit-text)] shadow-unit hover:shadow-unit-lg hover:bg-[var(--unit-accent)]/5 focus:ring-[var(--unit-primary)]/50',
   ghost: 'border-2 border-transparent bg-transparent text-[var(--unit-text)] hover:border-[var(--unit-accent)]/30 hover:bg-[var(--unit-accent)]/10 focus:ring-[var(--unit-accent)]/50',
-  danger: 'border-2 border-[var(--unit-error)]/50 bg-gradient-to-r from-[var(--unit-error)] to-red-600 text-white shadow-lg shadow-[var(--unit-error)]/25 hover:shadow-xl hover:shadow-[var(--unit-error)]/30 focus:ring-[var(--unit-error)]/50',
-  outline: 'border-2 border-[var(--unit-accent)]/50 bg-transparent text-[var(--unit-accent)] hover:bg-gradient-to-r hover:from-[var(--unit-accent)]/10 hover:to-[var(--unit-primary)]/10 focus:ring-[var(--unit-accent)]/50',
-  success: 'border-2 border-[var(--unit-success)]/50 bg-gradient-to-r from-[var(--unit-success)] to-green-600 text-white shadow-lg shadow-[var(--unit-success)]/25 hover:shadow-xl hover:shadow-[var(--unit-success)]/30 focus:ring-[var(--unit-success)]/50',
-  warning: 'border-2 border-[var(--unit-warning)]/50 bg-gradient-to-r from-[var(--unit-warning)] to-amber-600 text-white shadow-lg shadow-[var(--unit-warning)]/25 hover:shadow-xl hover:shadow-[var(--unit-warning)]/30 focus:ring-[var(--unit-warning)]/50',
+  danger: 'border-2 border-[var(--unit-error)]/50 bg-[var(--unit-error)] text-white shadow-unit shadow-[var(--unit-error)]/25 hover:shadow-unit-lg hover:shadow-[var(--unit-error)]/30 hover:bg-red-700 focus:ring-[var(--unit-error)]/50',
+  outline: 'border-2 border-[var(--unit-accent)]/50 bg-transparent text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10 focus:ring-[var(--unit-accent)]/50',
+  success: 'border-2 border-[var(--unit-success)]/50 bg-[var(--unit-success)] text-white shadow-unit shadow-[var(--unit-success)]/25 hover:shadow-unit-lg hover:shadow-[var(--unit-success)]/30 hover:bg-green-700 focus:ring-[var(--unit-success)]/50',
+  warning: 'border-2 border-[var(--unit-warning)]/50 bg-[var(--unit-warning)] text-white shadow-unit shadow-[var(--unit-warning)]/25 hover:shadow-unit-lg hover:shadow-[var(--unit-warning)]/30 hover:bg-amber-700 focus:ring-[var(--unit-warning)]/50',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  xs: 'px-2 py-1 text-xs rounded-lg font-semibold',
-  sm: 'px-3 py-1.5 text-sm rounded-lg font-semibold',
-  md: 'px-4 py-2 text-sm rounded-xl font-bold',
-  lg: 'px-6 py-3 text-base rounded-xl font-bold',
-  xl: 'px-8 py-4 text-lg rounded-2xl font-bold',
+  xs: 'px-2 py-1 text-xs rounded-[calc(var(--unit-border-radius)*0.5)] font-semibold',
+  sm: 'px-3 py-1.5 text-sm rounded-[calc(var(--unit-border-radius)*0.5)] font-semibold',
+  md: 'px-4 py-2 text-sm rounded-unit font-bold',
+  lg: 'px-6 py-3 text-base rounded-unit font-bold',
+  xl: 'px-8 py-4 text-lg rounded-unit-lg font-bold',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -77,11 +77,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         {...(props as Omit<ButtonProps, 'className' | 'variant' | 'size' | 'isLoading' | 'fullWidth' | 'disabled' | 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'>)}
       >
-        {/* Glassmorphism overlay - deshabilitado cuando está disabled */}
-        <div className={cn(
-          "absolute inset-0 bg-gradient-to-r from-white/20 to-white/10 transition-opacity duration-200 pointer-events-none",
-          (disabled || isLoading) ? "opacity-0" : "opacity-0 hover:opacity-100"
-        )}></div>
         
         {isLoading ? (
           <>

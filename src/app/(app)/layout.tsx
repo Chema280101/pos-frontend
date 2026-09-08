@@ -68,16 +68,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }): 
     <SecurityProvider>
       <AuthGuard>
         <ToastContainer toasts={toasts} removeToast={removeToast} />
-        <div className="flex min-h-screen flex-col">
+        <div className="flex min-h-screen flex-col bg-[var(--unit-surface)]">
           <OfflineBanner />
-          <Header onMenuClick={() => setSidebarOpen((o) => !o)} />
           <div className="flex flex-1 relative">
             <SidebarMemo
               mobileOpen={sidebarOpen}
               onMobileClose={() => setSidebarOpen(false)}
             />
-            <div className="min-w-0 flex-1 overflow-auto md:ml-56 lg:pt-0 bg-[var(--unit-surface)] flex flex-col">
-              <main className="flex-1">
+            <div className="min-w-0 flex-1 flex flex-col overflow-auto lg:ml-56">
+              <Header onMenuClick={() => setSidebarOpen((o) => !o)} />
+              <main className="flex-1 shrink-0">
                 {/* Enhanced mobile spacing */}
                 <div className="px-3 sm:px-4 md:px-6 py-4 md:py-6">
                   <AppBreadcrumbs />

@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -25,6 +26,7 @@ interface AppointmentsReportProps {
 }
 
 export function AppointmentsReport({ unit, dateFrom, dateTo, compact = false }: AppointmentsReportProps): JSX.Element {
+  const router = useRouter();
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['report-appointments', unit, dateFrom, dateTo],
     queryFn: async (): Promise<Appointment[]> => {
@@ -124,20 +126,20 @@ export function AppointmentsReport({ unit, dateFrom, dateTo, compact = false }: 
 
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver detalle de cita',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Appointment) => {
-        // TODO: Implement view appointment functionality
+        router.push(`/appointments/${row.id}`);
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
     {
-      label: 'Editar',
+      label: 'Gestionar cita',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Appointment) => {
-        // TODO: Implement edit appointment functionality
+        router.push(`/appointments/${row.id}`);
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
   ];
 

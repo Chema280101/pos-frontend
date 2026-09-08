@@ -23,18 +23,15 @@ export function ReportKPICard({
 }: ReportKPICardProps): JSX.Element {
   return (
     <div className={cn(
-      'relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group',
+      'relative overflow-hidden rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-6 shadow-unit-sm hover:shadow-unit transition-all duration-300 group',
       className
     )}>
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-      
       <div className="relative">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border border-[var(--unit-accent)]/30 shadow-lg group-hover:scale-110 transition-transform">
-            <Icon className="h-6 w-6 text-[var(--unit-accent)]" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] border border-[var(--unit-accent)]/20 shadow-unit-sm group-hover:scale-105 transition-transform">
+            <Icon className="h-6 w-6" />
           </div>
-          <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-full border border-[var(--unit-border)] shadow-sm">
+          <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] px-3 py-1 rounded-full border border-[var(--unit-border)]/50 shadow-unit-sm">
             {title}
           </span>
         </div>

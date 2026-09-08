@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -31,6 +32,7 @@ interface CashRegisterReportProps {
 }
 
 export function CashRegisterReport({ unit, dateFrom, dateTo, compact = false }: CashRegisterReportProps): JSX.Element {
+  const router = useRouter();
   const { data: cashRegisters = [], isLoading } = useQuery({
     queryKey: ['report-cash-registers', unit, dateFrom, dateTo],
     queryFn: async (): Promise<CashRegister[]> => {
@@ -188,20 +190,20 @@ export function CashRegisterReport({ unit, dateFrom, dateTo, compact = false }: 
 
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver en caja',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: CashRegister) => {
-        // TODO: Implement view cash register functionality
+        router.push('/cash-register');
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
     {
-      label: 'Editar',
+      label: 'Gestionar caja',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: CashRegister) => {
-        // TODO: Implement edit cash register functionality
+        router.push('/cash-register');
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
   ];
 

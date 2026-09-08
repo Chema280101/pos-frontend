@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ interface ClientsReportProps {
 }
 
 export function ClientsReport({ unit, dateFrom, dateTo, compact = false }: ClientsReportProps): JSX.Element {
+  const router = useRouter();
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['report-clients', unit, dateFrom, dateTo],
     queryFn: async (): Promise<Client[]> => {
@@ -121,20 +123,20 @@ export function ClientsReport({ unit, dateFrom, dateTo, compact = false }: Clien
 
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver perfil',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Client) => {
-        // TODO: Implement view client functionality
+        router.push(`/clients/${row.id}`);
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
     {
-      label: 'Editar',
+      label: 'Editar cliente',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: Client) => {
-        // TODO: Implement edit client functionality
+        router.push(`/clients/${row.id}/edit`);
       },
-      className: 'text-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/10',
     },
   ];
 

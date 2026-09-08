@@ -2,6 +2,7 @@
 
 import { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
@@ -9,7 +10,19 @@ import { useSocket } from '@/hooks/useSocket';
 import { useApprovalNotifications } from '@/hooks/useApprovalNotifications';
 import { cn } from '@/lib/utils';
 import { RoleGuard } from '@/guards/RoleGuard';
-// ✅ OPTIMIZACIÓN: Lazy loading para componentes pesados
+import { 
+  Sparkles, 
+  Calendar, 
+  CreditCard, 
+  Plus, 
+  RefreshCw, 
+  TrendingUp, 
+  Activity, 
+  Scissors, 
+  Layers 
+} from 'lucide-react';
+
+// Lazy loading for unit dashboards
 const DashboardSPA = lazy(() => import('./DashboardSPA').then(mod => ({ default: mod.DashboardSPA })));
 const DashboardBarberia = lazy(() => import('./DashboardBarberia').then(mod => ({ default: mod.DashboardBarberia })));
 const DashboardConsolidado = lazy(() => import('./DashboardConsolidado').then(mod => ({ default: mod.DashboardConsolidado })));
@@ -17,9 +30,6 @@ const DashboardConsolidado = lazy(() => import('./DashboardConsolidado').then(mo
 type DashboardView = 'SPA' | 'BARBERIA' | 'CONSOLIDADO';
 
 export function DashboardPage(): JSX.Element {
-  const user = useAuthStore((s) => s.user);
-  
-  // Solo ADMIN puede acceder al dashboard financiero
   return (
     <RoleGuard minRole="ADMIN">
       <DashboardContent />
@@ -28,31 +38,33 @@ export function DashboardPage(): JSX.Element {
 }
 
 function DashboardContent(): JSX.Element {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const activeUnit = useUnitStore((s) => s.activeUnit);
+  const setUnit = useUnitStore((s) => s.setUnit);
   const isAdmin = user?.role === 'ADMIN';
   const userUnit = user?.unit ?? null;
 
-  // 🔌 Activar Socket.io para actualizaciones en tiempo real
   useSocket();
-  
-  // 🔔 Activar notificaciones de aprobaciones para Admin
   useApprovalNotifications();
 
-  // ✅ OPTIMIZACIÓN: Memoizar logo para evitar re-calculos
-  const logoConfig = useMemo(() => ({
-    src: activeUnit === 'BARBERIA' ? '/logo-barberia.png' : '/logo-spa.png',
-    alt: activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA',
-  }), [activeUnit]);
+  // Determine initial view based on activeUnit / userUnit
+  const initialView: DashboardView = activeUnit === 'BARBERIA' 
+    ? 'BARBERIA' 
+    : activeUnit === 'SPA' 
+    ? 'SPA' 
+    : 'CONSOLIDADO';
 
-  const defaultView: DashboardView = userUnit === 'BARBERIA'
-    ? 'BARBERIA'
-    : userUnit === 'SPA'
-      ? 'SPA'
-      : 'CONSOLIDADO';
+  const [activeView, setActiveView] = useState<DashboardView>(initialView);
 
-  const [activeView, setActiveView] = useState<DashboardView>(defaultView);
+  // Sync activeView when activeUnit changes from the global toggle
+  useEffect(() => {
+    if (activeUnit === 'BARBERIA' || activeUnit === 'SPA') {
+      setActiveView(activeUnit);
+    }
+  }, [activeUnit]);
 
+  // Greeting based on current time
   const greeting = (() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Buenos días';
@@ -70,83 +82,92 @@ function DashboardContent(): JSX.Element {
 
   return (
     <div className="relative min-h-screen bg-[var(--unit-surface)] overflow-hidden">
-      {/* Watermark logo */}
-      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center" aria-hidden>
-        <Image
-          src={logoConfig.src}
-          alt={logoConfig.alt}
-          width={500}
-          height={500}
-          className="h-[45vh] w-auto object-contain opacity-[0.04] select-none"
-          priority={false}
-        />
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="bg-gradient-to-r from-[var(--unit-primary)]/5 to-[var(--unit-accent)]/5 rounded-[var(--unit-border-radius)] p-6 border border-[var(--unit-border)]/20">
-            <h1 className="text-3xl font-bold text-[var(--unit-text)] mb-2">
-              {greeting}, <span className="text-[var(--unit-accent)]">{user?.name?.split(' ')[0] ?? 'Usuario'}</span>
+      <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions (Agenda Style) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Panel Ejecutivo • {activeView === 'BARBERIA' ? 'Barbería' : activeView === 'SPA' ? 'SPA' : 'Consolidado'}
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              {greeting}, <span className="text-[var(--unit-accent)]">{user?.name?.split(' ')[0] ?? 'Administrador'}</span>
             </h1>
-            <p className="text-[var(--unit-text-muted)] text-sm font-medium uppercase tracking-wider">
-              {user?.role}
-              {user?.unit ? ` · ${user.unit}` : ' · Todas las unidades'}
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Métricas financieras, productividad de especialistas y flujo operativo en tiempo real
             </p>
           </div>
-          
-          {/* Quick stats */}
-          <div className="hidden lg:flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-xs text-[var(--unit-text-muted)] uppercase tracking-wider">Unidad activa</p>
-              <p className="text-lg font-bold text-[var(--unit-text)]">{activeUnit || 'Global'}</p>
-            </div>
-            <div className="w-px h-12 bg-[var(--unit-border)]"></div>
-            <div className="text-right">
-              <p className="text-xs text-[var(--unit-text-muted)] uppercase tracking-wider">Vista actual</p>
-              <p className="text-lg font-bold text-[var(--unit-accent)]">{activeView}</p>
-            </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-1 sm:pb-0">
+            <Link
+              href="/appointments"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm shrink-0"
+            >
+              <Calendar className="h-4 w-4 text-[var(--unit-accent)]" />
+              <span className="hidden sm:inline">Ver Agenda</span>
+            </Link>
+
+            <Link
+              href="/pos"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm shrink-0"
+            >
+              <CreditCard className="h-4 w-4 text-emerald-600" />
+              <span className="hidden sm:inline">Abrir POS</span>
+            </Link>
+
+            <Link
+              href="/appointments/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98] shrink-0"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Nueva Cita</span>
+              <span className="sm:hidden">Nueva Cita</span>
+            </Link>
           </div>
         </div>
 
-        {/* View tabs (Admin only) */}
+        {/* View Switcher Tabs (Agenda Pill Style) */}
         {tabs.length > 0 && (
-          <div className="mb-8">
-            <div className="inline-flex gap-1 rounded-[var(--unit-border-radius)] bg-[var(--unit-surface-elevated)] p-1 border border-[var(--unit-border)]/30 shadow-[var(--unit-shadow)]">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveView(tab.key)}
-                  className={cn(
-                    'relative px-6 py-3 text-base font-semibold rounded-[var(--unit-radius-sm)] transition-all duration-200',
-                    activeView === tab.key
-                      ? 'bg-[var(--unit-accent)] text-white shadow-lg shadow-[var(--unit-accent)]/25 scale-[1.02]'
-                      : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] hover:bg-[var(--unit-primary)]/10'
-                  )}
-                >
-                  {tab.label}
-                  {activeView === tab.key && (
-                    <div className="absolute inset-0 rounded-[var(--unit-radius-sm)] bg-gradient-to-r from-[var(--unit-accent)]/20 to-transparent pointer-events-none"></div>
-                  )}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-1.5 p-1 bg-[var(--unit-surface-elevated)] rounded-unit-lg border border-[var(--unit-border)]/40 w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  setActiveView(tab.key);
+                  if (tab.key === 'SPA' || tab.key === 'BARBERIA') {
+                    setUnit(tab.key);
+                  }
+                }}
+                className={cn(
+                  'px-4 py-2 rounded-unit text-xs font-bold transition-all',
+                  activeView === tab.key
+                    ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                    : 'text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Dashboard content */}
+        {/* Dashboard Content with Suspense */}
         <div className="space-y-8">
           <Suspense fallback={
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-[140px] bg-[var(--unit-surface-elevated)] rounded-[var(--unit-border-radius)] border border-[var(--unit-border)]/30 animate-pulse"></div>
+                <div key={i} className="h-32 bg-[var(--unit-surface-elevated)] rounded-unit-lg border border-[var(--unit-border)]/30 animate-pulse" />
               ))}
             </div>
           }>
-              {activeView === 'SPA' && <DashboardSPA />}
-              {activeView === 'BARBERIA' && <DashboardBarberia />}
-              {activeView === 'CONSOLIDADO' && <DashboardConsolidado />}
+            {activeView === 'SPA' && <DashboardSPA />}
+            {activeView === 'BARBERIA' && <DashboardBarberia />}
+            {activeView === 'CONSOLIDADO' && <DashboardConsolidado />}
           </Suspense>
         </div>
       </div>

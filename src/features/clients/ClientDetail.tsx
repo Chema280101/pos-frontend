@@ -36,7 +36,8 @@ import {
 
 export function ClientDetail(): JSX.Element {
   const params = useParams();
-  const id = params.id == null ? undefined : Array.isArray(params.id) ? params.id[0] : params.id;
+  const rawId = params?.id;
+  const id = rawId == null ? undefined : Array.isArray(rawId) ? rawId[0] : rawId;
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
@@ -57,7 +58,7 @@ export function ClientDetail(): JSX.Element {
   };
 
   const isVipClient = (totalVisits?: number) => {
-    return totalVisits && totalVisits > 10;
+    return (totalVisits ?? 0) > 10;
   };
 
   const { data: client, isLoading } = useQuery({
@@ -208,7 +209,7 @@ export function ClientDetail(): JSX.Element {
           <div className="relative px-6 py-4">
             <Link
               href="/clients"
-              className="inline-flex items-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm px-4 py-2 text-sm font-medium text-[var(--unit-text)] hover:bg-white transition-all hover:shadow-lg"
+              className="inline-flex items-center gap-2 rounded-unit bg-white/80 backdrop-blur-sm px-4 py-2 text-sm font-medium text-[var(--unit-text)] hover:bg-[var(--unit-surface-elevated)] transition-all hover:shadow-unit"
             >
               <ArrowLeft className="h-4 w-4" />
               Volver a clientes
@@ -220,23 +221,23 @@ export function ClientDetail(): JSX.Element {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               {/* Enhanced Avatar Section */}
               <div className="relative flex-shrink-0">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] text-3xl font-bold text-[var(--unit-accent)] border-4 border-[var(--unit-accent)] shadow-2xl ring-4 ring-[var(--unit-accent)]/20">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--unit-accent)] text-2xl font-bold text-white shadow-unit">
                   {client.name.charAt(0).toUpperCase()}
                 </div>
-                <div className={`absolute -bottom-2 -right-2 h-8 w-8 rounded-full border-4 border-[var(--unit-surface)] shadow-md ${
+                <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-2 border-[var(--unit-surface)] ${
                   client.isBlocked ? 'bg-red-500' : 'bg-emerald-500'
                 }`} />
                 
                 {/* Enhanced VIP/New Badges */}
                 <div className="absolute -top-2 -right-2 flex gap-1">
                   {isVipClient(client._count?.appointments) && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500/30 to-amber-600/20 px-2 py-1 text-[10px] font-bold text-amber-700 border border-amber-500/40 shadow-sm">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                       <Star className="h-3 w-3" />
                       VIP
                     </span>
                   )}
                   {isRecentClient(client.createdAt) && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--unit-surface)] px-2 py-1 text-[10px] font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)] shadow-sm">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--unit-accent)] px-2 py-0.5 text-[10px] font-semibold text-white shadow-unit-sm">
                       <Sparkles className="h-3 w-3" />
                       Nuevo
                     </span>
@@ -248,23 +249,21 @@ export function ClientDetail(): JSX.Element {
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6 mb-6">
                   <div className="flex-1 min-w-0">
-                    <h1 className="text-3xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-sm">{client.name}</h1>
+                    <h1 className="text-2xl font-bold text-[var(--unit-text)] mb-2">{client.name}</h1>
                     <div className="flex flex-wrap items-center gap-4">
-                      <span className="inline-flex items-center gap-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-                        <Phone className="h-4 w-4 text-[var(--unit-text)]" />
-                        <span className="text-[var(--unit-text)] font-medium">{client.phone}</span>
+                      <span className="inline-flex items-center gap-2 text-sm text-[var(--unit-text-muted)]">
+                        <Phone className="h-4 w-4" />
+                        {client.phone}
                       </span>
                       {client.gender && (
-                        <span className="inline-flex items-center gap-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-                          <Users className="h-4 w-4 text-[var(--unit-text)]" />
-                          <span className="text-[var(--unit-text)] font-medium">{client.gender}</span>
+                        <span className="inline-flex items-center gap-2 text-sm text-[var(--unit-text-muted)]">
+                          <Users className="h-4 w-4" />
+                          {client.gender}
                         </span>
                       )}
-                      <span className="inline-flex items-center gap-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-                        <Calendar className="h-4 w-4 text-[var(--unit-text)]" />
-                        <span className="text-[var(--unit-text)] font-medium">
-                          Cliente desde: {format(new Date(client.createdAt), "d MMM yyyy", { locale: es })}
-                        </span>
+                      <span className="inline-flex items-center gap-2 text-sm text-[var(--unit-text-muted)]">
+                        <Calendar className="h-4 w-4" />
+                        Cliente desde: {format(new Date(client.createdAt), "d MMM yyyy", { locale: es })}
                       </span>
                     </div>
                   </div>
@@ -273,7 +272,7 @@ export function ClientDetail(): JSX.Element {
                   {canEdit && (
                     <Link
                       href={`/clients/${id}/edit`}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-unit bg-[var(--unit-accent)] text-white font-semibold shadow-unit border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-unit hover:bg-[var(--unit-accent-hover)] active:scale-[0.98]"
                     >
                       <Edit className="h-4 w-4" />
                       Editar
@@ -283,12 +282,12 @@ export function ClientDetail(): JSX.Element {
 
                 {/* Enhanced Status Alert */}
                 {(client.isBlocked || Number(client.creditBalance) < 0) && (
-                  <div className="rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
+                  <div className="rounded-unit border border-red-200 bg-red-50 p-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 border-2 border-red-600 shadow-lg">
-                        <AlertCircle className="h-5 w-5 text-white" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-red-100">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
                       </div>
-                      <p className="font-bold text-red-800">
+                      <p className="text-sm font-semibold text-red-700">
                         {client.isBlocked && <>Cliente bloqueado{client.blockReason ? `: ${client.blockReason}` : ''}</>}
                         {client.isBlocked && Number(client.creditBalance) < 0 && ' · '}
                         {Number(client.creditBalance) < 0 && (
@@ -307,96 +306,74 @@ export function ClientDetail(): JSX.Element {
         {client._count != null && (
           <div className="px-6 -mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Total Interactions - Enhanced */}
-              <div className="relative overflow-hidden rounded-[var(--unit-border-radius)] border-2 border-[var(--unit-primary)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-primary)]/10 to-[var(--unit-accent)]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-[var(--unit-border-radius)]"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-primary)] to-[var(--unit-accent)] border-2 border-[var(--unit-accent)] shadow-lg group-hover:scale-110 transition-transform">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-full border border-[var(--unit-border)] shadow-sm">Total</span>
+              {/* Total Interactions - Simplificado */}
+              <div className="rounded-[var(--unit-border-radius)] border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] p-4 hover:shadow-unit transition-all">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-primary)]/10">
+                    <Users className="h-5 w-5 text-[var(--unit-primary)]" />
                   </div>
-                  <p className="text-3xl font-bold text-[var(--unit-text)] tabular-nums mb-2">
-                    {client._count.appointments + client._count.sales}
-                  </p>
-                  <p className="text-sm text-[var(--unit-text-muted)] font-medium">Interacciones totales</p>
+                  <span className="text-xs font-semibold text-[var(--unit-text-muted)] uppercase tracking-wide">Total</span>
                 </div>
+                <p className="text-2xl font-bold text-[var(--unit-text)] tabular-nums mb-1">
+                  {client._count.appointments + client._count.sales}
+                </p>
+                <p className="text-xs text-[var(--unit-text-muted)]">Interacciones totales</p>
               </div>
 
-              {/* Appointments - Enhanced */}
-              <div className="relative overflow-hidden rounded-[var(--unit-border-radius)] border-2 border-[var(--unit-primary)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-primary)]/10 to-[var(--unit-accent)]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-[var(--unit-border-radius)]"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-primary)] to-[var(--unit-accent)] border-2 border-[var(--unit-accent)] shadow-lg group-hover:scale-110 transition-transform">
-                      <Calendar className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-full border border-[var(--unit-border)] shadow-sm">Citas</span>
+              {/* Appointments - Simplificado */}
+              <div className="rounded-[var(--unit-border-radius)] border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] p-4 hover:shadow-unit transition-all">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-primary)]/10">
+                    <Calendar className="h-5 w-5 text-[var(--unit-primary)]" />
                   </div>
-                  <p className="text-3xl font-bold text-[var(--unit-text)] tabular-nums mb-2">{client._count.appointments}</p>
-                  <p className="text-sm text-[var(--unit-text-muted)] font-medium">
-                    {client._count.appointments === 1 ? 'Cita total' : 'Citas totales'}
-                  </p>
+                  <span className="text-xs font-semibold text-[var(--unit-text-muted)] uppercase tracking-wide">Citas</span>
                 </div>
+                <p className="text-2xl font-bold text-[var(--unit-text)] tabular-nums mb-1">{client._count.appointments}</p>
+                <p className="text-xs text-[var(--unit-text-muted)]">
+                  {client._count.appointments === 1 ? 'Cita total' : 'Citas totales'}
+                </p>
               </div>
 
-              {/* Sales - Enhanced */}
-              <div className="relative overflow-hidden rounded-[var(--unit-border-radius)] border-2 border-[var(--unit-accent)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-6 hover:shadow-lg transition-all duration-300 group">
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-[var(--unit-border-radius)]"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] border-2 border-[var(--unit-primary)] shadow-lg group-hover:scale-110 transition-transform">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface)] px-3 py-1 rounded-full border border-[var(--unit-border)] shadow-sm">Ventas</span>
+              {/* Sales - Simplificado */}
+              <div className="rounded-[var(--unit-border-radius)] border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] p-4 hover:shadow-unit transition-all">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
+                    <TrendingUp className="h-5 w-5 text-[var(--unit-accent)]" />
                   </div>
-                  <p className="text-3xl font-bold text-[var(--unit-text)] tabular-nums mb-2">{client._count.sales}</p>
-                  <p className="text-sm text-[var(--unit-text-muted)] font-medium">
-                    {client._count.sales === 1 ? 'Venta total' : 'Ventas totales'}
-                  </p>
+                  <span className="text-xs font-semibold text-[var(--unit-text-muted)] uppercase tracking-wide">Ventas</span>
                 </div>
+                <p className="text-2xl font-bold text-[var(--unit-text)] tabular-nums mb-1">{client._count.sales}</p>
+                <p className="text-xs text-[var(--unit-text-muted)]">
+                  {client._count.sales === 1 ? 'Venta total' : 'Ventas totales'}
+                </p>
               </div>
 
-              {/* Credit - Enhanced */}
-              <div className={`relative overflow-hidden rounded-[var(--unit-border-radius)] border-2 ${
-                Number(client.creditBalance) < 0 
-                  ? 'border-red-500/30 bg-gradient-to-br from-red-50 to-red-100' 
-                  : 'border-[var(--unit-accent)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)]'
-              } p-6 hover:shadow-lg transition-all duration-300 group`}>
-                <div className={`absolute inset-0 bg-gradient-to-r ${
-                  Number(client.creditBalance) < 0 
-                    ? 'from-red-100/50 to-red-200/50' 
-                    : 'from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10'
-                } opacity-0 group-hover:opacity-100 transition-opacity rounded-[var(--unit-border-radius)]`}></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                      Number(client.creditBalance) < 0 
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 border-2 border-red-600' 
-                        : 'bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] border-2 border-[var(--unit-primary)]'
-                    } shadow-lg group-hover:scale-110 transition-transform`}>
-                      <CreditCard className="h-6 w-6 text-white" />
-                    </div>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full shadow-sm ${
-                      Number(client.creditBalance) < 0 
-                        ? 'bg-white text-red-800 border border-red-300' 
-                        : 'bg-[var(--unit-surface)] text-[var(--unit-text)] border border-[var(--unit-border)]'
-                    }`}>
-                      {Number(client.creditBalance) < 0 ? 'Deuda' : 'Crédito'}
-                    </span>
-                  </div>
-                  <p className={`text-3xl font-bold tabular-nums mb-2 ${
-                    Number(client.creditBalance) < 0 ? 'text-red-900' : 'text-[var(--unit-text)]'
+              {/* Credit - Simplificado */}
+              <div className={`rounded-[var(--unit-border-radius)] border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] p-4 hover:shadow-unit transition-all ${
+                Number(client.creditBalance) < 0 ? 'border-l-4 border-l-red-500' : ''
+              }`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-unit ${
+                    Number(client.creditBalance) < 0 ? 'bg-red-100' : 'bg-[var(--unit-accent)]/10'
                   }`}>
-                    S/ {Number(client.creditBalance).toFixed(2)}
-                  </p>
-                  <p className={`text-sm font-medium ${
-                    Number(client.creditBalance) < 0 ? 'text-red-700' : 'text-[var(--unit-text-muted)]'
+                    <CreditCard className={`h-5 w-5 ${
+                      Number(client.creditBalance) < 0 ? 'text-red-600' : 'text-[var(--unit-primary)]'
+                    }`} />
+                  </div>
+                  <span className={`text-xs font-semibold uppercase tracking-wide ${
+                    Number(client.creditBalance) < 0 ? 'text-red-600' : 'text-[var(--unit-text-muted)]'
                   }`}>
-                    {Number(client.creditBalance) < 0 ? 'Saldo adeudado' : 'Saldo disponible'}
-                  </p>
+                    {Number(client.creditBalance) < 0 ? 'Deuda' : 'Crédito'}
+                  </span>
                 </div>
+                <p className={`text-2xl font-bold tabular-nums mb-1 ${
+                  Number(client.creditBalance) < 0 ? 'text-red-700' : 'text-[var(--unit-text)]'
+                }`}>
+                  S/ {Number(client.creditBalance).toFixed(2)}
+                </p>
+                <p className="text-xs text-[var(--unit-text-muted)]">
+                  {Number(client.creditBalance) < 0 ? 'Saldo adeudado' : 'Saldo disponible'}
+                </p>
               </div>
             </div>
           </div>
@@ -430,7 +407,7 @@ export function ClientDetail(): JSX.Element {
                     {tab === 'notas' && 'Notas'}
                   </div>
                   {activeTab === tab && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] rounded-t-lg"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--unit-accent)] rounded-t-lg"></div>
                   )}
                 </button>
               ))}
@@ -582,7 +559,7 @@ export function ClientDetail(): JSX.Element {
                               <button
                                 onClick={() => setAppointmentsPage(appointmentsPage - 1)}
                                 disabled={appointmentsPage === 1}
-                                className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                className="inline-flex items-center gap-2 rounded-unit border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-unit disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                               >
                                 <ChevronLeft className="h-4 w-4" />
                                 Anterior
@@ -596,10 +573,10 @@ export function ClientDetail(): JSX.Element {
                                     ) : (
                                       <button
                                         onClick={() => setAppointmentsPage(pageNum as number)}
-                                        className={`px-3 py-1 text-sm font-bold rounded-xl transition-all ${
+                                        className={`px-3 py-1 text-sm font-bold rounded-unit transition-all ${
                                           pageNum === appointmentsPage
-                                            ? 'bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white shadow-lg scale-110'
-                                            : 'border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-md'
+                                            ? 'bg-[var(--unit-accent)] text-white shadow-unit scale-105'
+                                            : 'border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-unit-sm'
                                         }`}
                                       >
                                         {pageNum}
@@ -612,7 +589,7 @@ export function ClientDetail(): JSX.Element {
                               <button
                                 onClick={() => setAppointmentsPage(appointmentsPage + 1)}
                                 disabled={appointmentsPage === appointmentsTotalPages}
-                                className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                className="inline-flex items-center gap-2 rounded-unit border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-unit disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                               >
                                 Siguiente
                                 <ChevronRight className="h-4 w-4" />
@@ -676,7 +653,7 @@ export function ClientDetail(): JSX.Element {
                               <button
                                 onClick={() => setSalesPage(salesPage - 1)}
                                 disabled={salesPage === 1}
-                                className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                className="inline-flex items-center gap-2 rounded-unit border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-unit disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                               >
                                 <ChevronLeft className="h-4 w-4" />
                                 Anterior
@@ -690,10 +667,10 @@ export function ClientDetail(): JSX.Element {
                                     ) : (
                                       <button
                                         onClick={() => setSalesPage(pageNum as number)}
-                                        className={`px-3 py-1 text-sm font-bold rounded-xl transition-all ${
+                                        className={`px-3 py-1 text-sm font-bold rounded-unit transition-all ${
                                           pageNum === salesPage
-                                            ? 'bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white shadow-lg scale-110'
-                                            : 'border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-md'
+                                            ? 'bg-[var(--unit-accent)] text-white shadow-unit scale-105'
+                                            : 'border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-unit-sm'
                                         }`}
                                       >
                                         {pageNum}
@@ -706,7 +683,7 @@ export function ClientDetail(): JSX.Element {
                               <button
                                 onClick={() => setSalesPage(salesPage + 1)}
                                 disabled={salesPage === salesTotalPages}
-                                className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                className="inline-flex items-center gap-2 rounded-unit border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] px-3 py-2 text-sm font-bold text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] hover:shadow-unit disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                               >
                                 Siguiente
                                 <ChevronRight className="h-4 w-4" />

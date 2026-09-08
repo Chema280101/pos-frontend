@@ -37,14 +37,14 @@ export function NotificationBell(): JSX.Element {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="relative rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-3 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all duration-200 group"
+        className="relative rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-3 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all duration-200 group"
         aria-expanded={open}
         aria-label={unreadCount > 0 ? `${unreadCount} notificaciones sin leer` : 'Notificaciones'}
       >
         <Bell className="h-5 w-5 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
         {unreadCount > 0 && (
           <span
-            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-xl border-2 border-white bg-gradient-to-r from-red-500 to-red-600 px-1.5 text-[10px] font-bold text-white shadow-lg animate-pulse"
+            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-unit border-2 border-white bg-gradient-to-r from-red-500 to-red-600 px-1.5 text-[10px] font-bold text-white shadow-unit animate-pulse"
             aria-hidden
           >
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -54,11 +54,11 @@ export function NotificationBell(): JSX.Element {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-80 rounded-2xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl"
+          className="absolute right-0 top-full z-50 mt-2 w-[calc(100vw-3rem)] sm:w-80 rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg overflow-hidden"
           role="menu"
         >
           {/* Header del dropdown */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border-b border-[var(--unit-border)]/30 px-4 py-3">
+          <div className="bg-[var(--unit-surface-elevated)] border-b border-[var(--unit-border)]/30 px-4 py-3">
             <div className="flex items-center justify-between">
               <span className="font-heading text-sm font-bold text-[var(--unit-text)]">
                 Notificaciones
@@ -67,7 +67,7 @@ export function NotificationBell(): JSX.Element {
                 <button
                   type="button"
                   onClick={() => markAllAsRead()}
-                  className="text-xs font-medium text-[var(--unit-accent)] hover:text-[var(--unit-primary)] transition-colors"
+                  className="text-xs font-semibold text-[var(--unit-accent)] hover:opacity-80 transition-opacity"
                 >
                   Marcar todas leídas
                 </button>
@@ -98,7 +98,7 @@ export function NotificationBell(): JSX.Element {
                     <div
                       className={cn(
                         'flex gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-[var(--unit-accent)]/5 group',
-                        !n.read && 'bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border-l-2 border-[var(--unit-accent)]/50'
+                        !n.read && 'bg-[var(--unit-accent)]/10 border-l-2 border-[var(--unit-accent)]'
                       )}
                     >
                       <span className={cn(

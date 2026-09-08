@@ -1,12 +1,12 @@
 'use client';
 
-import { AlertTriangle, X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, X, CheckCircle, AlertCircle, Info, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ConfirmDialogProps {
+export interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
@@ -27,41 +27,38 @@ export function ConfirmDialog({
   confirmText = type === 'danger' ? 'Confirmar eliminación' : 'Confirmar',
   cancelText = 'Cancelar',
   isLoading = false,
-}: ConfirmDialogProps): JSX.Element {
-  if (!isOpen) return <></>;
+}: ConfirmDialogProps): JSX.Element | null {
+  if (!isOpen) return null;
+
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    onClose();
+  };
 
   const typeConfig = {
     danger: {
       icon: AlertTriangle,
-      bgColor: 'from-red-50 to-red-100',
-      borderColor: 'border-red-200/50',
-      iconColor: 'text-red-600',
-      buttonBg: 'from-red-600 to-red-700',
-      buttonHover: 'hover:from-red-700 hover:to-red-800',
+      badgeBg: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
+      iconBoxBg: 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/25',
+      buttonBg: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-unit shadow-red-600/20 border-red-500/30',
     },
     warning: {
       icon: AlertCircle,
-      bgColor: 'from-amber-50 to-amber-100',
-      borderColor: 'border-amber-200/50',
-      iconColor: 'text-amber-600',
-      buttonBg: 'from-amber-600 to-amber-700',
-      buttonHover: 'hover:from-amber-700 hover:to-amber-800',
+      badgeBg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+      iconBoxBg: 'bg-gradient-to-br from-amber-500 to-yellow-600 shadow-amber-500/25',
+      buttonBg: 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white shadow-unit shadow-amber-600/20 border-amber-500/30',
     },
     info: {
       icon: Info,
-      bgColor: 'from-blue-50 to-blue-100',
-      borderColor: 'border-blue-200/50',
-      iconColor: 'text-blue-600',
-      buttonBg: 'from-blue-600 to-blue-700',
-      buttonHover: 'hover:from-blue-700 hover:to-blue-800',
+      badgeBg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+      iconBoxBg: 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/25',
+      buttonBg: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-unit shadow-blue-600/20 border-blue-500/30',
     },
     success: {
       icon: CheckCircle,
-      bgColor: 'from-emerald-50 to-emerald-100',
-      borderColor: 'border-emerald-200/50',
-      iconColor: 'text-emerald-600',
-      buttonBg: 'from-emerald-600 to-emerald-700',
-      buttonHover: 'hover:from-emerald-700 hover:to-emerald-800',
+      badgeBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+      iconBoxBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/25',
+      buttonBg: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-unit shadow-emerald-600/20 border-emerald-500/30',
     },
   };
 
@@ -69,59 +66,62 @@ export function ConfirmDialog({
   const Icon = config.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
-      <div className={cn(
-        'w-full max-w-md rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 relative overflow-hidden',
-        config.borderColor
-      )}>
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="h-full w-full bg-repeat" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}></div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity animate-in fade-in duration-200" 
+        onClick={handleCancel}
+      />
+
+      {/* Modal Dialog Card */}
+      <div 
+        className={cn(
+          'w-full max-w-md rounded-t-3xl sm:rounded-unit-lg border border-[var(--unit-border)]/60',
+          'bg-[var(--unit-surface-elevated)] shadow-unit-lg p-6 sm:p-7 relative z-10 overflow-hidden',
+          'animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200'
+        )}
+      >
+        {/* Ambient Top Glow */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--unit-accent)]/30 to-transparent pointer-events-none" />
+
+        {/* Mobile handle */}
+        <div className="pt-1 pb-3 flex justify-center sm:hidden">
+          <div className="h-1.5 w-12 rounded-full bg-slate-300 dark:bg-zinc-700" />
         </div>
 
         {/* Header */}
-        <div className="relative mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                'flex h-12 w-12 items-center justify-center rounded-xl shadow-lg',
-                `bg-gradient-to-br ${config.buttonBg}`
-              )}>
-                <Icon className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-[var(--unit-text)]">{title}</h3>
-              </div>
+        <div className="relative mb-5 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className={cn('flex h-11 w-11 items-center justify-center rounded-unit text-white shadow-md shrink-0', config.iconBoxBg)}>
+              <Icon className="h-5 w-5" />
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 disabled:opacity-50"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div>
+              <h3 className="font-heading text-lg sm:text-xl font-bold text-[var(--unit-text)]">{title}</h3>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={isLoading}
+            className="shrink-0 rounded-unit border border-slate-200/80 dark:border-zinc-700/80 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 p-2 text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100 transition-all active:scale-95 disabled:opacity-50"
+            aria-label="Cerrar"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* Content */}
-        <div className={cn(
-          'relative mb-6 p-4 rounded-xl border-2',
-          config.borderColor,
-          `bg-gradient-to-br ${config.bgColor}`
-        )}>
-          <p className="text-sm text-[var(--unit-text)] leading-relaxed">{message}</p>
+        {/* Content Message Box */}
+        <div className={cn('mb-6 p-4 rounded-unit border leading-relaxed text-sm', config.badgeBg)}>
+          <p className="text-slate-800 dark:text-zinc-100 font-medium">{message}</p>
         </div>
 
         {/* Actions */}
-        <div className="relative flex gap-3">
+        <div className="flex gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleCancel}
             disabled={isLoading}
-            className="flex-1 px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 rounded-unit border border-slate-200/80 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-200 font-semibold bg-slate-100/80 hover:bg-slate-200/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             {cancelText}
           </button>
@@ -130,13 +130,13 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={isLoading}
             className={cn(
-              'flex-1 px-6 py-3 rounded-xl text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100',
-              `bg-gradient-to-r ${config.buttonBg} ${config.buttonHover}`
+              'flex-1 px-4 py-2.5 rounded-unit font-semibold border transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm',
+              config.buttonBg
             )}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Procesando...
               </span>
             ) : (

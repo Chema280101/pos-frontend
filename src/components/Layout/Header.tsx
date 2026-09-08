@@ -60,6 +60,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
   // Refs
   const ref = useRef<HTMLDivElement>(null);
@@ -170,43 +171,61 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
       <RemindersComponent role={user?.role} />
       
     <header
-      className="sticky top-0 z-40 border-2 border-[var(--unit-border)]/30 bg-gradient-to-r from-white/95 to-white/85 backdrop-blur-md shadow-2xl px-6 py-4"
+      className="sticky top-0 z-40 border-b border-[var(--unit-border)]/40 bg-[var(--unit-surface)] px-6 py-3.5"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 lg:ml-56">
+      <div className="flex items-center justify-between gap-2 w-full relative">
+        <div className={cn("flex items-center gap-2 flex-1 min-w-0 transition-all", isMobileSearchOpen ? "opacity-0 invisible pointer-events-none lg:opacity-100 lg:visible lg:pointer-events-auto" : "opacity-100")}>
           {onMenuClick && (
             <button
               type="button"
               onClick={onMenuClick}
-              className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all lg:hidden active:scale-95 touch-manipulation"
+              className="rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all lg:hidden active:scale-95 touch-manipulation"
               aria-label="Abrir menú"
             >
               <Menu className="h-7 w-7" />
             </button>
           )}
-          <div className="font-heading text-lg font-semibold tracking-tight text-[var(--unit-text)]">
+          <div className="font-heading text-lg sm:text-xl font-semibold tracking-tight text-[var(--unit-text)] truncate">
             {activeUnit === 'SPA' && 'GLOW SPA'}
               {activeUnit === 'BARBERIA' && 'BARMAN BARBERIA'}
             {!activeUnit && 'Barbería y Spa POS'}
           </div>
         </div>
 
-        {/* Barra de búsqueda central */}
-        <div className="hidden lg:flex flex-1 max-w-md mx-8" ref={searchRef}>
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--unit-text-muted)]" />
+        {/* Barra de búsqueda central estilo Spotlight */}
+        <div 
+          className={cn(
+            "absolute inset-0 z-10 flex items-center bg-[var(--unit-surface)] lg:static lg:flex lg:flex-1 lg:max-w-lg lg:mx-8 transition-all duration-200",
+            isMobileSearchOpen ? "opacity-100 visible" : "opacity-0 invisible lg:opacity-100 lg:visible"
+          )}
+          ref={searchRef}
+        >
+          <div className="relative w-full flex items-center gap-2">
+            <button
+              type="button"
+              className="lg:hidden p-2 text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] transition-colors"
+              onClick={() => {
+                setIsMobileSearchOpen(false);
+                setShowSearchResults(false);
+              }}
+              aria-label="Cerrar búsqueda"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <div className="relative w-full group flex-1">
+            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--unit-text-muted)] group-focus-within:text-[var(--unit-accent)] transition-colors" />
             <input
               type="text"
               placeholder="Buscar clientes, productos, citas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowSearchResults(searchResults.length > 0)}
-              className="w-full pl-10 pr-4 py-2 border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 rounded-xl text-sm text-[var(--unit-text)] placeholder-[var(--unit-text-muted)] focus:border-[var(--unit-accent)]/50 focus:bg-[var(--unit-accent)]/10 focus:outline-none transition-all"
+              className="w-full pl-10 pr-4 py-2 border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)]/50 rounded-full text-sm text-[var(--unit-text)] placeholder-[var(--unit-text-muted)] focus:bg-[var(--unit-surface)] focus:ring-2 focus:ring-[var(--unit-accent)]/30 focus:border-[var(--unit-accent)]/50 outline-none transition-all shadow-sm group-focus-within:shadow-unit-sm"
             />
             
             {/* Dropdown de resultados */}
             {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-[var(--unit-border)]/50 rounded-xl shadow-2xl max-h-96 overflow-y-auto z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--unit-surface)] border-2 border-[var(--unit-border)]/50 rounded-unit shadow-unit-lg max-h-96 overflow-y-auto z-50">
                 <div className="p-2">
                   {searchResults.map((result, index) => (
                     <Link
@@ -239,10 +258,19 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className={cn("flex items-center gap-2 sm:gap-4 shrink-0 transition-all", isMobileSearchOpen ? "opacity-0 invisible pointer-events-none lg:opacity-100 lg:visible lg:pointer-events-auto" : "opacity-100")}>
+          <button
+            type="button"
+            className="lg:hidden p-1.5 sm:p-2 rounded-full text-[var(--unit-text)] hover:bg-[var(--unit-surface-elevated)] transition-colors"
+            onClick={() => setIsMobileSearchOpen(true)}
+            aria-label="Buscar"
+          >
+            <Search className="h-5 w-5" />
+          </button>
           <ThemeToggle />
           <span
             title={online ? 'Conectado' : 'Sin conexión'}
@@ -257,16 +285,16 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
           </span>
           <NotificationBell />
           {user?.role === 'ADMIN' && (
-            <div className="flex rounded-2xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-1 shadow-lg">
+            <div className="hidden md:flex rounded-unit-lg border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-1 shadow-unit shrink-0">
               {(['SPA', 'BARBERIA'] as const).map((u) => (
                 <button
                   key={u}
                   type="button"
                   onClick={() => handleUnitChange(u)}
-                  className={`rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 ${
+                  className={`rounded-unit px-4 py-2 text-sm font-bold transition-all duration-200 ${
                     activeUnit === u
-                      ? 'bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white shadow-lg border-2 border-[var(--unit-accent)]/50'
-                      : 'text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10 border-2 border-transparent'
+                      ? 'bg-[var(--unit-accent)] text-white shadow-unit'
+                      : 'text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10'
                   }`}
                 >
                   {u === 'BARBERIA' ? 'Barbería' : u}
@@ -279,83 +307,109 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
-              className="flex items-center gap-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-3 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all duration-200 group"
+              className="flex items-center gap-3 rounded-full border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)]/50 pl-1.5 pr-4 py-1.5 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all duration-200 group shadow-sm hover:shadow-unit-sm"
               aria-expanded={open}
               aria-haspopup="true"
             >
               <span
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] text-sm font-bold text-white shadow-lg border-2 border-[var(--unit-accent)]/50 group-hover:scale-105 transition-transform"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--unit-accent)] text-xs font-bold text-white shadow-sm group-hover:scale-105 transition-transform"
                 aria-hidden
               >
                 {initial}
               </span>
-              <span className="hidden text-left text-sm text-[var(--unit-text)] sm:block">
-                <span className="font-bold text-[var(--unit-text)]">{user?.name}</span>
-                <span className="ml-1 block text-xs text-[var(--unit-text-muted)]">
+              <span className="hidden text-left text-xs sm:block">
+                <span className="font-bold text-[var(--unit-text)] block truncate max-w-[120px]">{user?.name}</span>
+                <span className="block text-[10px] uppercase tracking-wider text-[var(--unit-text-muted)] truncate max-w-[120px]">
                   {user?.role ? getRoleLabel(user.role) : user?.role} {user?.unit ? `· ${getUnitLabel(user.unit)}` : ''}
                 </span>
               </span>
-              <ChevronDown className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
+              <ChevronDown className={cn(
+                "h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-transform",
+                open && "rotate-180 text-[var(--unit-accent)]"
+              )} />
             </button>
 
             {open && (
               <div
-                className="absolute right-0 top-full z-50 mt-3 w-64 rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl py-2"
+                className="absolute right-0 top-full z-50 mt-2 w-64 rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg py-1 animate-in fade-in zoom-in-95 duration-200"
                 role="menu"
               >
                 {/* Header del dropdown */}
-                <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-4 py-3 border-b border-[var(--unit-border)]/30 -mx-2 -mt-2 mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-md">
-                      <span className="text-xs font-bold text-white">{initial}</span>
-                    </div>
-                    <div>
-                      <p className="font-bold text-[var(--unit-text)] text-sm">{user?.name}</p>
-                      <p className="text-xs text-[var(--unit-text-muted)]">{user?.email}</p>
-                    </div>
-                  </div>
+                <div className="px-4 py-3 border-b border-[var(--unit-border)]/40 mb-1">
+                  <p className="font-bold text-[var(--unit-text)] text-sm truncate">{user?.name}</p>
+                  <p className="text-[11px] text-[var(--unit-text-muted)] truncate">{user?.email}</p>
                 </div>
 
                 {/* Menu items */}
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10 transition-colors group"
-                  role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setProfileDrawerOpen(true);
-                  }}
-                >
-                  <User className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
-                  <span className="font-medium">Mi perfil</span>
-                </button>
-                <Link
-                  href="/change-password"
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10 transition-colors group"
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                  onMouseEnter={() => prefetchRoute('/change-password')}
-                  onFocus={() => prefetchRoute('/change-password')}
-                >
-                  <Key className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
-                  <span className="font-medium">Cambiar contraseña</span>
-                </Link>
+                {user?.role === 'ADMIN' && (
+                  <div className="px-3 py-2 md:hidden">
+                    <p className="text-[10px] font-bold text-[var(--unit-text-muted)] uppercase tracking-wider mb-2">Cambiar Unidad</p>
+                    <div className="flex rounded-unit-md border border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-1 shadow-sm w-full">
+                      {(['SPA', 'BARBERIA'] as const).map((u) => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => {
+                            handleUnitChange(u);
+                            setOpen(false);
+                          }}
+                          className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition-all duration-200 ${
+                            activeUnit === u
+                              ? 'bg-[var(--unit-accent)] text-white shadow-unit-sm'
+                              : 'text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10'
+                          }`}
+                        >
+                          {u === 'BARBERIA' ? 'Barbería' : u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {user?.role === 'ADMIN' && <div className="border-t border-[var(--unit-border)]/40 my-1 md:hidden"></div>}
+
+                <div className="px-1 space-y-0.5">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-left text-xs font-semibold text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-colors group"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpen(false);
+                      setProfileDrawerOpen(true);
+                    }}
+                  >
+                    <User className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
+                    <span>Mi perfil</span>
+                  </button>
+                  <Link
+                    href="/change-password"
+                    className="flex items-center gap-3 px-3 py-2 rounded-md text-xs font-semibold text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-colors group"
+                    role="menuitem"
+                    onClick={() => setOpen(false)}
+                    onMouseEnter={() => prefetchRoute('/change-password')}
+                    onFocus={() => prefetchRoute('/change-password')}
+                  >
+                    <Key className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
+                    <span>Cambiar contraseña</span>
+                  </Link>
+                </div>
                 
                 {/* Divider */}
-                <div className="border-t border-[var(--unit-border)]/30 my-2"></div>
+                <div className="border-t border-[var(--unit-border)]/40 my-1"></div>
                 
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors group"
-                  role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setLogoutModal(true);
-                  }}
-                >
-                  <LogOut className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                  <span>Cerrar sesión</span>
-                </button>
+                <div className="px-1">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-left text-xs font-bold text-rose-600 hover:bg-rose-500/10 transition-colors group"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpen(false);
+                      setLogoutModal(true);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Cerrar sesión</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -387,7 +441,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
           </div>
           <Link
             href="/change-password"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] px-4 py-2 text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 hover:shadow-xl hover:scale-[1.02] transition-all"
+            className="inline-flex items-center gap-2 rounded-unit bg-[var(--unit-accent)] px-4 py-2 text-white font-bold shadow-unit hover:shadow-xl hover:scale-[1.02] transition-all"
             onClick={() => setProfileDrawerOpen(false)}
           >
             <Key className="h-4 w-4" />

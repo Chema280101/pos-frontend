@@ -58,7 +58,7 @@ export function OpenRegisterForm({ onSuccess }: Props): JSX.Element {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-[var(--unit-surface-elevated)] rounded-xl border border-[var(--unit-border)]">
+    <div className="space-y-6 p-6 bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]">
       <h2 className="text-lg font-semibold">Apertura de Caja</h2>
 
       {/* Unidad */}

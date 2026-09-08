@@ -1,10 +1,12 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui';
+import { Button, Modal, Input, Select, Textarea } from '@/components/ui';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { t, getPlaceholder } from '@/lib/uiTranslations';
+import { getPlaceholder } from '@/lib/uiTranslations';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
@@ -18,17 +20,15 @@ import {
   Save, 
   Info,
   Loader2,
-  CheckCircle,
   Edit,
   Tag,
   Clock,
   DollarSign,
   Building2,
   FolderPlus,
-  Sparkles,
-  Activity,
   TrendingUp
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
@@ -75,35 +75,12 @@ export function ServiceForm(): JSX.Element {
   const queryClient = useQueryClient();
   const { success, error } = useToast();
 
-  // Success confirmation state - eliminado en favor de toast
-  // const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  // const [successMessage, setSuccessMessage] = useState('');
-
-  // Get user's business unit from auth store or unit store
   const user = useAuthStore((s) => s.user);
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const userUnit = user?.unit || activeUnit || 'SPA';
 
-  // Category creation state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  
-  // ESC key handler for modals
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (showCategoryModal) {
-          setShowCategoryModal(false);
-          setNewCategoryName('');
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showCategoryModal, newCategoryName]);
 
   const { data: service } = useQuery({
     queryKey: ['service', id],
@@ -122,14 +99,14 @@ export function ServiceForm(): JSX.Element {
     },
   });
 
-  const { register, handleSubmit, setError, reset, watch, formState: { errors, isSubmitting, isDirty } } = useForm<FormData>({
+  const { register, handleSubmit, setError, reset, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
       description: '',
       price: 0,
       durationMin: 30,
-      unit: userUnit, // Use user's business unit automatically
+      unit: userUnit as 'SPA' | 'BARBERIA',
       categoryId: null,
       isComboEligible: false,
       isActive: true,
@@ -139,17 +116,15 @@ export function ServiceForm(): JSX.Element {
   const unit = watch('unit') ?? userUnit;
   const categoriesForUnit = categories?.filter((c) => c.unit === unit) ?? [];
 
-  // Update form unit when user unit changes (only for new services)
   useEffect(() => {
     if (!isEdit && userUnit) {
       reset({
         ...watch(),
-        unit: userUnit,
+        unit: userUnit as 'SPA' | 'BARBERIA',
       });
     }
   }, [userUnit, isEdit, reset, watch]);
 
-  // Reset form when service data loads (edit mode)
   useEffect(() => {
     if (isEdit && service) {
       reset({
@@ -196,36 +171,15 @@ export function ServiceForm(): JSX.Element {
       });
       return data;
     },
-    onMutate: async (newCategory) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['service-categories'] });
-      
-      // Snapshot the previous value
-      const previousCategories = queryClient.getQueryData<Category[]>(['service-categories']);
-      
-      // Optimistically add the new category
-      const optimisticCategory: Category = {
-        id: 'temp-' + Date.now(),
-        name: newCategory.trim(),
-        unit: userUnit,
-      };
-      
-      queryClient.setQueryData(['service-categories'], (old: Category[] | undefined) => 
-        old ? [...old, optimisticCategory] : [optimisticCategory]
-      );
-      
-      return { previousCategories };
-    },
-    onError: (err: any, newCategory, context) => {
-      // Rollback on error
-      if (context?.previousCategories) {
-        queryClient.setQueryData(['service-categories'], context.previousCategories);
-      }
-      setError('root', { message: err.response?.data?.error ?? 'Error al crear categoría' });
-    },
-    onSettled: () => {
-      // Always refetch after error or success
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-categories'] });
+      success('Categoría creada exitosamente');
+      setShowCategoryModal(false);
+      setNewCategoryName('');
+    },
+    onError: (err: any) => {
+      setError('root', { message: err.response?.data?.error ?? 'Error al crear categoría' });
+      error(err.response?.data?.error ?? 'Error al crear categoría');
     },
   });
 
@@ -254,505 +208,319 @@ export function ServiceForm(): JSX.Element {
     else createMutation.mutate(data);
   };
 
-  // Show error state if service not found
-  if (isEdit && !service && !createMutation.isPending) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="h-full w-full bg-repeat" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}></div>
-        </div>
-        
-        <div className="relative flex items-center justify-center min-h-screen p-6">
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 text-red-500 mb-4">
-              <Tag className="h-12 w-12" />
+  return (
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit-sm shrink-0">
+              {isEdit ? <Edit className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
             </div>
-            <h2 className="text-xl font-semibold text-[var(--unit-text)] mb-2">Servicio no encontrado</h2>
-            <p className="text-[var(--unit-text-muted)] mb-6">El servicio que intentas editar no existe o ha sido eliminado.</p>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                  {isEdit ? 'Edición' : 'Nuevo'}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--unit-text)]">
+                {isEdit ? 'Editar Servicio' : 'Nuevo Servicio'}
+              </h1>
+              <p className="text-xs sm:text-sm font-medium text-[var(--unit-text-muted)] mt-0.5">
+                {userUnit === 'SPA' ? 'Módulo Spa' : 'Módulo Barbería'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push('/services')}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--unit-accent)] px-4 py-2 text-white font-medium hover:bg-[var(--unit-primary)] transition-colors"
+              type="button"
+              onClick={() => router.back()}
+              className="px-5 py-2 rounded-full border border-[var(--unit-border)]/60 text-sm font-bold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] shadow-sm transition-all"
             >
-              <X className="h-4 w-4" />
-              Volver a servicios
+              Cancelar
             </button>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  if (isEdit && !service && !createMutation.isPending) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="h-full w-full bg-repeat" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}></div>
-        </div>
-        
-        <div className="relative flex items-center justify-center min-h-screen p-6">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--unit-accent)] mx-auto mb-4"></div>
-            <p className="text-[var(--unit-text)]">Cargando servicio...</p>
+        {/* Form Root Error */}
+        {errors.root && (
+          <div className="rounded-unit border border-red-500/30 bg-red-500/10 p-4 flex items-center gap-3 text-red-600 dark:text-red-400 text-sm">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <p className="font-medium">{errors.root.message}</p>
           </div>
-        </div>
-      </div>
-    );
-  }
+        )}
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto p-4 md:p-6">
-        {/* Enhanced Header - Exacto estilo ClientForm */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-            <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-            <span className="text-sm font-medium text-[var(--unit-text)]">
-              {isEdit ? 'Modo edición' : 'Nuevo registro'}
-            </span>
-          </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
-            {isEdit ? 'Editar servicio' : 'Nuevo servicio'}
-          </h1>
-          <p className="text-[var(--unit-text-muted)]">
-            {isEdit ? 'Modifica la información del servicio' : 'Registra un nuevo servicio en el sistema'}
-          </p>
-        </div>
-
-        {/* Enhanced Form Container - Exacto estilo ClientForm */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl">
-            {/* Form Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  {isEdit ? (
-                    <Edit className="h-5 w-5 text-white" />
-                  ) : (
-                    <Plus className="h-5 w-5 text-white" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Información del servicio</h2>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Completa todos los campos requeridos</p>
-                </div>
-              </div>
+          {/* Section: Basic Information */}
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
+            <div className="flex items-center gap-2 text-[var(--unit-accent)] border-b border-[var(--unit-border)]/30 pb-3">
+              <Tag className="h-4 w-4" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Información Básica
+              </h2>
             </div>
 
-            {/* Enhanced Error Alert */}
-            {errors.root && (
-              <div className="mx-6 mt-4 rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
-                    <AlertCircle className="h-4 w-4 text-white" />
-                  </div>
-                  <p className="font-medium text-red-800">{errors.root.message}</p>
-                </div>
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                label="Nombre del servicio"
+                placeholder={getPlaceholder('name')}
+                required
+                error={errors.name?.message}
+                {...register('name')}
+              />
+
+              <Textarea
+                label="Descripción"
+                rows={3}
+                placeholder={getPlaceholder('description')}
+                error={errors.description?.message}
+                {...register('description')}
+              />
+            </div>
+          </div>
+
+          {/* Section: Price & Duration */}
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
+            <div className="flex items-center gap-2 text-[var(--unit-accent)] border-b border-[var(--unit-border)]/30 pb-3">
+              <DollarSign className="h-4 w-4" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Precio y Duración
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Select
+                label="Tipo de Precio"
+                required
+                options={[
+                  { value: 'FIXED', label: 'Precio Fijo' },
+                  { value: 'VARIABLE', label: 'Precio Variable' },
+                  { value: 'RANGE', label: 'Precio con Aprobación' },
+                  { value: 'QUOTE', label: 'Precio por Cotización' },
+                ]}
+                {...register('priceType')}
+              />
+
+              <Input
+                label="Precio Base (S/)"
+                type="number"
+                step="0.10"
+                min="0"
+                placeholder="0.00"
+                required
+                prefixText="S/"
+                error={errors.price?.message}
+                {...register('price', { valueAsNumber: true })}
+              />
+
+              <Input
+                label="Duración (Minutos)"
+                type="number"
+                min="1"
+                placeholder="30"
+                required
+                leftIcon={<Clock className="h-4 w-4" />}
+                error={errors.durationMin?.message}
+                {...register('durationMin', { valueAsNumber: true })}
+              />
+            </div>
+
+            {/* Range conditional inputs */}
+            {(watch('priceType') === 'VARIABLE' || watch('priceType') === 'RANGE') && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[var(--unit-border)]/20">
+                <Input
+                  label="Precio Mínimo (S/)"
+                  type="number"
+                  step="0.10"
+                  min="0"
+                  placeholder="0.00"
+                  prefixText="S/"
+                  error={errors.minPrice?.message}
+                  {...register('minPrice', { valueAsNumber: true })}
+                />
+                <Input
+                  label="Precio Máximo (S/)"
+                  type="number"
+                  step="0.10"
+                  min="0"
+                  placeholder="0.00"
+                  prefixText="S/"
+                  error={errors.maxPrice?.message}
+                  {...register('maxPrice', { valueAsNumber: true })}
+                />
               </div>
             )}
+          </div>
 
-            {/* Enhanced Form Content */}
-            <div className="p-6 space-y-6">
-              {/* Basic Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Tag className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información básica</h4>
-                </div>
-                
-                {/* Enhanced Name Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre del servicio *</label>
-                  <input 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                    placeholder={getPlaceholder('name')}
-                    {...register('name')} 
-                  />
-                  {errors.name && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.name.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Enhanced Description Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Descripción</label>
-                  <textarea 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
-                    rows={4}
-                    placeholder={getPlaceholder('description')}
-                    {...register('description')} 
-                  />
-                  {errors.description && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.description.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Pricing Type Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Tipo de precio</h4>
-                </div>
-
-                {/* Price Type Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Tipo de precio *</label>
-                  <select 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    {...register('priceType')}
-                  >
-                    <option value="FIXED">Precio Fijo</option>
-                    <option value="VARIABLE">Precio Variable</option>
-                    <option value="RANGE">Precio con Aprobación</option>
-                    <option value="QUOTE">Precio por Cotización</option>
-                  </select>
-                  {errors.priceType && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.priceType.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Conditional Price Range Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Min Price Field */}
-                  <div>
-                    <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio mínimo (S/)</label>
-                    <input
-                      type="number"
-                      step="0.10"
-                      min="0"
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder="0.00"
-                      {...register('minPrice', { valueAsNumber: true })}
-                    />
-                    {errors.minPrice && (
-                      <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {errors.minPrice.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Max Price Field */}
-                  <div>
-                    <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio máximo (S/)</label>
-                    <input
-                      type="number"
-                      step="0.10"
-                      min="0"
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder="0.00"
-                      {...register('maxPrice', { valueAsNumber: true })}
-                    />
-                    {errors.maxPrice && (
-                      <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {errors.maxPrice.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Price Type Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-blue-800 mb-2">
-                    <Info className="h-4 w-4" />
-                    <span className="text-sm font-medium">Información sobre tipos de precio</span>
-                  </div>
-                  <div className="space-y-2 text-sm text-blue-700">
-                    <div><strong>Fijo:</strong> Precio único que no puede cambiar</div>
-                    <div><strong>Variable:</strong> Puede cambiar dentro de un rango sin aprobación</div>
-                    <div><strong>Rango:</strong> Siempre requiere aprobación administrativa</div>
-                    <div><strong>Cotización:</strong> Requiere cotización previa al cliente</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pricing and Duration Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Precio base y duración</h4>
-                </div>
-
-                {/* Enhanced Price and Duration Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Enhanced Price Field */}
-                  <div>
-                    <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Precio (S/) *</label>
-                    <input
-                      type="number"
-                      step="0.10"
-                      min="0"
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder={getPlaceholder('price')}
-                      {...register('price', { valueAsNumber: true })}
-                    />
-                    {errors.price && (
-                      <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {errors.price.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Enhanced Duration Field */}
-                  <div>
-                    <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Duración (minutos) *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      placeholder="Ej: 45"
-                      {...register('durationMin', { valueAsNumber: true })}
-                    />
-                    {errors.durationMin && (
-                      <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {errors.durationMin.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Configuration Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Configuración</h4>
-                </div>
-
-                {/* Enhanced Unit Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Unidad de negocio *</label>
-                  {!isEdit ? (
-                    <div className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)]">
-                      {userUnit === 'SPA' ? 'SPA' : 'Barbería'}
-                    </div>
-                  ) : (
-                    <select 
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                      {...register('unit')}
-                    >
-                      <option value="SPA">SPA</option>
-                      <option value="BARBERIA">Barbería</option>
-                    </select>
-                  )}
-                  {!isEdit && (
-                    <p className="text-xs text-[var(--unit-text-muted)] mt-2 flex items-center gap-1">
-                      <Info className="h-4 w-4" />
-                      La unidad se asigna automáticamente según tu unidad de negocio
-                    </p>
-                  )}
-                </div>
-
-                {/* Enhanced Category Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Categoría</label>
-                  <div className="flex gap-2">
-                    <select 
-                      className="flex-1 rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                      {...register('categoryId')}
-                    >
-                      <option value="">Sin categoría</option>
-                      {categoriesForUnit.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => setShowCategoryModal(true)}
-                      className="px-4 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-                      title="Crear nueva categoría"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {categoriesForUnit.length === 0 && (
-                    <EmptyState
-                      title={`No hay categorías para ${unit === 'SPA' ? 'SPA' : 'Barbería'}`}
-                      description={`No se encontraron categorías registradas para ${unit === 'SPA' ? 'SPA' : 'Barbería'}. Crea una categoría usando el botón de arriba para poder organizar tus servicios.`}
-                      icon={<FolderPlus className="mx-auto h-12 w-12" aria-hidden />}
-                      variant="data"
-                    />
-                  )}
-                </div>
-
-                {/* Enhanced Checkboxes */}
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-[var(--unit-border)]/30 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer group">
-                    <input 
-                      type="checkbox" 
-                      className="rounded-lg border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 w-5 h-5"
-                      style={{
-                        accentColor: 'var(--unit-accent)'
-                      }}
-                      {...register('isComboEligible')} 
-                    />
-                    <span className="text-sm text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] font-medium">Elegible para combo</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-[var(--unit-border)]/30 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer group">
-                    <input 
-                      type="checkbox" 
-                      className="rounded-lg border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 w-5 h-5"
-                      style={{
-                        accentColor: 'var(--unit-accent)'
-                      }}
-                      {...register('isActive')} 
-                    />
-                    <span className="text-sm text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] font-medium">Activo</span>
-                  </label>
-                </div>
-              </div>
+          {/* Section: Category & Options */}
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
+            <div className="flex items-center gap-2 text-[var(--unit-accent)] border-b border-[var(--unit-border)]/30 pb-3">
+              <Building2 className="h-4 w-4" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Categoría y Configuración
+              </h2>
             </div>
 
-            {/* Enhanced Action Buttons - Exacto estilo ClientForm */}
-            <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
-              <div className="flex gap-4">
-                <Button 
-                  type="submit" 
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  disabled={isSubmitting}
-                  className="flex-1"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Select
+                    label="Categoría"
+                    options={[
+                      { value: '', label: 'Sin categoría' },
+                      ...categoriesForUnit.map((c) => ({ value: c.id, label: c.name }))
+                    ]}
+                    {...register('categoryId')}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="h-[42px] px-3.5 rounded-unit border border-[var(--unit-accent)]/40 text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white bg-[var(--unit-surface)] font-semibold transition-all shadow-sm flex items-center justify-center mb-[2px]"
+                  title="Crear nueva categoría"
                 >
-                  <Save className="h-4 w-4" />
-                  {isEdit ? 'Actualizar servicio' : 'Guardar servicio'}
-                </Button>
-                <button 
-                  type="button" 
-                  onClick={() => router.back()} 
-                  className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  <span className="flex items-center gap-2">
-                    <X className="h-4 w-4" />
-                    Cancelar
-                  </span>
+                  <Plus className="h-4 w-4" />
                 </button>
               </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--unit-text-muted)]">
+                  Unidad de Negocio
+                </label>
+                {!isEdit ? (
+                  <div className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)]/50 px-4 py-2.5 text-sm font-semibold text-[var(--unit-text)]">
+                    {userUnit === 'SPA' ? 'SPA' : 'Barbería'}
+                  </div>
+                ) : (
+                  <Select
+                    options={[
+                      { value: 'SPA', label: 'SPA' },
+                      { value: 'BARBERIA', label: 'Barbería' }
+                    ]}
+                    {...register('unit')}
+                  />
+                )}
+              </div>
             </div>
+
+            {/* Checkbox triggers */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <label className="flex items-center gap-3 p-3.5 rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface)]/60 hover:border-[var(--unit-accent)]/40 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('isComboEligible')}
+                  className="w-4 h-4 rounded text-[var(--unit-accent)] focus:ring-[var(--unit-accent)]/40"
+                  style={{ accentColor: 'var(--unit-accent)' }}
+                />
+                <span className="text-sm font-semibold text-[var(--unit-text)]">Elegible para combos y paquetes</span>
+              </label>
+
+              <label className="flex items-center gap-3 p-3.5 rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface)]/60 hover:border-[var(--unit-accent)]/40 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('isActive')}
+                  className="w-4 h-4 rounded text-[var(--unit-accent)] focus:ring-[var(--unit-accent)]/40"
+                  style={{ accentColor: 'var(--unit-accent)' }}
+                />
+                <span className="text-sm font-semibold text-[var(--unit-text)]">Servicio activo en catálogo</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Action Bar */}
+          <div className="flex gap-4 pt-4 mt-6 border-t border-[var(--unit-border)]/40">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-6 py-2.5 rounded-full font-bold text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/60 transition-all shadow-sm"
+            >
+              Cancelar
+            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 rounded-full font-bold shadow-unit-sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isEdit ? 'Actualizar Servicio' : 'Guardar Servicio'}
+            </Button>
           </div>
         </form>
       </div>
 
-      {/* Enhanced Category Creation Modal - Exacto estilo ClientForm */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setShowCategoryModal(false);
-            setNewCategoryName('');
-          }
-        }}>
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 max-w-md w-full">
-            {/* Modal Header - Estándar consistente */}
-            <div className="relative mb-6 flex items-start justify-between gap-4">
-              {/* Background gradient for header - Consistente con Modal.tsx */}
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-              
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <FolderPlus className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Nueva Categoría</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Crea una categoría para organizar servicios</p>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setShowCategoryModal(false)}
-                className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                aria-label="Cerrar"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre de la categoría *</label>
-                <input
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder={getPlaceholder('description')}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  maxLength={50}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Unidad de negocio</label>
-                <div className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)]">
-                  {userUnit === 'SPA' ? 'SPA' : 'Barbería'}
-                </div>
-                <p className="text-xs text-[var(--unit-text-muted)] mt-2 flex items-center gap-1">
-                  <Info className="h-4 w-4" />
-                  La categoría se creará para tu unidad de negocio actual
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4 mt-6">
-              <button
-                onClick={() => {
-                  if (newCategoryName.trim()) {
-                    categoryMutation.mutate(newCategoryName);
-                  }
-                }}
-                disabled={!newCategoryName.trim() || categoryMutation.isPending}
-                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-              >
-                {categoryMutation.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creando...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <FolderPlus className="h-4 w-4" />
-                    Crear categoría
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowCategoryModal(false);
-                  setNewCategoryName('');
-                }}
-                className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-              >
-                <span className="flex items-center gap-2">
-                  <X className="h-4 w-4" />
-                  Cancelar
-                </span>
-              </button>
-            </div>
+      {/* Category Creation Modal using standardized Modal primitive */}
+      <Modal
+        open={showCategoryModal}
+        onClose={() => {
+          setShowCategoryModal(false);
+          setNewCategoryName('');
+        }}
+        title="Nueva Categoría"
+        description="Organiza tus servicios en categorías personalizadas"
+        headerIcon={<FolderPlus className="h-5 w-5" />}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+              Nombre de la categoría <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Ej: Faciales, Cortes Clásicos, etc."
+              maxLength={50}
+              className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] px-4 py-2.5 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
+            />
+          </div>
+
+          <div className="p-3 rounded-unit border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)]/40 text-xs text-[var(--unit-text-muted)] flex items-center gap-2">
+            <Info className="h-4 w-4 shrink-0 text-[var(--unit-accent)]" />
+            <span>Se registrará para la unidad <strong>{userUnit === 'SPA' ? 'SPA' : 'Barbería'}</strong></span>
+          </div>
+
+          <div className="flex gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCategoryModal(false);
+                setNewCategoryName('');
+              }}
+              className="flex-1 px-4 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-sm font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-border)]/20 transition-all active:scale-[0.98]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (newCategoryName.trim()) {
+                  categoryMutation.mutate(newCategoryName);
+                }
+              }}
+              disabled={!newCategoryName.trim() || categoryMutation.isPending}
+              className="flex-1 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white font-semibold shadow-unit shadow-[var(--unit-accent)]/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+            >
+              {categoryMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <FolderPlus className="h-4 w-4" />
+                  Crear Categoría
+                </>
+              )}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

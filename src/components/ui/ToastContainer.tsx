@@ -45,7 +45,7 @@ export const ToastContainer: React.FC = () => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`max-w-sm w-full p-4 rounded-lg border shadow-lg transition-all duration-300 ease-in-out cursor-pointer ${ToastStyles[toast.variant || 'info']}`}
+          className={`max-w-sm w-full p-4 rounded-lg border shadow-unit transition-all duration-300 ease-in-out cursor-pointer ${ToastStyles[toast.variant || 'info']}`}
           onClick={() => toastState.removeToast(toast.id)}
         >
           <div className="flex items-start">

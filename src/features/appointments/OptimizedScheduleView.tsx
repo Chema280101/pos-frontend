@@ -1,9 +1,21 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { format, addMinutes, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, Clock, User, Calendar, ChevronLeft, ChevronRight, Scissors, Sparkles, TrendingUp } from 'lucide-react';
+import { 
+  Plus, 
+  Clock, 
+  User, 
+  Calendar, 
+  ChevronLeft, 
+  ChevronRight, 
+  Scissors, 
+  Sparkles, 
+  CheckCircle,
+  AlertTriangle,
+  MapPin
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type Appointment } from '@/types/appointment';
 import { useToast } from '@/hooks/useToast';
@@ -44,19 +56,57 @@ const TIME_SLOTS = [
   '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'
 ];
 
-const statusColors = {
-  SCHEDULED: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600 shadow-blue-200',
-  CONFIRMED: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-600 shadow-emerald-200',
-  IN_PROGRESS: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-600 shadow-yellow-200',
-  COMPLETED: 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-600 shadow-green-200',
-  CANCELLED: 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600 shadow-red-200',
-  NO_SHOW: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white border-gray-600 shadow-gray-200',
-  RESCHEDULED: 'bg-gradient-to-r from-sky-500 to-sky-600 text-white border-sky-600 shadow-sky-200',
-};
-
-const unitColors = {
-  SPA: 'from-purple-500 to-purple-600',
-  BARBERIA: 'from-indigo-500 to-indigo-600',
+// Accessible status styling matching WCAG AA
+const statusCardStyles: Record<string, { bg: string; text: string; border: string; badgeBg: string; badgeText: string }> = {
+  SCHEDULED: {
+    bg: 'bg-blue-50/90 dark:bg-blue-950/40',
+    text: 'text-blue-950 dark:text-blue-100',
+    border: 'border-blue-300 dark:border-blue-700/60',
+    badgeBg: 'bg-blue-100 dark:bg-blue-900/60',
+    badgeText: 'text-blue-700 dark:text-blue-300',
+  },
+  CONFIRMED: {
+    bg: 'bg-teal-50/90 dark:bg-teal-950/40',
+    text: 'text-teal-950 dark:text-teal-100',
+    border: 'border-teal-300 dark:border-teal-700/60',
+    badgeBg: 'bg-teal-100 dark:bg-teal-900/60',
+    badgeText: 'text-teal-700 dark:text-teal-300',
+  },
+  IN_PROGRESS: {
+    bg: 'bg-amber-50/95 dark:bg-amber-950/50',
+    text: 'text-amber-950 dark:text-amber-100',
+    border: 'border-amber-400 dark:border-amber-600',
+    badgeBg: 'bg-amber-100 dark:bg-amber-900/70',
+    badgeText: 'text-amber-800 dark:text-amber-200',
+  },
+  COMPLETED: {
+    bg: 'bg-emerald-50/90 dark:bg-emerald-950/40',
+    text: 'text-emerald-950 dark:text-emerald-100',
+    border: 'border-emerald-300 dark:border-emerald-700/60',
+    badgeBg: 'bg-emerald-100 dark:bg-emerald-900/60',
+    badgeText: 'text-emerald-700 dark:text-emerald-300',
+  },
+  CANCELLED: {
+    bg: 'bg-rose-50/80 dark:bg-rose-950/30',
+    text: 'text-rose-950 dark:text-rose-200',
+    border: 'border-rose-300 dark:border-rose-800/50',
+    badgeBg: 'bg-rose-100 dark:bg-rose-900/50',
+    badgeText: 'text-rose-700 dark:text-rose-300',
+  },
+  NO_SHOW: {
+    bg: 'bg-slate-100/90 dark:bg-slate-900/40',
+    text: 'text-[var(--unit-text)] dark:text-slate-200',
+    border: 'border-[var(--unit-border)] dark:border-slate-700/60',
+    badgeBg: 'bg-slate-200 dark:bg-slate-800',
+    badgeText: 'text-[var(--unit-text)] dark:text-slate-300',
+  },
+  RESCHEDULED: {
+    bg: 'bg-purple-50/90 dark:bg-purple-950/40',
+    text: 'text-purple-950 dark:text-purple-100',
+    border: 'border-purple-300 dark:border-purple-700/60',
+    badgeBg: 'bg-purple-100 dark:bg-purple-900/60',
+    badgeText: 'text-purple-700 dark:text-purple-300',
+  },
 };
 
 export function OptimizedScheduleView({
@@ -71,17 +121,15 @@ export function OptimizedScheduleView({
 }: OptimizedScheduleViewProps) {
   const [selectedDate, setSelectedDate] = useState(date);
   const [draggedAppointment, setDraggedAppointment] = useState<string | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{ employeeId: string; time: string } | null>(null);
   const { success } = useToast();
 
-  // ✅ DEBOUNCE para cambios de fecha - evita múltiples peticiones API
   const debouncedSelectedDate = useDebouncedValue(selectedDate, DEBOUNCE_MS);
 
-  // Sincronizar selectedDate con la prop date cuando cambia
   useEffect(() => {
     setSelectedDate(date);
   }, [date]);
 
-  // ✅ Solo notificar cambios cuando la fecha debounced sea diferente
   useEffect(() => {
     if (debouncedSelectedDate.getTime() !== date.getTime()) {
       onDateChange?.(debouncedSelectedDate);
@@ -98,22 +146,28 @@ export function OptimizedScheduleView({
 
   // Filter appointments for selected date
   const dayAppointments = useMemo(() => {
-    // ✅ SAFETY: Ensure appointments is an array
     if (!Array.isArray(appointments)) return [];
     
-    const filtered = appointments.filter((apt) => {
+    return appointments.filter((apt) => {
       const appointmentDate = new Date(apt.startTime);
-      const isWithin = isWithinInterval(appointmentDate, {
+      return isWithinInterval(appointmentDate, {
         start: startOfDay(selectedDate),
         end: endOfDay(selectedDate),
       });
-      return isWithin;
     });
-    
-    return filtered;
   }, [appointments, selectedDate]);
 
-  // Group appointments by employee and time
+  // Helper to get true duration in minutes
+  const getAppointmentDurationMinutes = (apt: Appointment): number => {
+    const itemDuration = apt.items?.[0]?.durationMin || apt.items?.[0]?.service?.durationMin;
+    if (itemDuration && Number(itemDuration) > 0) return Number(itemDuration);
+    if ((apt as any).service?.durationMin && Number((apt as any).service.durationMin) > 0) {
+      return Number((apt as any).service.durationMin);
+    }
+    return 30;
+  };
+
+  // Group appointments by employee and start time
   const scheduleGrid = useMemo(() => {
     const grid: Record<string, Record<string, Appointment | null>> = {};
     
@@ -126,7 +180,7 @@ export function OptimizedScheduleView({
 
     dayAppointments.forEach(apt => {
       const startTime = format(new Date(apt.startTime), 'HH:mm');
-      const employeeId = apt.employee?.id;
+      const employeeId = apt.employee?.id || apt.employeeId || (apt as any).items?.[0]?.employeeId;
        
       if (employeeId && grid[employeeId] && grid[employeeId][startTime] === null) {
         grid[employeeId][startTime] = apt;
@@ -140,20 +194,16 @@ export function OptimizedScheduleView({
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 1);
     setSelectedDate(newDate);
-    // ✅ No llamar a onDateChange aquí - el debounce se encarga
   };
 
   const handleNextDay = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + 1);
     setSelectedDate(newDate);
-    // ✅ No llamar a onDateChange aquí - el debounce se encarga
   };
 
   const handleToday = () => {
-    const newDate = new Date();
-    setSelectedDate(newDate);
-    // ✅ No llamar a onDateChange aquí - el debounce se encarga
+    setSelectedDate(new Date());
   };
 
   const handleTimeSlotClick = (employeeId: string, time: string, unit: 'SPA' | 'BARBERIA') => {
@@ -167,22 +217,35 @@ export function OptimizedScheduleView({
     setDraggedAppointment(appointmentId);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, employeeId: string, time: string) => {
     e.preventDefault();
+    setDragOverSlot({ employeeId, time });
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
   };
 
   const handleDrop = async (e: React.DragEvent, employeeId: string, time: string) => {
     e.preventDefault();
+    setDragOverSlot(null);
+
     if (draggedAppointment) {
       const [hours, minutes] = time.split(':').map(Number);
       const newTime = new Date(selectedDate);
       newTime.setHours(hours, minutes, 0, 0);
       
+      // Check collision
+      const targetExisting = scheduleGrid[employeeId]?.[time];
+      if (targetExisting && targetExisting.id !== draggedAppointment && targetExisting.status !== 'CANCELLED') {
+        alert('Este especialista ya tiene una cita agendada en este horario. Por favor, selecciona otro horario libre.');
+        setDraggedAppointment(null);
+        return;
+      }
+
       try {
         await onReschedule(draggedAppointment, employeeId, newTime);
-        success('Cita reprogramada exitosamente');
       } catch (error) {
-        // Show error notification
         alert('Error al reprogramar la cita. Por favor, inténtalo nuevamente.');
       } finally {
         setDraggedAppointment(null);
@@ -190,298 +253,233 @@ export function OptimizedScheduleView({
     }
   };
 
-  const getAppointmentDuration = (appointment: Appointment) => {
-    // ✅ FIX: Use items array to get service duration since Appointment interface doesn't have service directly
-    const duration = 30; // Default duration
-    const slots = Math.ceil(duration / 30);
-    return slots;
+  // Render a specific unit's schedule
+  const renderUnitSchedule = (unitType: 'SPA' | 'BARBERIA', unitEmployees: Employee[]) => {
+    const isSpa = unitType === 'SPA';
+
+    return (
+      <div className="mb-8 last:mb-0">
+        {/* Unit Header Card */}
+        <div className="flex items-center justify-between p-4 mb-4 rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-unit font-bold shadow-unit-sm",
+              isSpa 
+                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" 
+                : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+            )}>
+              {isSpa ? <Sparkles className="h-4 w-4" /> : <Scissors className="h-4 w-4" />}
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[var(--unit-text)]">{isSpa ? 'Área SPA & Estética' : 'Área Barbería'}</h4>
+              <p className="text-xs text-[var(--unit-text-muted)] font-medium">
+                {unitEmployees.length} {unitEmployees.length === 1 ? 'especialista disponible' : 'especialistas disponibles'}
+              </p>
+            </div>
+          </div>
+          <span className={cn(
+            "text-xs font-semibold px-3 py-1 rounded-full border",
+            isSpa 
+              ? "bg-purple-500/10 text-purple-600 border-purple-500/20" 
+              : "bg-blue-500/10 text-blue-600 border-blue-500/20"
+          )}>
+            {isSpa ? 'SPA' : 'Barbería'}
+          </span>
+        </div>
+
+        {unitEmployees.length === 0 ? (
+          <div className="text-center py-8 border border-dashed border-[var(--unit-border)]/50 rounded-unit">
+            <p className="text-xs text-[var(--unit-text-muted)]">No hay especialistas asignados a esta unidad.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto pb-4">
+            <div className="min-w-[700px]">
+              {/* Employee Column Headers */}
+              <div 
+                className="grid gap-3 mb-3 sticky top-0 z-20 bg-[var(--unit-surface)] py-2 border-b border-[var(--unit-border)]/40"
+                style={{
+                  gridTemplateColumns: `80px repeat(${unitEmployees.length}, minmax(180px, 1fr))`
+                }}
+              >
+                <div className="flex items-center justify-center text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/40 py-2">
+                  Hora
+                </div>
+                {unitEmployees.map(emp => (
+                  <div 
+                    key={emp.id} 
+                    className="flex items-center gap-2.5 p-2 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/40 shadow-unit-sm"
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-unit flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-unit-sm",
+                      isSpa ? "bg-purple-600" : "bg-blue-600"
+                    )}>
+                      {emp.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[var(--unit-text)] truncate">{emp.name}</p>
+                      <p className="text-[10px] text-[var(--unit-text-muted)]">Especialista</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Time Slot Rows */}
+              <div className="space-y-2">
+                {TIME_SLOTS.map((time) => (
+                  <div 
+                    key={time}
+                    className="grid gap-3 items-stretch min-h-[56px]"
+                    style={{
+                      gridTemplateColumns: `80px repeat(${unitEmployees.length}, minmax(180px, 1fr))`
+                    }}
+                  >
+                    {/* Time Label */}
+                    <div className="flex items-center justify-center text-xs font-bold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)]/60 rounded-unit border border-[var(--unit-border)]/30">
+                      {time}
+                    </div>
+
+                    {/* Employee Cells */}
+                    {unitEmployees.map((emp) => {
+                      const appointment = scheduleGrid[emp.id]?.[time];
+                      const isHovered = dragOverSlot?.employeeId === emp.id && dragOverSlot?.time === time;
+
+                      if (appointment) {
+                        const durationMin = getAppointmentDurationMinutes(appointment);
+                        const styleConfig = statusCardStyles[appointment.status] || statusCardStyles.SCHEDULED;
+                        const serviceName = appointment.items?.[0]?.service?.name || (appointment as any).service?.name || 'Servicio';
+                        const customerName = appointment.customer?.name || 'Cliente';
+
+                        return (
+                          <div
+                            key={`${emp.id}-${time}`}
+                            draggable
+                            onDragStart={() => handleDragStart(appointment.id)}
+                            onClick={() => onViewAppointment(appointment.id)}
+                            className={cn(
+                              "relative p-2.5 rounded-unit border-2 cursor-pointer transition-all duration-150 shadow-unit-sm hover:shadow-unit hover:scale-[1.01] flex flex-col justify-between select-none group",
+                              styleConfig.bg,
+                              styleConfig.border,
+                              draggedAppointment === appointment.id && "opacity-40 ring-2 ring-[var(--unit-accent)]"
+                            )}
+                            title={`Cita de ${customerName} (${durationMin} min) - Clic para ver detalles o arrastra para mover`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-md", styleConfig.badgeBg, styleConfig.badgeText)}>
+                                  {format(new Date(appointment.startTime), 'HH:mm')}
+                                </span>
+                                <span className="text-[10px] font-semibold text-[var(--unit-text-muted)]">
+                                  {durationMin} min
+                                </span>
+                              </div>
+                              <p className={cn("text-xs font-bold truncate leading-tight", styleConfig.text)}>
+                                {customerName}
+                              </p>
+                              <p className="text-[11px] text-[var(--unit-text-muted)] truncate mt-0.5 font-medium">
+                                {serviceName}
+                              </p>
+                            </div>
+                            
+                            {appointment.sale && (
+                              <div className="mt-1 flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Cobrado</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={`${emp.id}-${time}`}
+                          className={cn(
+                            "min-h-[56px] border border-dashed border-[var(--unit-border)]/40 rounded-unit hover:border-[var(--unit-accent)]/60 hover:bg-[var(--unit-accent)]/5 cursor-pointer transition-all flex items-center justify-center group",
+                            isHovered && "bg-[var(--unit-accent)]/15 border-[var(--unit-accent)] border-solid scale-[1.01]"
+                          )}
+                          onClick={() => handleTimeSlotClick(emp.id, time, unitType)}
+                          onDragOver={(e) => handleDragOver(e, emp.id, time)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, emp.id, time)}
+                          title={`Agendar con ${emp.name} a las ${time}`}
+                        >
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs font-semibold text-[var(--unit-accent)]">
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline">Agendar</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl overflow-hidden">
-      {/* Premium Header */}
-      <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-6 border-b border-[var(--unit-border)]/30">
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5"></div>
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handlePrevDay}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border-2 border-[var(--unit-accent)]/30 hover:bg-[var(--unit-accent)]/30 transition-all hover:scale-110"
-            >
-              <ChevronLeft className="h-5 w-5 text-[var(--unit-accent)]" />
-            </button>
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-[var(--unit-text)] drop-shadow-lg">
-                {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
-              </h3>
-              <p className="text-sm text-[var(--unit-text-muted)] font-medium">
-                {dayAppointments.length} citas programadas
-              </p>
-            </div>
-            <button
-              onClick={handleNextDay}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)]/20 to-[var(--unit-primary)]/20 border-2 border-[var(--unit-accent)]/30 hover:bg-[var(--unit-accent)]/30 transition-all hover:scale-110"
-            >
-              <ChevronRight className="h-5 w-5 text-[var(--unit-accent)]" />
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Schedule Control Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-unit-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] shadow-unit-sm">
+        <div className="flex items-center gap-3">
           <button
-            onClick={handleToday}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+            onClick={handlePrevDay}
+            className="flex h-9 w-9 items-center justify-center rounded-unit bg-[var(--unit-surface)] border border-[var(--unit-border)]/50 hover:bg-[var(--unit-accent)]/10 hover:border-[var(--unit-accent)]/30 text-[var(--unit-text)] transition-all"
+            title="Día anterior"
           >
-            <Calendar className="h-4 w-4" />
-            Hoy
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          
+          <div className="text-center sm:text-left">
+            <h3 className="text-lg font-bold text-[var(--unit-text)] capitalize">
+              {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
+            </h3>
+            <p className="text-xs text-[var(--unit-text-muted)] font-medium">
+              {dayAppointments.length} {dayAppointments.length === 1 ? 'cita programada' : 'citas programadas'} para este día
+            </p>
+          </div>
+
+          <button
+            onClick={handleNextDay}
+            className="flex h-9 w-9 items-center justify-center rounded-unit bg-[var(--unit-surface)] border border-[var(--unit-border)]/50 hover:bg-[var(--unit-accent)]/10 hover:border-[var(--unit-accent)]/30 text-[var(--unit-text)] transition-all"
+            title="Día siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-      </div>
 
-      {/* Schedule Grid */}
-      <div className="p-6">
-        <div className="overflow-x-auto">
-          {/* SPA Section - Show only when SPA is selected or no unit is selected */}
-          {(selectedUnit === 'SPA' || selectedUnit === null) && (
-            <div className={selectedUnit === null ? 'mb-8' : ''}>
-              {/* SPA Premium Header */}
-              <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-primary)]/30 bg-gradient-to-br from-[var(--unit-primary)]/10 to-[var(--unit-primary)]/5 p-4 mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-primary)]/10 to-[var(--unit-primary-dark)]/10 rounded-xl"></div>
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-primary)] to-[var(--unit-primary-dark)] shadow-lg">
-                      <Sparkles className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-[var(--unit-text)]">SPA</h4>
-                      <p className="text-sm text-[var(--unit-text-muted)] font-medium">
-                        {employeesByUnit.SPA.length} estilistas disponibles
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--unit-primary)]/20 rounded-full border border-[var(--unit-primary)]/30">
-                    <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-                    <span className="text-xs font-bold text-[var(--unit-text)]">Activo</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="min-w-[600px]">
-                {/* SPA Header */}
-                <div className="grid grid-cols-[80px_repeat(auto-fit,_minmax(180px,_1fr))] gap-3 mb-4">
-                  <div className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider bg-[var(--unit-primary)]/20 px-3 py-2 rounded-xl border border-[var(--unit-primary)]/30 text-center">
-                    Hora
-                  </div>
-                  {employeesByUnit.SPA.map(emp => (
-                    <div key={emp.id} className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--unit-primary)]/20 flex items-center justify-center text-sm font-bold text-[var(--unit-text)] border-2 border-[var(--unit-primary)]/30 shadow-sm group-hover:scale-110 transition-transform">
-                          {emp.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-sm font-medium text-[var(--unit-text)]">{emp.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* SPA Time Slots */}
-                {TIME_SLOTS.map(time => (
-                  <div key={time} className="grid grid-cols-[80px_repeat(auto-fit,_minmax(180px,_1fr))] gap-3 mb-3">
-                    <div className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider bg-[var(--unit-primary)]/15 px-3 py-3 rounded-xl border border-[var(--unit-primary)]/25 text-center font-medium">
-                      {time}
-                    </div>
-
-                    {employeesByUnit.SPA.map(emp => {
-                      const appointment = scheduleGrid[emp.id]?.[time];
-                      
-                      if (appointment) {
-                        const duration = getAppointmentDuration(appointment);
-                        const statusColor = statusColors[appointment.status as keyof typeof statusColors] || statusColors.SCHEDULED;
-                        
-                        return (
-                          <div
-                            key={`${emp.id}-${time}`}
-                            className={cn(
-                              "relative p-3 rounded-xl border-2 cursor-pointer transition-all hover:shadow-xl hover:scale-[1.02] shadow-lg backdrop-blur-sm",
-                              statusColor
-                            )}
-                            style={{ 
-                              gridRow: `span ${Math.min(duration, 4)}` 
-                            }}
-                            draggable
-                            onDragStart={() => handleDragStart(appointment.id)}
-                            onClick={() => onViewAppointment(appointment.id)}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-xl"></div>
-                            <div className="relative">
-                              <div className="text-sm font-bold text-white mb-1 truncate drop-shadow">
-                                {appointment.customer?.name || 'Cliente'}
-                              </div>
-                              <div className="text-xs text-white/95 truncate mb-1 drop-shadow">
-                                {appointment.items?.[0]?.service?.name || 'Servicio'}
-                              </div>
-                              <div className="flex items-center gap-1 text-xs text-white/90 drop-shadow">
-                                <Clock className="h-3 w-3" />
-                                <span>{format(new Date(appointment.startTime), 'HH:mm')}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          key={`${emp.id}-${time}`}
-                          className="h-16 border-2 border-dashed border-purple-200/50 rounded-xl hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:to-purple-100 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] group"
-                          onClick={() => handleTimeSlotClick(emp.id, time, 'SPA')}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, emp.id, time)}
-                        >
-                          <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Plus className="h-4 w-4 text-purple-400" />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="flex items-center gap-2">
+          {!isToday(selectedDate) && (
+            <button
+              onClick={handleToday}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-unit bg-[var(--unit-accent)] text-white text-xs font-bold hover:bg-[var(--unit-accent)]/90 transition-all shadow-unit-sm active:scale-[0.98]"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              Ir a Hoy
+            </button>
           )}
 
-          {/* Barbería Section - Show only when BARBERIA is selected or no unit is selected */}
-          {(selectedUnit === 'BARBERIA' || selectedUnit === null) && (
-            <div>
-              {/* Barbería Premium Header */}
-              <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-accent)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4 mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 rounded-xl"></div>
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                      <TrendingUp className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-[var(--unit-text)]">Barman Barbería</h4>
-                      <p className="text-sm text-[var(--unit-text-muted)] font-medium">
-                        {employeesByUnit.BARBERIA.length} barberos disponibles
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--unit-accent)]/10 rounded-full border border-[var(--unit-accent)]/30">
-                    <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-                    <span className="text-xs font-bold text-[var(--unit-accent)]">Activo</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="min-w-[600px]">
-                {/* Barbería Header */}
-                <div className="grid grid-cols-[80px_repeat(auto-fit,_minmax(180px,_1fr))] gap-3 mb-4">
-                  <div className="text-xs font-bold text-[var(--unit-accent)] uppercase tracking-wider bg-[var(--unit-accent)]/10 px-3 py-2 rounded-xl border border-[var(--unit-accent)]/30 text-center">
-                    Hora
-                  </div>
-                  {employeesByUnit.BARBERIA.map(emp => (
-                    <div key={emp.id} className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] flex items-center justify-center text-sm font-bold text-white border-2 border-[var(--unit-accent)] shadow-lg group-hover:scale-110 transition-transform">
-                          {emp.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-sm font-medium text-[var(--unit-text)]">{emp.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Barbería Time Slots */}
-                {TIME_SLOTS.map(time => (
-                  <div key={time} className="grid grid-cols-[80px_repeat(auto-fit,_minmax(180px,_1fr))] gap-3 mb-3">
-                    <div className="text-xs font-bold text-[var(--unit-accent)] uppercase tracking-wider bg-[var(--unit-accent)]/10 px-3 py-3 rounded-xl border border-[var(--unit-accent)]/30 text-center font-medium">
-                      {time}
-                    </div>
-
-                    {employeesByUnit.BARBERIA.map(emp => {
-                      const appointment = scheduleGrid[emp.id]?.[time];
-                      
-                      if (appointment) {
-                        const duration = getAppointmentDuration(appointment);
-                        const statusColor = statusColors[appointment.status as keyof typeof statusColors] || statusColors.SCHEDULED;
-                        
-                        return (
-                          <div
-                            key={`${emp.id}-${time}`}
-                            className={cn(
-                              "relative p-3 rounded-xl border-2 cursor-pointer transition-all hover:shadow-xl hover:scale-[1.02] shadow-lg backdrop-blur-sm",
-                              statusColor
-                            )}
-                            style={{ 
-                              gridRow: `span ${Math.min(duration, 4)}` 
-                            }}
-                            draggable
-                            onDragStart={() => handleDragStart(appointment.id)}
-                            onClick={() => onViewAppointment(appointment.id)}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-xl"></div>
-                            <div className="relative">
-                              <div className="text-sm font-bold text-white mb-1 truncate drop-shadow">
-                                {appointment.customer?.name || 'Cliente'}
-                              </div>
-                              <div className="text-xs text-white/95 truncate mb-1 drop-shadow">
-                                {appointment.items?.[0]?.service?.name || 'Servicio'}
-                              </div>
-                              <div className="flex items-center gap-1 text-xs text-white/90 drop-shadow">
-                                <Clock className="h-3 w-3" />
-                                <span>{format(new Date(appointment.startTime), 'HH:mm')}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          key={`${emp.id}-${time}`}
-                          className="h-16 border-2 border-dashed border-[var(--unit-accent)]/30 rounded-xl hover:border-[var(--unit-accent)] hover:bg-gradient-to-br hover:from-[var(--unit-accent)]/5 hover:to-[var(--unit-primary)]/5 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] group"
-                          onClick={() => handleTimeSlotClick(emp.id, time, 'BARBERIA')}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, emp.id, time)}
-                        >
-                          <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Plus className="h-4 w-4 text-[var(--unit-accent)]" />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="bg-[var(--unit-surface)] p-4 border-t border-[var(--unit-border)]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="text-xs font-medium text-[var(--unit-text-muted)]">Estados:</div>
-            <div className="flex items-center gap-3">
-              {Object.entries(statusColors).map(([status, color]) => (
-                <div key={status} className="flex items-center gap-1">
-                  <div className={cn("w-3 h-3 rounded-full", color)} />
-                  <span className="text-xs text-[var(--unit-text-muted)]">
-                    {status === 'SCHEDULED' ? 'Programada' :
-                     status === 'IN_PROGRESS' ? 'En curso' :
-                     status === 'COMPLETED' ? 'Completada' :
-                     status === 'CANCELLED' ? 'Cancelada' :
-                     status === 'NO_SHOW' ? 'No asistió' :
-                     status === 'RESCHEDULED' ? 'Reprogramada' : status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="text-xs text-[var(--unit-text-muted)]">
-            💡 Tip: Arrastra las citas para reprogramarlas
+          {/* Quick status summary helper */}
+          <div className="hidden lg:flex items-center gap-3 text-xs text-[var(--unit-text-muted)] pl-3 border-l border-[var(--unit-border)]/40">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-blue-500" /> Programada
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber-500" /> En curso
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" /> Completada
+            </span>
           </div>
         </div>
       </div>
+
+      {/* Renders Selected Unit or All Units */}
+      {(selectedUnit === 'SPA' || selectedUnit === null) && renderUnitSchedule('SPA', employeesByUnit.SPA)}
+      {(selectedUnit === 'BARBERIA' || selectedUnit === null) && renderUnitSchedule('BARBERIA', employeesByUnit.BARBERIA)}
     </div>
   );
 }

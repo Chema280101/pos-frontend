@@ -48,7 +48,7 @@ export function Drawer({ open, onClose, title, children, width = 'md' }: DrawerP
               >
                 <Dialog.Panel
                   className={cn(
-                    'w-screen rounded-l-2xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl relative overflow-hidden',
+                    'w-full rounded-l-unit-lg border-l border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg relative overflow-hidden',
                     widthClasses[width]
                   )}
                 >
@@ -61,7 +61,7 @@ export function Drawer({ open, onClose, title, children, width = 'md' }: DrawerP
                   
                   <div className="relative h-full flex flex-col">
                     {title && (
-                      <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 border-b border-[var(--unit-border)]/30 px-6 py-4">
+                      <div className="bg-[var(--unit-surface-elevated)] border-b border-[var(--unit-border)]/30 px-6 py-4">
                         <div className="flex items-center justify-between">
                           <Dialog.Title className="font-heading text-lg font-bold text-[var(--unit-text)]">
                             {title}
@@ -69,7 +69,7 @@ export function Drawer({ open, onClose, title, children, width = 'md' }: DrawerP
                           <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
+                            className="rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
                             aria-label="Cerrar"
                           >
                             <X className="h-5 w-5" />

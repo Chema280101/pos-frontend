@@ -112,7 +112,7 @@ export function DashboardSpecialist(): JSX.Element {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Tratamientos de Hoy */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 rounded-unit opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <KPICard
               title="Tratamientos Hoy"
               value={todayAppointments}
@@ -126,7 +126,7 @@ export function DashboardSpecialist(): JSX.Element {
 
           {/* Tratamientos Semana */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-teal-100/50 to-teal-200/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-100/50 to-teal-200/50 rounded-unit opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <KPICard
               title="Tratamientos Semana"
               value={thisWeekAppointments}
@@ -140,7 +140,7 @@ export function DashboardSpecialist(): JSX.Element {
 
           {/* Servicios Completados */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 to-green-200/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 to-green-200/50 rounded-unit opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <KPICard
               title="Servicios Hechos"
               value={completedAppointments}
@@ -154,7 +154,7 @@ export function DashboardSpecialist(): JSX.Element {
 
           {/* Comisiones Pendientes (sin mostrar valor monetario) */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 rounded-unit opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <KPICard
               title="Comisiones"
               value={commissions?.filter(c => c.status === 'PENDING').length || 0}
@@ -169,11 +169,11 @@ export function DashboardSpecialist(): JSX.Element {
 
         {/* Próximos Tratamientos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+          <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6">
+            <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Sparkles className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                  <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--unit-text)]">Próximos Tratamientos</h3>
@@ -186,14 +186,14 @@ export function DashboardSpecialist(): JSX.Element {
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="animate-pulse">
-                    <div className="h-16 bg-gray-200 rounded-lg"></div>
+                    <div className="h-16 bg-[var(--unit-surface-elevated)] rounded-unit"></div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="space-y-3">
                 {appointments?.slice(0, 5).map((appointment) => (
-                  <div key={appointment.id} className="flex items-center justify-between p-3 bg-[var(--unit-surface)]/50 rounded-lg border border-[var(--unit-border)]/30">
+                  <div key={appointment.id} className="flex items-center justify-between p-3 bg-[var(--unit-surface-elevated)] rounded-unit border border-[var(--unit-border)]/30">
                     <div className="flex-1">
                       <p className="font-medium text-[var(--unit-text)]">{appointment.clientName}</p>
                       <p className="text-sm text-[var(--unit-text-muted)]">{appointment.serviceName}</p>
@@ -219,11 +219,11 @@ export function DashboardSpecialist(): JSX.Element {
           </div>
 
           {/* Comisiones Recientes */}
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+          <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6">
+            <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <TrendingUp className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                  <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--unit-text)]">Mis Comisiones</h3>
@@ -236,14 +236,14 @@ export function DashboardSpecialist(): JSX.Element {
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="animate-pulse">
-                    <div className="h-12 bg-gray-200 rounded-lg"></div>
+                    <div className="h-12 bg-gray-200 rounded-unit"></div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="space-y-3">
                 {commissions?.slice(0, 5).map((commission) => (
-                  <div key={commission.id} className="flex items-center justify-between p-3 bg-[var(--unit-surface)]/50 rounded-lg border border-[var(--unit-border)]/30">
+                  <div key={commission.id} className="flex items-center justify-between p-3 bg-[var(--unit-surface)]/50 rounded-unit border border-[var(--unit-border)]/30">
                     <div className="flex-1">
                       <p className="font-medium text-[var(--unit-text)]">{commission.serviceName}</p>
                       <p className="text-sm text-[var(--unit-text-muted)]">
@@ -257,7 +257,7 @@ export function DashboardSpecialist(): JSX.Element {
                           ? 'bg-green-100 text-green-800'
                           : commission.status === 'PENDING'
                           ? 'bg-amber-100 text-amber-800'
-                          : 'bg-gray-100 text-gray-800'
+                          : 'bg-gray-100 text-[var(--unit-text)]'
                       )}>
                         {commission.status === 'PAID' ? 'Pagada' : 
                          commission.status === 'PENDING' ? 'Pendiente' : commission.status}
@@ -280,11 +280,11 @@ export function DashboardSpecialist(): JSX.Element {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Link
             href="/appointments"
-            className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-purple-50 to-purple-100 p-6 hover:shadow-lg transition-all duration-300 group"
+            className="relative overflow-hidden rounded-unit-lg border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-purple-50 to-purple-100 p-6 hover:shadow-unit transition-all duration-300 group"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit-lg"></div>
             <div className="relative flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-purple-700 shadow-lg group-hover:scale-110 transition-transform">
+              <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-purple-600 to-purple-700 shadow-unit group-hover:scale-110 transition-transform">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -296,11 +296,11 @@ export function DashboardSpecialist(): JSX.Element {
 
           <Link
             href="/commissions"
-            className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-amber-50 to-amber-100 p-6 hover:shadow-lg transition-all duration-300 group"
+            className="relative overflow-hidden rounded-unit-lg border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-amber-50 to-amber-100 p-6 hover:shadow-unit transition-all duration-300 group"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit-lg"></div>
             <div className="relative flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-600 to-amber-700 shadow-lg group-hover:scale-110 transition-transform">
+              <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-amber-600 to-amber-700 shadow-unit group-hover:scale-110 transition-transform">
                 <TrendingUp className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -312,11 +312,11 @@ export function DashboardSpecialist(): JSX.Element {
 
           <Link
             href="/profile"
-            className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-teal-50 to-teal-100 p-6 hover:shadow-lg transition-all duration-300 group"
+            className="relative overflow-hidden rounded-unit-lg border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-teal-50 to-teal-100 p-6 hover:shadow-unit transition-all duration-300 group"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-teal-100/50 to-teal-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-100/50 to-teal-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit-lg"></div>
             <div className="relative flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-teal-700 shadow-lg group-hover:scale-110 transition-transform">
+              <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-teal-600 to-teal-700 shadow-unit group-hover:scale-110 transition-transform">
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div>

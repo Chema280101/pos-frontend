@@ -78,15 +78,35 @@ export interface GroupedCommission {
 }
 
 export interface CommissionsResponse {
-  data: GroupedCommission[];
-  pagination: {
+  data: Commission[];
+  pagination?: {
     page: number;
     limit: number;
     total: number;
     totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
+    hasNext?: boolean;
+    hasPrev?: boolean;
   };
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+}
+
+export interface GroupedCommissionsResponse {
+  data: GroupedCommission[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext?: boolean;
+    hasPrev?: boolean;
+  };
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 }
 
 export interface CommissionFilters {

@@ -78,8 +78,8 @@ export function AppointmentIntegration({
     switch (status) {
       case 'SCHEDULED': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'IN_PROGRESS': return 'bg-green-100 text-green-800 border-green-200';
-      case 'COMPLETED': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'COMPLETED': return 'bg-gray-100 text-[var(--unit-text)] border-[var(--unit-border)]/60';
+      default: return 'bg-gray-100 text-[var(--unit-text)] border-[var(--unit-border)]/60';
     }
   };
 
@@ -104,7 +104,7 @@ export function AppointmentIntegration({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-blue-500/10">
           <Calendar className="h-4 w-4 text-blue-600" />
         </div>
         <div>
@@ -139,7 +139,7 @@ export function AppointmentIntegration({
           {appointments.map((appointment) => (
             <div
               key={appointment.id}
-              className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 p-4 transition-all hover:shadow-md hover:scale-[1.01]"
+              className="relative overflow-hidden rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] p-4 transition-all hover:shadow-unit hover:scale-[1.01]"
             >
               {/* Status Badge */}
               <div className="absolute top-2 right-2">
@@ -155,7 +155,7 @@ export function AppointmentIntegration({
               <div className="space-y-3">
                 {/* Time and Customer */}
                 <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-blue-500/10">
                     <Clock className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="flex-1">
@@ -184,7 +184,7 @@ export function AppointmentIntegration({
 
                 {/* Service and Employee */}
                 <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-green-500/10">
                     <DollarSign className="h-4 w-4 text-green-600" />
                   </div>
                   <div className="flex-1">
@@ -209,7 +209,7 @@ export function AppointmentIntegration({
 
                 {/* Sale Status */}
                 {appointment.saleId && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-unit p-2">
                     <p className="text-xs text-emerald-800">
                       ✅ Ya tiene una venta asociada
                     </p>
@@ -222,7 +222,7 @@ export function AppointmentIntegration({
                     <button
                       type="button"
                       onClick={() => onConvertToSale(appointment)}
-                      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md"
+                      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-unit hover:from-blue-600 hover:to-blue-700 transition-all shadow-unit-sm hover:shadow-unit"
                     >
                       <ArrowRight className="h-3 w-3" />
                       Convertir a Venta
@@ -233,7 +233,7 @@ export function AppointmentIntegration({
                     <button
                       type="button"
                       onClick={() => onAddServiceToCart(appointment.service, appointment.employee.id)}
-                      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-sm hover:shadow-md"
+                      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-unit hover:from-green-600 hover:to-green-700 transition-all shadow-unit-sm hover:shadow-unit"
                     >
                       <DollarSign className="h-3 w-3" />
                       Agregar al Carrito
@@ -247,7 +247,7 @@ export function AppointmentIntegration({
       )}
 
       {/* Instructions */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-unit p-3 mt-4">
         <h4 className="text-sm font-semibold text-blue-800 mb-2">💡 Cómo funciona:</h4>
         <ul className="text-xs text-blue-700 space-y-1">
           <li>• <strong>Convertir a Venta:</strong> Crea una venta automáticamente con el servicio de la cita</li>

@@ -3,28 +3,48 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format, isWithinInterval, parseISO, subDays } from 'date-fns';
+import { format, subDays, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getStartOfPeruDay, getEndOfPeruDay, formatPeruDateTime } from '@/utils/peruTime';
-import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
-import { Clock, Calendar, CheckCircle2, AlertCircle, Plus, Eye, Trash2, User, Phone, ChevronDown, ChevronUp, X, Filter, Search, Loader2, RefreshCw } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Clock, 
+  Calendar, 
+  CheckCircle2, 
+  AlertCircle, 
+  Plus, 
+  Eye, 
+  Trash2, 
+  User, 
+  Phone, 
+  ChevronDown, 
+  ChevronUp, 
+  X, 
+  Filter, 
+  Search, 
+  Loader2, 
+  RefreshCw,
+  LayoutGrid,
+  List,
+  BarChart3,
+  CheckCircle,
+  CreditCard,
+  Scissors,
+  Sparkles
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { useUnitStore } from '@/store/unitStore';
 import { useAuthStore } from '@/store/authStore';
-import { LazyCalendar } from '@/components/Calendar/LazyCalendar';
-import type { CalendarAppointment } from '@/components/Calendar/AppointmentCalendar';
-import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { AppointmentDetailDrawer } from './AppointmentDetailDrawer';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { DataTable } from '@/components/ui/DataTable';
 import { OptimizedScheduleView } from './OptimizedScheduleView';
 import { AppointmentsMetrics } from './AppointmentsMetrics';
+import { TableToolbar, type QuickChip } from '@/components/ui/TableToolbar';
+import { TableBadge } from '@/components/ui/TableBadge';
 import { cn } from '@/lib/utils';
 import { STATUS_CONFIG, getStatusConfig, type Appointment, type CalendarAppointmentWithProps } from '@/types/appointment';
 import { useToast } from '@/hooks/useToast';
-
-const DAY_QUEUE_ROW_HEIGHT = 120;
 
 export function AppointmentsPage(): JSX.Element {
   const router = useRouter();
@@ -32,33 +52,28 @@ export function AppointmentsPage(): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const user = useAuthStore((s) => s.user);
   const unit = activeUnit ?? 'SPA';
+  const { success, error: toastError } = useToast();
 
-  // Función para forzar recarga de citas
-  const refreshAppointments = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['appointments'] });
-  }, [queryClient]);
+  // Tab View Navigation: schedule | list | metrics
+  const [activeTab, setActiveTab] = useState<'schedule' | 'list' | 'metrics'>('schedule');
 
-  const { success } = useToast();
-
-  const [viewStart, setViewStart] = useState<Date>(() => getStartOfPeruDay(subDays(new Date(), 30))); // Start 30 days ago
-  const [viewEnd, setViewEnd] = useState<Date>(() => getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // End 30 days from now
-  const [calendarView, setCalendarView] = useState<'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'>('timeGridDay');
+  const [viewStart, setViewStart] = useState<Date>(() => getStartOfPeruDay(subDays(new Date(), 30)));
+  const [viewEnd, setViewEnd] = useState<Date>(() => getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)));
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
 
-  // Función para manejar cambio de fecha del calendario
   const handleCalendarDateChange = useCallback((date: Date) => {
     setCalendarDate(date);
   }, []);
+
   const [drawerAppointmentId, setDrawerAppointmentId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(true);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<'SPA' | 'BARBERIA' | null>(null);
   const [search, setSearch] = useState('');
 
   // Date range filter states
-  const [dateFrom, setDateFrom] = useState<Date>(getStartOfPeruDay(subDays(new Date(), 30))); // 30 días atrás
-  const [dateTo, setDateTo] = useState<Date>(getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))); // 30 días en el futuro
+  const [dateFrom, setDateFrom] = useState<Date>(getStartOfPeruDay(subDays(new Date(), 30)));
+  const [dateTo, setDateTo] = useState<Date>(getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)));
   const [unitFilter, setUnitFilter] = useState<string>('');
 
   // Additional filter states
@@ -66,29 +81,27 @@ export function AppointmentsPage(): JSX.Element {
   const [serviceFilter, setServiceFilter] = useState<string>('');
   const [employeeFilter, setEmployeeFilter] = useState<string>('');
 
-  // Hide employee filter for BARBER and SPA_SPECIALIST roles
   const canFilterByEmployee = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
 
   // State for delete confirmation dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<CalendarAppointmentWithProps | null>(null);
 
-  // Get real employees from API
+  // Employees Query
   const { data: employees = [] } = useQuery({
     queryKey: ['users-employees'],
     queryFn: async () => {
       const { data } = await api.get('/api/users/employees');
-      const processedEmployees = data.map((emp: any) => ({
+      return data.map((emp: any) => ({
         id: emp.id,
         name: emp.name,
         unit: emp.unit || 'SPA',
         color: emp.unit === 'BARBERIA' ? '#3B82F6' : '#A855F7'
       }));
-      return processedEmployees;
     },
   });
 
-  // Get services for service filter dropdown
+  // Services Query
   const { data: servicesList = [] } = useQuery({
     queryKey: ['services-all'],
     queryFn: async () => {
@@ -97,8 +110,8 @@ export function AppointmentsPage(): JSX.Element {
     },
   });
 
-  // ✅ QUERY UNIFICADA - Reemplaza calendar y table queries
-  const { data: appointments = [], isLoading } = useQuery({
+  // Unified Appointments Query
+  const { data: appointments = [], isLoading, isFetching } = useQuery({
     queryKey: ['appointments', unit, viewStart.toISOString(), viewEnd.toISOString(), unitFilter, dateFrom, dateTo, statusFilter, serviceFilter, canFilterByEmployee ? employeeFilter : null, search],
     queryFn: async (): Promise<Appointment[]> => {
       const params = new URLSearchParams({
@@ -107,78 +120,96 @@ export function AppointmentsPage(): JSX.Element {
       });
 
       if (unitFilter) params.set('unit', unitFilter);
-
-      // Additional filters (solo para ADMIN y RECEPTIONIST)
-      if (unitFilter) params.set('unitFilter', unitFilter);
       if (dateFrom) params.set('dateFrom', dateFrom.toISOString());
       if (dateTo) params.set('dateTo', dateTo.toISOString());
       if (statusFilter) params.set('status', statusFilter);
       if (serviceFilter) params.set('serviceId', serviceFilter);
 
-      // Employee filter solo para ADMIN y RECEPTIONIST
-      if (employeeFilter && (user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST')) {
+      if (employeeFilter && canFilterByEmployee) {
         params.set('employeeId', employeeFilter);
       }
 
       if (search) params.set('search', search);
 
       const response = await api.get(`/api/appointments?${params}`);
-
-      // Extract the array from paginated response
-      const data = response.data?.data || [];
-
-      return data;
+      return response.data?.data || [];
     },
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    refetchInterval: 5 * 60 * 1000, // Refresco cada 5 minutos
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 
-  // Transform appointments for OptimizedScheduleView (Appointment format)
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      await api.delete(`/api/appointments/${appointmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
+      success('Cita eliminada exitosamente');
+      setShowDeleteDialog(false);
+      setSelectedAppointment(null);
+    },
+    onError: (err: any) => {
+      toastError(err?.response?.data?.error || 'Error al eliminar la cita');
+    },
+  });
+
+  // Schedule Appointments format
   const scheduleAppointments = useMemo(() => {
-    const transformed = appointments.map((apt: any) => {
-      return {
-        id: apt.id,
+    return appointments.map((apt: any) => ({
+      id: apt.id,
+      customer: apt.customer,
+      employee: apt.employee,
+      service: apt.service || apt.items?.[0]?.service,
+      items: apt.items,
+      date: apt.date,
+      startTime: apt.startTime,
+      endTime: apt.endTime,
+      duration: apt.durationMin || apt.items?.[0]?.durationMin || 30,
+      status: apt.status,
+      notes: apt.notes,
+      sale: apt.sale,
+    }));
+  }, [appointments]);
+
+  // Normalized Appointments for DataTable
+  const normalizedAppointments = useMemo(() => {
+    return appointments.map((apt: any): CalendarAppointmentWithProps => ({
+      id: apt.id,
+      title: `${apt.customer?.name || 'Sin cliente'} - ${apt.items?.[0]?.service?.name || apt.service?.name || 'Sin servicio'}`,
+      start: new Date(apt.startTime),
+      end: new Date(apt.endTime),
+      extendedProps: {
+        appointmentId: apt.id,
         customer: apt.customer,
+        service: apt.items?.[0]?.service || apt.service,
         employee: apt.employee,
-        service: apt.service,
-        date: apt.date,
-        startTime: apt.startTime,
-        endTime: apt.endTime,
-        duration: apt.duration,
+        unit: apt.unit,
         status: apt.status,
         notes: apt.notes,
-      };
-    });
-
-    return transformed;
+        sale: apt.sale,
+      }
+    }));
   }, [appointments]);
 
-  // Debug: Ver empleados disponibles
+  // Summary Metrics calculation for top micro-bar
+  const summaryMetrics = useMemo(() => {
+    const todayAppointments = appointments.filter(apt => isToday(new Date(apt.startTime)));
+    const inProgress = appointments.filter(apt => apt.status === 'IN_PROGRESS');
+    const scheduled = appointments.filter(apt => apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED' || apt.status === 'RESCHEDULED');
+    const completed = appointments.filter(apt => apt.status === 'COMPLETED');
 
-  const normalizedAppointments = useMemo(() => {
-    return appointments.map((apt: any): CalendarAppointmentWithProps => {
-      return {
-        id: apt.id,
-        title: `${apt.customer?.name || 'Sin cliente'} - ${apt.items?.[0]?.service?.name || 'Sin servicio'}`,
-        start: new Date(apt.startTime),
-        end: new Date(apt.endTime),
-        extendedProps: {
-          appointmentId: apt.id,
-          customer: apt.customer,
-          service: apt.items?.[0]?.service,
-          employee: apt.employee, // Usar el empleado directo de la cita
-          unit: apt.unit,
-          status: apt.status,
-          notes: apt.notes
-        }
-      };
-    });
+    return {
+      todayCount: todayAppointments.length,
+      inProgressCount: inProgress.length,
+      scheduledCount: scheduled.length,
+      completedCount: completed.length,
+    };
   }, [appointments]);
 
-  // Estado para mostrar última actualización
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Actualizar timestamp cuando se refrescan los datos
   useEffect(() => {
     if (appointments && appointments.length > 0) {
       setLastUpdate(new Date());
@@ -186,13 +217,10 @@ export function AppointmentsPage(): JSX.Element {
   }, [appointments]);
 
   const forceRefreshAppointments = useCallback(() => {
-    setLastUpdate(new Date()); // Update timestamp immediately for feedback
+    setLastUpdate(new Date());
     queryClient.invalidateQueries({ queryKey: ['appointments'] });
   }, [queryClient]);
 
-
-
-  // Handlers for OptimizedScheduleView
   const handleNewAppointment = useCallback((employeeId: string, time: Date, unit: 'SPA' | 'BARBERIA') => {
     const params = new URLSearchParams({
       employeeId,
@@ -209,80 +237,64 @@ export function AppointmentsPage(): JSX.Element {
 
   const handleReschedule = useCallback(async (appointmentId: string, newEmployeeId: string, newTime: Date) => {
     try {
-      // Find the appointment to get its duration from scheduleAppointments
       const appointment = scheduleAppointments.find((apt: any) => apt.id === appointmentId);
-      const duration = appointment?.service?.durationMin || 30;
-
+      const duration = appointment?.items?.[0]?.durationMin || appointment?.service?.durationMin || 30;
       const endTime = new Date(newTime.getTime() + duration * 60 * 1000);
 
       await api.patch(`/api/appointments/${appointmentId}`, {
         employeeId: newEmployeeId,
         startTime: newTime.toISOString(),
         endTime: endTime.toISOString(),
-        status: 'RESCHEDULED', // ✅ Agregar status de reprogramación
+        status: 'RESCHEDULED',
       });
 
-      // ✅ Invalidar queries específicas para actualizar el drawer
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
-      queryClient.invalidateQueries({ queryKey: ['appointments-calendar'] });
       success('Cita reprogramada exitosamente');
-
-      // ✅ Si el drawer está abierto para esta cita, invalidar para que se actualice
-      if (drawerAppointmentId === appointmentId) {
-        queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
-      }
     } catch (error) {
-      throw error; // Re-throw to let OptimizedScheduleView handle the revert
+      throw error;
     }
-  }, [queryClient, scheduleAppointments, drawerAppointmentId]);
+  }, [queryClient, scheduleAppointments, success]);
 
-  // Listen for calendar filter changes from Header
-  useEffect(() => {
-    const handleCalendarFilterChange = (event: CustomEvent) => {
-      const { unit } = event.detail;
-      setSelectedUnit(unit);
-    };
-
-    window.addEventListener('calendarFilterChange', handleCalendarFilterChange as EventListener);
-
-    return () => {
-      window.removeEventListener('calendarFilterChange', handleCalendarFilterChange as EventListener);
-    };
-  }, []);
-
-  // Sync selectedUnit with global active unit on mount and when activeUnit changes
+  // Sync selectedUnit with global active unit
   useEffect(() => {
     if (activeUnit && !selectedUnit) {
       setSelectedUnit(activeUnit);
     }
   }, [activeUnit, selectedUnit]);
 
+  // Chips para estado de la cita
+  const statusChips: QuickChip[] = [
+    { id: '', label: 'Todas' },
+    { id: 'SCHEDULED', label: 'Programadas' },
+    { id: 'IN_PROGRESS', label: 'En curso' },
+    { id: 'COMPLETED', label: 'Finalizadas' },
+    { id: 'CANCELLED', label: 'Canceladas' },
+  ];
+
+  // Table Columns Definition
   const columns = [
     {
       key: 'startTime',
       header: 'Fecha y Hora',
       sortable: true,
-      render: (row: CalendarAppointmentWithProps) => {
-        return (
-          <div className="text-sm">
-            <div className="font-medium">{formatPeruDateTime(row.start)}</div>
+      render: (row: CalendarAppointmentWithProps) => (
+        <div className="text-sm">
+          <div className="font-semibold text-[var(--unit-text)]">{formatPeruDateTime(row.start)}</div>
+          <div className="text-xs text-[var(--unit-text-muted)]">
+            Hasta {format(row.end, 'HH:mm')}
           </div>
-        );
-      },
+        </div>
+      ),
     },
     {
       key: 'customer',
       header: 'Cliente',
       render: (row: CalendarAppointmentWithProps) => (
-        <div className="flex flex-col gap-1">
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
-            {row.extendedProps.customer?.name || 'Sin cliente'}
-          </span>
+        <div>
+          <div className="font-bold text-[var(--unit-text)]">{row.extendedProps.customer?.name || 'Sin cliente'}</div>
           {row.extendedProps.customer?.phone && (
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-sky-100 text-sky-800">
-              {row.extendedProps.customer.phone}
-            </span>
+            <div className="text-xs text-[var(--unit-text-muted)]">{row.extendedProps.customer.phone}</div>
           )}
         </div>
       ),
@@ -290,62 +302,38 @@ export function AppointmentsPage(): JSX.Element {
     {
       key: 'service',
       header: 'Servicio',
-      render: (row: CalendarAppointmentWithProps) => {
-        const serviceName = row.extendedProps.service?.name;
-        const serviceId = row.extendedProps.appointmentId;
-        return (
-          <div className="flex flex-col gap-1">
-            {serviceName ? (
-              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
-                {serviceName}
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
-                Servicio no encontrado
-              </span>
-            )}
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-              {row.extendedProps.service?.durationMin || 0} min
-            </span>
-          </div>
-        );
-      },
+      render: (row: CalendarAppointmentWithProps) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-xs text-[var(--unit-text)]">
+            {row.extendedProps.service?.name || 'Servicio no especificado'}
+          </span>
+          <span className="text-[11px] text-[var(--unit-text-muted)]">
+            {row.extendedProps.service?.durationMin || 30} min
+          </span>
+        </div>
+      ),
     },
     {
       key: 'employee',
-      header: 'Empleado',
-      render: (row: CalendarAppointmentWithProps) => {
-        const employeeName = row.extendedProps.employee?.name;
-        const employeeId = row.extendedProps.employee?.id;
-        return (
-          <div className="flex flex-col gap-1">
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
-              {employeeName || 'Empleado no asignado'}
-            </span>
-            {employeeId && !employeeName && (
-              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 font-mono">
-                ID: {employeeId.slice(0, 8)}...
-              </span>
-            )}
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
-              {row.extendedProps.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-            </span>
+      header: 'Especialista',
+      render: (row: CalendarAppointmentWithProps) => (
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-md bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] flex items-center justify-center text-xs font-bold">
+            {row.extendedProps.employee?.name?.charAt(0) || 'E'}
           </div>
-        );
-      },
+          <span className="text-xs font-medium text-[var(--unit-text)]">
+            {row.extendedProps.employee?.name || 'No asignado'}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'unit',
       header: 'Unidad',
       render: (row: CalendarAppointmentWithProps) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.extendedProps.unit === 'SPA'
-            ? 'bg-purple-100 text-purple-800'
-            : 'bg-red-100 text-red-800'
-        )}>
+        <TableBadge type={row.extendedProps.unit === 'BARBERIA' ? 'unit-barberia' : 'unit-spa'}>
           {row.extendedProps.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -353,142 +341,205 @@ export function AppointmentsPage(): JSX.Element {
       header: 'Estado',
       render: (row: CalendarAppointmentWithProps) => {
         const status = getStatusConfig(row.extendedProps.status);
+        const mappedType = row.extendedProps.status === 'COMPLETED' ? 'status-completed'
+                         : row.extendedProps.status === 'IN_PROGRESS' ? 'status-pending'
+                         : row.extendedProps.status === 'CANCELLED' || row.extendedProps.status === 'NO_SHOW' ? 'status-cancelled'
+                         : 'status-scheduled';
         return (
-          <span className={cn('px-2 py-1 rounded-full text-xs font-medium', status.bg, status.text)}>
+          <TableBadge type={mappedType}>
             {status.label}
-          </span>
+          </TableBadge>
         );
       },
     },
     {
       key: 'sale',
-      header: 'Venta',
-      render: (row: CalendarAppointmentWithProps) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
-          {/* TODO: Add sale info from extendedProps when available */}
-          Sin venta
-        </span>
-      ),
-    },
-  ];
-
-  const filters = [
-    {
-      key: 'status',
-      label: 'Estado',
-      type: 'select' as const,
-      options: [
-        { label: 'Todos', value: '' },
-        { label: 'Programadas', value: 'SCHEDULED' },
-        { label: 'En curso', value: 'IN_PROGRESS' },
-        { label: 'Completadas', value: 'COMPLETED' },
-        { label: 'Canceladas', value: 'CANCELLED' },
-        { label: 'No asistió', value: 'NO_SHOW' },
-      ],
-    },
-    {
-      key: 'unit',
-      label: 'Unidad',
-      type: 'select' as const,
-      options: [
-        { label: 'Todos', value: '' },
-        { label: 'SPA', value: 'SPA' },
-        { label: 'Barbería', value: 'BARBERIA' },
-      ],
+      header: 'Venta / Cobro',
+      render: (row: CalendarAppointmentWithProps) => {
+        const sale = row.extendedProps.sale;
+        if (sale) {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              #{sale.saleNumber}
+            </span>
+          );
+        }
+        if (row.extendedProps.status === 'COMPLETED' || row.extendedProps.status === 'IN_PROGRESS') {
+          return (
+            <Link
+              href={`/pos?customerId=${encodeURIComponent(row.extendedProps.customer?.id || '')}&appointmentId=${encodeURIComponent(row.id)}`}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-unit text-xs font-bold bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/90 transition-all"
+            >
+              <CreditCard className="h-3 w-3" />
+              Cobrar
+            </Link>
+          );
+        }
+        return (
+          <span className="text-xs text-[var(--unit-text-muted)]">—</span>
+        );
+      },
     },
   ];
 
   const actions = [
     {
-      label: 'Ver',
+      label: 'Ver detalle',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: CalendarAppointmentWithProps) => {
         setDrawerAppointmentId(row.id);
         setDrawerOpen(true);
       },
-      className: 'text-blue-600 hover:bg-blue-50',
     },
     {
       label: 'Eliminar',
+      variant: 'delete' as const,
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (row: CalendarAppointmentWithProps) => {
         setSelectedAppointment(row);
         setShowDeleteDialog(true);
       },
-      className: 'text-red-600 hover:bg-red-50',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)]">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto p-6">
-        {/* Enhanced Header */}
-        <div className="mb-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-              <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-              <span className="text-sm font-medium text-[var(--unit-text)]">
-                Sistema de Citas
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header & Fast Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                Gestión Operativa
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Agenda</h1>
-            <p className="text-[var(--unit-text-muted)]">
-              Gestiona citas y programaciones con control total
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+              Agenda & Citas
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+              Control de programaciones, turnos de especialistas y flujo de caja en tiempo real
             </p>
           </div>
 
-          {/* Appointments Metrics */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[var(--unit-accent)]" />
-              <span className="ml-2 text-[var(--unit-text)]">Cargando métricas...</span>
-            </div>
-          ) : (
-            <AppointmentsMetrics appointments={appointments} />
-          )}
-
-          {/* Enhanced Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
-            <Link href="/appointments/new" className="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto">
-              <Plus className="h-5 w-5" />
-              Nueva Cita
-            </Link>
-            <button
-              onClick={() => setShowCalendar(!showCalendar)}
-              className="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98] w-full sm:w-auto"
-            >
-              <Calendar className="h-5 w-5" />
-              {showCalendar ? 'Ocultar' : 'Mostrar'} Calendario
-            </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={forceRefreshAppointments}
-              className="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-text)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-text)] hover:text-[var(--unit-surface)] transition-all hover:shadow-lg active:scale-[0.98] w-full sm:w-auto"
-              title="Forzar actualización de citas"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Actualizar datos"
             >
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-5 w-5" />
-              )}
-              Actualizar
+              <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin text-[var(--unit-accent)]")} />
+              <span className="hidden sm:inline">Actualizar</span>
             </button>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 w-full sm:w-auto">
-              <span className="text-xs text-[var(--unit-text)]">Última:</span>
-              <span className="text-xs font-bold text-[var(--unit-accent)]">{format(lastUpdate, 'HH:mm:ss')}</span>
+
+            <Link
+              href="/appointments/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
+            >
+              <Plus className="h-4 w-4" />
+              Nueva Cita
+            </Link>
+          </div>
+        </div>
+
+        {/* Ergonomic Micro Status Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+              <Calendar className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Citas Hoy</p>
+              <p className="text-lg font-bold text-[var(--unit-text)]">{summaryMetrics.todayCount}</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+              <Clock className="h-4 w-4 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">En Curso</p>
+              <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{summaryMetrics.inProgressCount}</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+              <CheckCircle className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Por Atender</p>
+              <p className="text-lg font-bold text-[var(--unit-text)]">{summaryMetrics.scheduledCount}</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] flex items-center gap-3">
+            <div className="h-9 w-9 rounded-unit bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--unit-text-muted)] uppercase">Finalizadas</p>
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{summaryMetrics.completedCount}</p>
             </div>
           </div>
         </div>
 
-        {/* Calendar */}
-        {showCalendar && (
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
+        {/* View Switcher (Segmented Tabs) */}
+        <div className="flex items-center justify-between border-b border-[var(--unit-border)]/40 pb-2">
+          <div className="flex items-center gap-1.5 p-1 rounded-unit-lg bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/40">
+            <button
+              onClick={() => setActiveTab('schedule')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-unit text-xs font-bold transition-all",
+                activeTab === 'schedule'
+                  ? "bg-[var(--unit-surface)] text-[var(--unit-accent)] shadow-unit-sm border border-[var(--unit-border)]/40"
+                  : "text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]"
+              )}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Rejilla de Horarios
+            </button>
+
+            <button
+              onClick={() => setActiveTab('list')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-unit text-xs font-bold transition-all",
+                activeTab === 'list'
+                  ? "bg-[var(--unit-surface)] text-[var(--unit-accent)] shadow-unit-sm border border-[var(--unit-border)]/40"
+                  : "text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]"
+              )}
+            >
+              <List className="h-4 w-4" />
+              Lista de Citas
+            </button>
+
+            <button
+              onClick={() => setActiveTab('metrics')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-unit text-xs font-bold transition-all",
+                activeTab === 'metrics'
+                  ? "bg-[var(--unit-surface)] text-[var(--unit-accent)] shadow-unit-sm border border-[var(--unit-border)]/40"
+                  : "text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]"
+              )}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Métricas & KPIs
+            </button>
+          </div>
+
+          <div className="text-[11px] text-[var(--unit-text-muted)] hidden sm:block">
+            Última sincro: <span className="font-semibold text-[var(--unit-text)]">{format(lastUpdate, 'HH:mm:ss')}</span>
+          </div>
+        </div>
+
+        {/* TAB 1: SCHEDULE VIEW */}
+        {activeTab === 'schedule' && (
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-4 sm:p-6 shadow-unit-sm animate-in fade-in duration-200">
             <OptimizedScheduleView
               date={calendarDate}
               employees={employees}
@@ -502,237 +553,125 @@ export function AppointmentsPage(): JSX.Element {
           </div>
         )}
 
-        {/* Enhanced Appointments Filters */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Citas</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-              >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+        {/* TAB 2: LIST VIEW & FILTERS */}
+        {activeTab === 'list' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <TableToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Buscar por cliente, teléfono, servicio o especialista..."
+              chips={statusChips}
+              activeChip={statusFilter}
+              onChipChange={(id) => setStatusFilter(id as string)}
+              showAdvancedFiltersButton={true}
+              isAdvancedOpen={showFilters}
+              onToggleAdvanced={() => setShowFilters(!showFilters)}
+              activeFiltersCount={(serviceFilter ? 1 : 0) + (employeeFilter ? 1 : 0) + (unitFilter ? 1 : 0)}
+              onResetFilters={() => {
+                setServiceFilter('');
+                setEmployeeFilter('');
+                setUnitFilter('');
+                setDateFrom(getStartOfPeruDay(subDays(new Date(), 30)));
+                setDateTo(getEndOfPeruDay(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)));
+              }}
+              advancedFiltersContent={
+                <div className="space-y-4">
+                  <DateRangeFilter
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onDateFromChange={(d) => d && setDateFrom(d)}
+                    onDateToChange={(d) => d && setDateTo(d)}
+                    unit={unitFilter}
+                    onUnitChange={setUnitFilter}
+                    showUnitFilter={true}
+                    showStatusFilter={false}
+                    className="rounded-unit bg-[var(--unit-surface)]"
+                  />
 
-          {/* Filter Content - Conditional Rendering */}
-          {showFilters && (
-            <div className="space-y-6">
-              {/* Date Range Filter */}
-              <DateRangeFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(date: Date | null) => date && setDateFrom(date)}
-                onDateToChange={(date: Date | null) => date && setDateTo(date)}
-                unit={unitFilter}
-                onUnitChange={setUnitFilter}
-                showUnitFilter={true}
-                showStatusFilter={false}
-                className="rounded-xl"
-              />
-
-              {/* Additional Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Status Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
-                  <select
-                    value={statusFilter}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="SCHEDULED">Programadas</option>
-                    <option value="IN_PROGRESS">En curso</option>
-                    <option value="COMPLETED">Completadas</option>
-                    <option value="CANCELLED">Canceladas</option>
-                    <option value="NO_SHOW">No asistió</option>
-                  </select>
-                </div>
-
-                {/* Service Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Servicio</label>
-                  <select
-                    value={serviceFilter}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    onChange={(e) => setServiceFilter(e.target.value)}
-                  >
-                    <option value="">Todos los servicios</option>
-                    {servicesList.map((service: any) => (
-                      <option key={service.id} value={service.id}>
-                        {service.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Employee Filter - Solo para ADMIN y RECEPTIONIST */}
-                {canFilterByEmployee && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Empleado</label>
-                    <select
-                      value={employeeFilter}
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                      onChange={(e) => {
-                        setEmployeeFilter(e.target.value);
-                      }}
-                    >
-                      <option value="">Todos los empleados</option>
-                      {employees.map((employee: any) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Enhanced Search Bar */}
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Buscar por cliente, servicio, empleado..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                  }}
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-4 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                  >
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                      <X className="h-3 w-3" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Service Filter */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase">Servicio</label>
+                      <select
+                        value={serviceFilter}
+                        onChange={(e) => setServiceFilter(e.target.value)}
+                        className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] px-3 py-2 text-xs text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40"
+                      >
+                        <option value="">Todos los servicios</option>
+                        {servicesList.map((service: any) => (
+                          <option key={service.id} value={service.id}>
+                            {service.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </button>
-                )}
-              </div>
 
-              {/* Enhanced Active Filters Summary */}
-              {(statusFilter || serviceFilter || (employeeFilter && canFilterByEmployee) || search || unitFilter) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {statusFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
-                            Estado: {statusFilter === 'SCHEDULED' ? 'Programadas' :
-                              statusFilter === 'IN_PROGRESS' ? 'En curso' :
-                                statusFilter === 'COMPLETED' ? 'Completadas' :
-                                  statusFilter === 'CANCELLED' ? 'Canceladas' :
-                                    statusFilter === 'NO_SHOW' ? 'No asistió' : statusFilter}
-                          </span>
-                        )}
-                        {serviceFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Servicio: {servicesList.find((s: any) => s.id === serviceFilter)?.name || serviceFilter}
-                          </span>
-                        )}
-                        {employeeFilter && canFilterByEmployee && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 border border-green-200">
-                            Empleado: {employees.find((e: any) => e.id === employeeFilter)?.name || employeeFilter}
-                          </span>
-                        )}
-                        {unitFilter && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {unitFilter === 'SPA' ? 'SPA' : 'Barbería'}
-                          </span>
-                        )}
-                        {search && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                            Búsqueda: {search}
-                          </span>
-                        )}
+                    {/* Employee Filter */}
+                    {canFilterByEmployee && (
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase">Especialista</label>
+                        <select
+                          value={employeeFilter}
+                          onChange={(e) => setEmployeeFilter(e.target.value)}
+                          className="w-full rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] px-3 py-2 text-xs text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40"
+                        >
+                          <option value="">Todos los especialistas</option>
+                          {employees.map((emp: any) => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.name} ({emp.unit})
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setStatusFilter('');
-                        setServiceFilter('');
-                        if (canFilterByEmployee) setEmployeeFilter('');
-                        setSearch('');
-                        setUnitFilter('');
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              }
+            />
 
-        {/* Enhanced Appointments Table */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-          {/* Table Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Calendar className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Lista de Citas</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Historial completo de citas</p>
+            {/* Appointments DataTable */}
+            <div className="rounded-unit-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-5 shadow-unit-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-[var(--unit-text)]">Listado General</h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)]">
+                    {normalizedAppointments.length} citas
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
-                  {normalizedAppointments.length} citas
-                </span>
-              </div>
+
+              <DataTable
+                columns={columns}
+                data={normalizedAppointments as any}
+                keyExtractor={(row) => row.id}
+                loading={isLoading}
+                searchPlaceholder=""
+                filters={[]}
+                actions={actions}
+                emptyMessage="No se encontraron citas con los criterios seleccionados."
+                pageSize={15}
+                pageSizeOptions={[10, 15, 30, 50]}
+                className="rounded-unit"
+              />
             </div>
           </div>
+        )}
 
-          {/* Enhanced Table */}
-          <DataTable
-            columns={columns}
-            data={normalizedAppointments as any}
-            keyExtractor={(row) => row.id}
-            loading={isLoading}
-            searchPlaceholder=""
-            filters={[]}
-            actions={actions}
-            emptyMessage="No se encontraron citas con los filtros aplicados."
-            pageSize={15}
-            pageSizeOptions={[10, 15, 30, 50]}
-            className="rounded-xl"
-          />
-        </div>
+        {/* TAB 3: METRICS VIEW */}
+        {activeTab === 'metrics' && (
+          <div className="animate-in fade-in duration-200">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16 gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-[var(--unit-accent)]" />
+                <span className="text-xs font-medium text-[var(--unit-text)]">Calculando métricas de citas...</span>
+              </div>
+            ) : (
+              <AppointmentsMetrics appointments={appointments} />
+            )}
+          </div>
+        )}
 
-        {/* Enhanced Drawer */}
+        {/* Appointment Detail Drawer */}
         {drawerOpen && (
           <AppointmentDetailDrawer
             appointmentId={drawerAppointmentId}
@@ -744,111 +683,72 @@ export function AppointmentsPage(): JSX.Element {
           />
         )}
 
-        {/* Delete Confirmation Modal - Estilo Original Premium */}
+        {/* Delete Confirmation Modal */}
         {showDeleteDialog && selectedAppointment && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDeleteDialog(false);
-              setSelectedAppointment(null);
-            }
-          }}>
-            <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85 backdrop-blur-md shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                <div className="h-full w-full bg-repeat" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ef4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-              </div>
-
-              {/* Header */}
-              <div className="relative flex items-center gap-4 mb-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                  <Trash2 className="h-6 w-6 text-white" />
+          <div 
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowDeleteDialog(false);
+                setSelectedAppointment(null);
+              }
+            }}
+          >
+            <div className="relative w-full max-w-md rounded-unit-lg border border-rose-500/30 bg-[var(--unit-surface)] p-6 shadow-unit-lg space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-unit bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                  <Trash2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-red-900">Eliminar Cita</h3>
-                  <p className="text-sm text-red-700">Esta acción es permanente</p>
+                  <h3 className="text-base font-bold text-[var(--unit-text)]">Eliminar Cita</h3>
+                  <p className="text-xs text-[var(--unit-text-muted)]">Esta acción es permanente y no se puede deshacer</p>
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="relative space-y-4">
-                <div className="rounded-xl border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-red-100 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg mt-1">
-                      <AlertCircle className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-red-900">
-                        ¿Estás seguro de que deseas eliminar la cita de "{selectedAppointment.extendedProps.customer?.name}"?
-                      </p>
-                      <p className="text-sm text-red-700 mt-1">
-                        Esta acción no se puede deshacer y se perderá toda la información de la cita.
-                      </p>
-                    </div>
-                  </div>
+              <div className="p-3.5 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/40 text-xs space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-[var(--unit-text-muted)]">Cliente:</span>
+                  <span className="font-bold text-[var(--unit-text)]">{selectedAppointment.extendedProps.customer?.name}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--unit-text-muted)]">Fecha y Hora:</span>
+                  <span className="font-medium text-[var(--unit-text)]">{formatPeruDateTime(selectedAppointment.start)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--unit-text-muted)]">Servicio:</span>
+                  <span className="font-medium text-[var(--unit-text)]">{selectedAppointment.extendedProps.service?.name}</span>
+                </div>
+              </div>
 
-                {/* Appointment Info */}
-                <div className="rounded-xl border-2 border-red-200/30 bg-gradient-to-br from-white/50 to-white/30 p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Cliente</span>
-                      <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                        {selectedAppointment.extendedProps.customer?.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {formatPeruDateTime(selectedAppointment.start)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Estado</span>
-                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium', getStatusConfig(selectedAppointment.extendedProps.status).bg, getStatusConfig(selectedAppointment.extendedProps.status).text)}>
-                        {getStatusConfig(selectedAppointment.extendedProps.status).label}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-4 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowDeleteDialog(false);
-                      setSelectedAppointment(null);
-                    }}
-                    className="flex-1 rounded-xl border-2 border-red-300/50 px-6 py-3 text-sm font-medium text-red-700 bg-white/80 hover:bg-red-50 transition-all hover:shadow-lg active:scale-[0.98]"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={refreshAppointments}
-                    className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-green-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <RefreshCw className="h-5 w-5" />
-                    Actualizar Citas
-                  </button>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement delete appointment mutation
-                      setShowDeleteDialog(false);
-                      setSelectedAppointment(null);
-                    }}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar Cita
-                    </span>
-                  </button>
-                </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedAppointment(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate(selectedAppointment.id)}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 px-4 py-2.5 rounded-unit bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all active:scale-[0.98] shadow-unit-sm disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  <span>{deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}</span>
+                </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

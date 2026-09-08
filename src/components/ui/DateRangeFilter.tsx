@@ -31,6 +31,7 @@ interface DateRangeFilterProps {
   
   // Styling
   className?: string;
+  compact?: boolean;
 }
 
 const defaultQuickDateRanges = [
@@ -95,6 +96,7 @@ export function DateRangeFilter({
     action: () => range.action(onDateFromChange, onDateToChange)
   })),
   className,
+  compact = false,
 }: DateRangeFilterProps): JSX.Element {
   
   const statusOptions = [
@@ -114,12 +116,124 @@ export function DateRangeFilter({
     { value: 'Depósito', label: 'Depósito' },
   ];
 
+  if (compact) {
+    return (
+      <div className={cn("space-y-3.5", className)}>
+        {/* Quick Date Ranges */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-semibold text-[var(--unit-text-muted)] mr-1 flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+            Acceso Rápido:
+          </span>
+          {quickDateRanges.map((range, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={range.action}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-all"
+            >
+              {range.icon}
+              <span>{range.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Filters Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {showUnitFilter && onUnitChange && (
+            <div>
+              <label className="block text-xs font-bold text-[var(--unit-text)] mb-1 flex items-center gap-1">
+                <Building2 className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+                Unidad
+              </label>
+              <select
+                value={unit || ''}
+                onChange={(e) => onUnitChange(e.target.value)}
+                className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-3 text-xs text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]"
+              >
+                <option value="">Todas las unidades</option>
+                <option value="SPA">SPA</option>
+                <option value="BARBERIA">Barbería</option>
+              </select>
+            </div>
+          )}
+
+          {showStatusFilter && onStatusChange && (
+            <div>
+              <label className="block text-xs font-bold text-[var(--unit-text)] mb-1 flex items-center gap-1">
+                <Filter className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+                Estado
+              </label>
+              <select
+                value={status || ''}
+                onChange={(e) => onStatusChange(e.target.value)}
+                className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-3 text-xs text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]"
+              >
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {showPaymentMethodFilter && onPaymentMethodChange && (
+            <div>
+              <label className="block text-xs font-bold text-[var(--unit-text)] mb-1 flex items-center gap-1">
+                <DollarSign className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+                Método de Pago
+              </label>
+              <select
+                value={paymentMethod || ''}
+                onChange={(e) => onPaymentMethodChange(e.target.value)}
+                className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-3 text-xs text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]"
+              >
+                {paymentMethodOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-bold text-[var(--unit-text)] mb-1 flex items-center gap-1">
+              <Sun className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+              Fecha Desde
+            </label>
+            <input
+              type="date"
+              value={dateFrom ? dateFrom.toISOString().split('T')[0] : ''}
+              onChange={(e) => onDateFromChange(e.target.value ? new Date(e.target.value) : null)}
+              className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-3 text-xs text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[var(--unit-text)] mb-1 flex items-center gap-1">
+              <Moon className="h-3.5 w-3.5 text-[var(--unit-accent)]" />
+              Fecha Hasta
+            </label>
+            <input
+              type="date"
+              value={dateTo ? dateTo.toISOString().split('T')[0] : ''}
+              onChange={(e) => onDateToChange(e.target.value ? new Date(e.target.value) : null)}
+              className="w-full h-9 rounded-unit border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] px-3 text-xs text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6", className)}>
+    <div className={cn("relative overflow-hidden rounded-unit-lg border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] shadow-unit-lg p-6", className)}>
       {/* Filter Header */}
-      <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+      <div className="relative bg-[var(--unit-accent)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] shadow-unit">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -142,7 +256,7 @@ export function DateRangeFilter({
             <select
               value={unit || ''}
               onChange={(e) => onUnitChange(e.target.value)}
-              className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+              className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
             >
               <option value="">Todas</option>
               <option value="SPA">SPA</option>
@@ -161,7 +275,7 @@ export function DateRangeFilter({
             <select
               value={status || ''}
               onChange={(e) => onStatusChange(e.target.value)}
-              className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+              className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -182,7 +296,7 @@ export function DateRangeFilter({
             <select
               value={paymentMethod || ''}
               onChange={(e) => onPaymentMethodChange(e.target.value)}
-              className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+              className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
             >
               {paymentMethodOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -203,7 +317,7 @@ export function DateRangeFilter({
             type="date"
             value={dateFrom ? dateFrom.toISOString().split('T')[0] : ''}
             onChange={(e) => onDateFromChange(e.target.value ? new Date(e.target.value) : null)}
-            className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+            className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
           />
         </div>
 
@@ -217,7 +331,7 @@ export function DateRangeFilter({
             type="date"
             value={dateTo ? dateTo.toISOString().split('T')[0] : ''}
             onChange={(e) => onDateToChange(e.target.value ? new Date(e.target.value) : null)}
-            className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+            className="w-full rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] px-4 py-3 text-sm text-[var(--unit-text)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
           />
         </div>
       </div>
@@ -233,7 +347,7 @@ export function DateRangeFilter({
             <button
               key={index}
               onClick={range.action}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] group"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] transition-all hover:shadow-unit hover:scale-[1.02] active:scale-[0.98] group"
             >
               <span className="transition-transform group-hover:scale-110">{range.icon}</span>
               {range.label}

@@ -51,7 +51,7 @@ export function CashRegisterList({
       key: 'id',
       header: 'N° Caja',
       render: (row: CashRegister) => (
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-[var(--unit-text)]">
           #{row.id.slice(-8).toUpperCase()}
         </span>
       ),
@@ -83,8 +83,8 @@ export function CashRegisterList({
             </>
           ) : (
             <>
-              <Lock className="h-4 w-4 text-gray-600" />
-              <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              <Lock className="h-4 w-4 text-[var(--unit-text-muted)]" />
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-[var(--unit-text)]">
                 Cerrada
               </span>
             </>
@@ -97,10 +97,10 @@ export function CashRegisterList({
       header: 'Apertura',
       render: (row: CashRegister) => (
         <div>
-          <div className="text-sm text-gray-900">
+          <div className="text-sm text-[var(--unit-text)]">
             {format(new Date(row.openedAt), 'dd/MM/yyyy', { locale: es })}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-[var(--unit-text-muted)]">
             {format(new Date(row.openedAt), 'HH:mm', { locale: es })}
           </div>
         </div>
@@ -110,7 +110,7 @@ export function CashRegisterList({
       key: 'openingAmount',
       header: 'Monto Apertura',
       render: (row: CashRegister) => (
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-[var(--unit-text)]">
           S/ {row.openingAmount?.toFixed(2) || '0.00'}
         </span>
       ),
@@ -121,10 +121,10 @@ export function CashRegisterList({
       render: (row: CashRegister) => (
         row.closedAt ? (
           <div>
-            <div className="text-sm text-gray-900">
+            <div className="text-sm text-[var(--unit-text)]">
               {format(new Date(row.closedAt), 'dd/MM/yyyy', { locale: es })}
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-[var(--unit-text-muted)]">
               {format(new Date(row.closedAt), 'HH:mm', { locale: es })}
             </div>
           </div>
@@ -154,11 +154,13 @@ export function CashRegisterList({
   const actions: Action<CashRegister>[] = [
     {
       label: 'Ver detalles',
+      variant: 'view',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: CashRegister) => onViewDetails(row),
     },
     {
       label: 'Exportar PDF',
+      variant: 'download',
       icon: <FileDown className="h-4 w-4" />,
       onClick: (row: CashRegister) => onExportPDF(row),
       disabled: (row: CashRegister) => row.status !== 'CLOSED',
@@ -172,8 +174,8 @@ export function CashRegisterList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Historial de Cajas</h2>
-        <div className="text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-[var(--unit-text)]">Historial de Cajas</h2>
+        <div className="text-sm text-[var(--unit-text-muted)]">
           Mostrando {registersData.data.length} de {registersData.pagination.total} registros
         </div>
       </div>

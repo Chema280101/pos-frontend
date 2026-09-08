@@ -133,7 +133,7 @@ export function CloseRegisterForm({
   }
 
   return (
-    <div className="space-y-6 p-6 bg-[var(--unit-surface)] rounded-xl border border-[var(--unit-border)]">
+    <div className="space-y-6 p-6 bg-[var(--unit-surface)] rounded-unit border border-[var(--unit-border)]">
       <h2 className="text-lg font-semibold">Arqueo de Caja</h2>
 
       <div className="space-y-2">

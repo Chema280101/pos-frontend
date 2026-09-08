@@ -88,7 +88,7 @@ export function ItemSelector({
           placeholder="Buscar servicios, productos o paquetes..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 text-[var(--unit-text)] placeholder-[var(--unit-text-muted)] focus:outline-none focus:border-[var(--unit-accent)]/50 focus:ring-2 focus:ring-[var(--unit-accent)]/20 transition-all"
+          className="w-full pl-10 pr-4 py-3 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] placeholder-[var(--unit-text-muted)] focus:outline-none focus:border-[var(--unit-accent)]/50 focus:ring-2 focus:ring-[var(--unit-accent)]/20 transition-all"
         />
       </div>
 
@@ -114,9 +114,9 @@ export function ItemSelector({
                         onAddToCart(service);
                       }
                     }}
-                    className="w-full flex items-center gap-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 p-3 transition-all hover:scale-[1.02] hover:border-[var(--unit-accent)]/50 hover:shadow-md"
+                    className="w-full flex items-center gap-3 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3 transition-all hover:border-[var(--unit-accent)]/50"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
                       <Scissors className="h-4 w-4 text-[var(--unit-accent)]" />
                     </div>
                     <div className="flex-1 text-left">
@@ -151,9 +151,9 @@ export function ItemSelector({
                     key={product.id}
                     type="button"
                     onClick={() => onAddToCart(product)}
-                    className="w-full flex items-center gap-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 p-3 transition-all hover:scale-[1.02] hover:border-[var(--unit-accent)]/50 hover:shadow-md"
+                    className="w-full flex items-center gap-3 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3 transition-all hover:border-[var(--unit-accent)]/50"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
                       <Box className="h-4 w-4 text-[var(--unit-accent)]" />
                     </div>
                     <div className="flex-1 text-left">
@@ -188,9 +188,9 @@ export function ItemSelector({
                       onSelectServiceForEmployee(null);
                       setIsPackageSelection(true);
                     }}
-                    className="w-full flex items-center gap-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 p-3 transition-all hover:scale-[1.02] hover:border-[var(--unit-accent)]/50 hover:shadow-md"
+                    className="w-full flex items-center gap-3 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3 transition-all hover:border-[var(--unit-accent)]/50"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
                       <Package className="h-4 w-4 text-[var(--unit-accent)]" />
                     </div>
                     <div className="flex-1 text-left">

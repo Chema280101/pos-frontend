@@ -91,7 +91,7 @@ export function AppointmentDetail(): JSX.Element {
             <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
             <span className="text-sm font-medium text-[var(--unit-text)]">Detalles de Cita</span>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Información de la Cita</h1>
+          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-unit">Información de la Cita</h1>
           <p className="text-[var(--unit-text-muted)]">Gestiona los detalles y estado de la cita</p>
         </div>
 
@@ -99,7 +99,7 @@ export function AppointmentDetail(): JSX.Element {
         <div className="mb-6">
           <Link
             href="/appointments"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] font-medium bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-unit border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] font-medium bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-unit active:scale-[0.98]"
           >
             <ChevronLeft className="h-4 w-4" />
             Volver a Agenda
@@ -107,15 +107,13 @@ export function AppointmentDetail(): JSX.Element {
         </div>
 
         {/* Premium Detail Container */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-6">
-          <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 rounded-2xl"></div>
-          
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6 mb-6">
           <div className="relative">
             {/* Customer Info Header */}
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <User className="h-6 w-6 text-white" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10 border border-[var(--unit-accent)]/20 text-[var(--unit-accent)]">
+                  <User className="h-6 w-6" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-[var(--unit-text)]">{apt.customer.name}</h2>
@@ -125,7 +123,7 @@ export function AppointmentDetail(): JSX.Element {
               
               {/* Status Badge */}
               <span className={cn(
-                'inline-flex items-center px-3 py-1.5 text-sm font-bold rounded-xl border-2',
+                'inline-flex items-center px-3 py-1.5 text-sm font-bold rounded-unit border',
                 getStatusColor(apt.status)
               )}>
                 {apt.status === 'COMPLETED' ? 'Completada' :
@@ -137,7 +135,7 @@ export function AppointmentDetail(): JSX.Element {
 
             {/* Appointment Details */}
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--unit-surface)]/50 border border-[var(--unit-border)]/30">
+              <div className="flex items-center gap-3 p-3 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/30">
                 <Calendar className="h-5 w-5 text-[var(--unit-accent)]" />
                 <div>
                   <p className="text-[var(--unit-text)] font-medium">
@@ -148,7 +146,7 @@ export function AppointmentDetail(): JSX.Element {
               </div>
 
               {apt.notes && (
-                <div className="p-3 rounded-xl bg-[var(--unit-surface)]/50 border border-[var(--unit-border)]/30">
+                <div className="p-3 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/30">
                   <p className="text-sm text-[var(--unit-text)]">
                     <span className="font-medium">Notas:</span> {apt.notes}
                   </p>
@@ -156,8 +154,8 @@ export function AppointmentDetail(): JSX.Element {
               )}
 
               {apt.cancelReason && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                  <p className="text-sm text-red-800">
+                <div className="p-3 rounded-unit bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-800 dark:text-red-300">
                     <span className="font-medium">Motivo cancelación:</span> {apt.cancelReason}
                   </p>
                 </div>
@@ -172,10 +170,10 @@ export function AppointmentDetail(): JSX.Element {
               </h3>
               <div className="space-y-3">
                 {apt.items.map((item: Appointment['items'][0], i: number) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[var(--unit-surface)]/50 border border-[var(--unit-border)]/30">
+                  <div key={i} className="flex items-center justify-between p-3 rounded-unit bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/30">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">
-                        <Scissors className="h-4 w-4 text-[var(--unit-accent)]" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10 text-[var(--unit-accent)]">
+                        <Scissors className="h-4 w-4" />
                       </div>
                       <div>
                         <p className="text-[var(--unit-text)] font-medium">{item.service.name}</p>
@@ -194,92 +192,86 @@ export function AppointmentDetail(): JSX.Element {
 
         {/* Sale Status Section */}
         {apt.status === 'COMPLETED' && (
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-emerald-600/5 rounded-2xl"></div>
-            <div className="relative">
-              <h3 className="text-lg font-bold text-[var(--unit-text)] mb-4 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-emerald-600" />
-                Estado de Venta
-              </h3>
-              {apt.sale ? (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg">
-                    <CheckCircle className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-emerald-800 font-bold">Cobrado</p>
-                    <p className="text-emerald-600 text-sm">Venta {apt.sale.saleNumber}</p>
-                  </div>
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6 mb-6">
+            <h3 className="text-lg font-bold text-[var(--unit-text)] mb-4 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-emerald-600" />
+              Estado de Venta
+            </h3>
+            {apt.sale ? (
+              <div className="flex items-center gap-3 p-4 rounded-unit bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">
+                  <CheckCircle className="h-5 w-5" />
                 </div>
-              ) : (
-                <Link
-                  href={`/pos?customerId=${encodeURIComponent(apt.customer.id)}&appointmentId=${encodeURIComponent(apt.id)}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <CreditCard className="h-5 w-5" />
-                  Ir a venta
-                </Link>
-              )}
-            </div>
+                <div>
+                  <p className="text-emerald-800 dark:text-emerald-300 font-bold">Cobrado</p>
+                  <p className="text-emerald-600 dark:text-emerald-400 text-sm">Venta {apt.sale.saleNumber}</p>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href={`/pos?customerId=${encodeURIComponent(apt.customer.id)}&appointmentId=${encodeURIComponent(apt.id)}`}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-unit bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-unit transition-all active:scale-[0.98]"
+              >
+                <CreditCard className="h-5 w-5" />
+                Ir a venta
+              </Link>
+            )}
           </div>
         )}
 
         {/* Status Actions Section */}
         {canChangeStatus && (
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 rounded-2xl"></div>
-            <div className="relative">
-              <h3 className="text-lg font-bold text-[var(--unit-text)] mb-4 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-[var(--unit-accent)]" />
-                Acciones de Estado
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {apt.status === 'SCHEDULED' && (
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6">
+            <h3 className="text-lg font-bold text-[var(--unit-text)] mb-4 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-[var(--unit-accent)]" />
+              Acciones de Estado
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {apt.status === 'SCHEDULED' && (
+                <button
+                  type="button"
+                  onClick={() => statusMutation.mutate({ status: 'IN_PROGRESS' })}
+                  disabled={statusMutation.isPending}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-unit bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-unit-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  En progreso
+                </button>
+              )}
+              {(apt.status === 'SCHEDULED' || apt.status === 'IN_PROGRESS') && (
+                <>
                   <button
                     type="button"
-                    onClick={() => statusMutation.mutate({ status: 'IN_PROGRESS' })}
+                    onClick={() => statusMutation.mutate({ status: 'COMPLETED' })}
                     disabled={statusMutation.isPending}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-unit bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-unit-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Completada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reason = window.prompt('Motivo de cancelación (obligatorio):');
+                      if (reason?.trim()) statusMutation.mutate({ status: 'CANCELLED', cancelReason: reason.trim() });
+                    }}
+                    disabled={statusMutation.isPending}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-unit bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-unit-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => statusMutation.mutate({ status: 'NO_SHOW' })}
+                    disabled={statusMutation.isPending}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-unit border border-[var(--unit-border)]/50 text-[var(--unit-text)] font-semibold bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all active:scale-[0.98] disabled:opacity-50"
                   >
                     <AlertCircle className="h-4 w-4" />
-                    En progreso
+                    No se presentó
                   </button>
-                )}
-                {(apt.status === 'SCHEDULED' || apt.status === 'IN_PROGRESS') && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => statusMutation.mutate({ status: 'COMPLETED' })}
-                      disabled={statusMutation.isPending}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Completada
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const reason = window.prompt('Motivo de cancelación (obligatorio):');
-                        if (reason?.trim()) statusMutation.mutate({ status: 'CANCELLED', cancelReason: reason.trim() });
-                      }}
-                      disabled={statusMutation.isPending}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => statusMutation.mutate({ status: 'NO_SHOW' })}
-                      disabled={statusMutation.isPending}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-[var(--unit-border)]/50 text-[var(--unit-text)] font-bold bg-[var(--unit-surface)] shadow-lg transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <AlertCircle className="h-4 w-4" />
-                      No se presentó
-                    </button>
-                  </>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
         )}

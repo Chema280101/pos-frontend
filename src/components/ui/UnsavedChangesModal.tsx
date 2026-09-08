@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { AlertTriangle, X, Save } from 'lucide-react';
+import { AlertTriangle, X, ArrowLeft, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface UnsavedChangesModalProps {
+export interface UnsavedChangesModalProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -15,79 +15,80 @@ export function UnsavedChangesModal({
   onClose, 
   onConfirm, 
   onCancel 
-}: UnsavedChangesModalProps): JSX.Element {
+}: UnsavedChangesModalProps): JSX.Element | null {
+  if (!open) return null;
+
   return (
-    <>
-      {open && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              onClose();
-            }
-          }}
-        >
-          <div 
-            className="relative overflow-hidden rounded-2xl border-2 border-amber-500/50 bg-gradient-to-br from-amber-50/95 to-amber-100/85 backdrop-blur-md shadow-2xl p-8 max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-5">
-              <div className="h-full w-full bg-repeat" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23F59E0B' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-              }}></div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity animate-in fade-in duration-200" 
+        onClick={onClose}
+      />
+
+      {/* Modal Dialog */}
+      <div 
+        className={cn(
+          'w-full max-w-md rounded-t-3xl sm:rounded-unit-lg border border-[var(--unit-border)]/60',
+          'bg-[var(--unit-surface-elevated)] shadow-unit-lg p-6 sm:p-7 relative z-10 overflow-hidden',
+          'animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200'
+        )}
+      >
+        {/* Ambient Top Glow */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent pointer-events-none" />
+
+        {/* Mobile handle */}
+        <div className="pt-1 pb-3 flex justify-center sm:hidden">
+          <div className="h-1.5 w-12 rounded-full bg-slate-300 dark:bg-zinc-700" />
+        </div>
+
+        {/* Header */}
+        <div className="relative mb-5 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-unit bg-gradient-to-br from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/20 shrink-0">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-            
-            <div className="relative">
-              {/* Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 border-2 border-amber-300">
-                    <AlertTriangle className="h-6 w-6 text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-amber-900">Cambios no guardados</h3>
-                    <p className="text-sm text-amber-700">Tienes cambios que no han sido guardados</p>
-                  </div>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 hover:bg-amber-200 border-2 border-amber-300/50 transition-all hover:scale-105"
-                  aria-label="Cerrar"
-                >
-                  <X className="h-4 w-4 text-amber-700" />
-                </button>
-              </div>
-
-              {/* Message */}
-              <div className="mb-8 p-4 rounded-xl border-2 border-amber-200 bg-amber-50/50">
-                <p className="text-amber-800 text-center">
-                  ¿Estás seguro de que deseas cerrar? Todos los cambios realizados se perderán.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onCancel}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-amber-300 text-amber-700 font-bold bg-amber-100 hover:bg-amber-200 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  <X className="h-4 w-4" />
-                  Continuar editando
-                </button>
-                
-                <button
-                  onClick={onConfirm}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-amber-500 text-white font-bold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  <Save className="h-4 w-4" />
-                  Descartar cambios
-                </button>
-              </div>
+            <div>
+              <h3 className="font-heading text-lg sm:text-xl font-bold text-[var(--unit-text)]">Cambios sin guardar</h3>
+              <p className="text-xs text-[var(--unit-text-muted)]">Tienes modificaciones pendientes</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-unit border border-slate-200/80 dark:border-zinc-700/80 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 p-2 text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100 transition-all active:scale-95"
+            aria-label="Cerrar"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-      )}
-    </>
+
+        {/* Message */}
+        <div className="mb-6 p-4 rounded-unit border border-amber-500/30 bg-amber-500/10 text-sm leading-relaxed text-slate-800 dark:text-zinc-200 font-medium">
+          ¿Estás seguro de que deseas salir? Todos los cambios realizados que no hayas guardado se perderán definitivamente.
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 px-4 py-2.5 rounded-unit border border-slate-200/80 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-200 font-semibold bg-slate-100/90 hover:bg-slate-200/90 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/90 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4 text-[var(--unit-text-muted)]" />
+            Seguir editando
+          </button>
+          
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 rounded-unit text-white font-semibold shadow-unit shadow-red-500/20 border border-red-500/30 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Descartar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

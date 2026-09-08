@@ -1,15 +1,21 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api, getAccessToken } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableBadge, getTableBadgeTypeForStatus, getTableBadgeTypeForUnit } from '@/components/ui/TableBadge';
+import { Select } from '@/components/ui/Select';
 import { DetailedReportsMetrics } from './DetailedReportsMetrics';
-import { Search, Filter, Download, Eye, Edit, DollarSign, User, Calendar, Building2, Package, Receipt, FileText, Users, Trash2, AlertCircle, ChevronDown, ChevronUp, BarChart3, TrendingUp, Clock, CheckCircle2, X, Plus } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit, DollarSign, User, Calendar, Building2, Package, Receipt, FileText, FileSpreadsheet, Users, Trash2, AlertCircle, ChevronDown, ChevronUp, BarChart3, TrendingUp, Clock, CheckCircle2, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
 import { useUnitStore } from '@/store/unitStore';
+import { downloadExcelReport } from '@/lib/excelReport';
+import { downloadPdfReport } from '@/lib/pdfReport';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -37,6 +43,7 @@ interface DetailedReportsProps {
 }
 
 export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps): JSX.Element {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   
   // Debounce hook para búsqueda
@@ -138,19 +145,19 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       key: 'type',
       header: 'Tipo',
       render: (row: UnifiedReportData) => {
-        const typeConfig = {
-          sale: { label: 'Venta', color: 'bg-green-100 text-green-800' },
-          appointment: { label: 'Cita', color: 'bg-blue-100 text-blue-800' },
-          client: { label: 'Cliente', color: 'bg-purple-100 text-purple-800' },
-          product: { label: 'Producto', color: 'bg-amber-100 text-amber-800' },
-          commission: { label: 'Comisión', color: 'bg-pink-100 text-pink-800' },
-          'cash-register': { label: 'Caja', color: 'bg-indigo-100 text-indigo-800' },
+        const typeConfig: Record<string, { label: string; type: any }> = {
+          sale: { label: 'Venta', type: 'entity-sale' },
+          appointment: { label: 'Cita', type: 'date' },
+          client: { label: 'Cliente', type: 'entity-user' },
+          product: { label: 'Producto', type: 'entity-product' },
+          commission: { label: 'Comisión', type: 'entity-commission' },
+          'cash-register': { label: 'Caja', type: 'entity-cash-register' },
         };
-        const config = typeConfig[row.type];
+        const config = typeConfig[row.type] || { label: row.type, type: 'status-default' };
         return (
-          <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', config.color)}>
+          <TableBadge type={config.type as any}>
             {config.label}
-          </span>
+          </TableBadge>
         );
       },
     },
@@ -160,9 +167,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       sortable: true,
       render: (row: UnifiedReportData) => (
         row.amount ? (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 font-bold">
+          <TableBadge type="amount" bold>
             S/ {row.amount.toFixed(2)}
-          </span>
+          </TableBadge>
         ) : (
           <span className="text-[var(--unit-text-muted)]">—</span>
         )
@@ -173,9 +180,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       header: 'Cliente',
       render: (row: UnifiedReportData) => (
         row.customer ? (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+          <TableBadge type="customer-name">
             {row.customer}
-          </span>
+          </TableBadge>
         ) : (
           <span className="text-[var(--unit-text-muted)]">—</span>
         )
@@ -186,9 +193,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       header: 'Empleado',
       render: (row: UnifiedReportData) => (
         row.employee ? (
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-pink-100 text-pink-800">
+          <TableBadge type="employee-name">
             {row.employee}
-          </span>
+          </TableBadge>
         ) : (
           <span className="text-[var(--unit-text-muted)]">—</span>
         )
@@ -198,14 +205,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       key: 'unit',
       header: 'Unidad',
       render: (row: UnifiedReportData) => (
-        <span className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-          row.unit === 'SPA'
-            ? 'bg-purple-100 text-purple-800'
-            : 'bg-red-100 text-red-800'
-        )}>
+        <TableBadge type={getTableBadgeTypeForUnit(row.unit)}>
           {row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -213,9 +215,9 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       header: 'Fecha',
       sortable: true,
       render: (row: UnifiedReportData) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+        <TableBadge type="date">
           {format(new Date(row.date), 'd MMM yyyy', { locale: es })}
-        </span>
+        </TableBadge>
       ),
     },
     {
@@ -223,20 +225,10 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
       header: 'Estado',
       render: (row: UnifiedReportData) => {
         if (!row.status) return <span className="text-[var(--unit-text-muted)]">—</span>;
-        const statusConfig: Record<string, string> = {
-          CLOSED: 'bg-green-100 text-green-800',
-          OPEN: 'bg-blue-100 text-blue-800',
-          PENDING: 'bg-yellow-100 text-yellow-800',
-          PAID: 'bg-green-100 text-green-800',
-          CANCELLED: 'bg-red-100 text-red-800',
-          COMPLETED: 'bg-green-100 text-green-800',
-          SCHEDULED: 'bg-blue-100 text-blue-800',
-        };
-        const color = statusConfig[row.status] || 'bg-gray-100 text-gray-800';
         return (
-          <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', color)}>
+          <TableBadge type={getTableBadgeTypeForStatus(row.status)}>
             {getStatusLabel(row.status)}
-          </span>
+          </TableBadge>
         );
       },
     },
@@ -245,106 +237,108 @@ export function DetailedReports({ unit, dateFrom, dateTo }: DetailedReportsProps
   const actions = [
     {
       label: 'Ver',
+      variant: 'view' as const,
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: UnifiedReportData) => {
         // Navigate to appropriate detail page based on type
         switch (row.type) {
           case 'sale':
-            window.open(`/pos/sales/${row.referenceId}`, '_blank');
+            router.push('/reports/sales');
             break;
           case 'appointment':
-            window.open(`/appointments/${row.referenceId}`, '_blank');
+            router.push(`/appointments/${row.referenceId}`);
             break;
           case 'client':
-            window.open(`/clients/${row.referenceId}`, '_blank');
+            router.push(`/clients/${row.referenceId}`);
             break;
           case 'commission':
-            window.open(`/commissions/admin`, '_blank');
+            router.push('/commissions/admin');
             break;
           case 'cash-register':
-            window.open(`/cash/${row.referenceId}`, '_blank');
+            router.push('/cash-register');
+            break;
+          case 'product':
+            router.push('/inventory');
             break;
           default:
-            // TODO: Implement view details for other types
+            break;
         }
       },
-      className: 'text-blue-600 hover:bg-blue-50',
     },
     {
       label: 'Editar',
+      variant: 'edit' as const,
       icon: <Edit className="h-4 w-4" />,
       onClick: (row: UnifiedReportData) => {
         // Navigate to edit page based on type
         switch (row.type) {
           case 'sale':
-            window.open(`/pos/sales/${row.referenceId}/edit`, '_blank');
+            router.push('/pos');
             break;
           case 'appointment':
-            window.open(`/appointments/${row.referenceId}/edit`, '_blank');
+            router.push(`/appointments/${row.referenceId}`);
             break;
           case 'client':
-            window.open(`/clients/${row.referenceId}/edit`, '_blank');
+            router.push(`/clients/${row.referenceId}/edit`);
             break;
           case 'commission':
-            // Commissions can't be edited directly, only recalculated
-            error('Las comisiones no se pueden editar directamente. Use "Recalcular" si es necesario.');
+            error('Las comisiones no se pueden editar directamente. Use "Recalcular" en administración.');
             break;
           case 'cash-register':
-            window.open(`/cash/${row.referenceId}/edit`, '_blank');
+            router.push('/cash-register');
+            break;
+          case 'product':
+            router.push(`/inventory/products/${row.referenceId}/edit`);
             break;
           default:
-            // TODO: Implement edit for other types
+            break;
         }
       },
-      className: 'text-amber-600 hover:bg-amber-50',
       disabled: (row: UnifiedReportData) => {
         // Disable edit for certain types or statuses
         return row.type === 'commission' || row.status === 'COMPLETED' || row.status === 'CANCELLED';
       },
     },
     {
-      label: 'Exportar',
+      label: 'Exportar PDF',
+      variant: 'download' as const,
       icon: <Download className="h-4 w-4" />,
       onClick: (row: UnifiedReportData) => {
-        // Export individual item as PDF
-        const data = {
-          type: row.type,
-          referenceId: row.referenceId,
-          title: row.title,
-          amount: row.amount,
-          date: row.date,
-          unit: row.unit,
-          customer: row.customer,
-          employee: row.employee,
-          status: row.status,
+        const typeLabels: Record<string, string> = {
+          sale: 'Venta',
+          appointment: 'Cita',
+          client: 'Cliente',
+          product: 'Producto',
+          commission: 'Comisión',
+          'cash-register': 'Caja'
         };
-        
-        // Create simple PDF content (for demo purposes)
-        const pdfContent = `
-Reporte Individual - ${row.title}
-=====================================
-Tipo: ${row.type}
-ID Referencia: ${row.referenceId}
-Título: ${row.title}
-Monto: ${row.amount ? `S/ ${row.amount.toFixed(2)}` : 'N/A'}
-Fecha: ${format(new Date(row.date), 'dd/MM/yyyy HH:mm')}
-Unidad: ${row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'}
-Cliente: ${row.customer || 'N/A'}
-Empleado: ${row.employee || 'N/A'}
-Estado: ${row.status || 'N/A'}
-=====================================
-Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
-        `;
-        
-        const blob = new Blob([pdfContent], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${row.type}_${row.referenceId}_${new Date().toISOString().split('T')[0]}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+
+        const headers = ['Campo', 'Detalle'];
+        const rows = [
+          ['Tipo de Registro', typeLabels[row.type] || row.type],
+          ['ID / Referencia', row.referenceId || row.id],
+          ['Título / Concepto', row.title],
+          ['Monto', row.amount ? `S/ ${Number(row.amount).toFixed(2)}` : '—'],
+          ['Fecha', format(new Date(row.date), 'dd/MM/yyyy HH:mm', { locale: es })],
+          ['Unidad', row.unit === 'BARBERIA' ? 'Barbería' : 'SPA'],
+          ['Cliente', row.customer || '—'],
+          ['Especialista / Empleado', row.employee || '—'],
+          ['Estado', row.status || '—'],
+        ];
+
+        downloadPdfReport(
+          `reporte-individual-${row.type}-${row.referenceId || row.id}-${new Date().toISOString().slice(0, 10)}.pdf`,
+          `REPORTE INDIVIDUAL - ${row.title.toUpperCase()}`,
+          row.unit === 'BARBERIA' ? 'Barbería' : 'SPA',
+          headers,
+          rows,
+          {
+            unit: row.unit,
+            filterInfo: `Tipo: ${typeLabels[row.type] || row.type} | ID: ${row.referenceId || row.id}`
+          }
+        );
+        success('Reporte individual PDF descargado');
       },
-      className: 'text-emerald-600 hover:bg-emerald-50',
     },
   ];
 
@@ -390,43 +384,96 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
     },
   ];
 
-  // ✅ MEJORADO: Add export functionality
-  const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
+  // ✅ MEJORADO: Exportación ejecutiva real de Reportes Particulares
+  const handleExport = async (formatType: 'excel' | 'pdf') => {
     try {
       const params = new URLSearchParams({
-        unit: activeUnit || '',
+        ...(activeUnit && { unit: activeUnit }),
         from: currentDateFrom.toISOString(),
         to: currentDateTo.toISOString(),
-        format,
+        page: '1',
+        limit: '5000',
+        ...(selectedType && { type: selectedType }),
+        ...(selectedStatus && { status: selectedStatus }),
+        ...(debouncedSearchTerm && { search: debouncedSearchTerm }),
       });
 
-      const response = await api.get(`/api/reports/detailed/export?${params}`, {
-        responseType: format === 'pdf' ? 'blob' : 'text',
-      });
+      const response = await api.get(`/api/reports/detailed?${params}`);
+      const rawRows: UnifiedReportData[] = response.data?.data || data || [];
 
-      if (format === 'pdf') {
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reportes-detalles-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        const blob = new Blob([response.data], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reportes-detalles-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+      if (!rawRows || rawRows.length === 0) {
+        error('No hay datos disponibles para exportar con los filtros seleccionados');
+        return;
       }
 
-      success(`Reporte exportado exitosamente en formato ${format.toUpperCase()}`);
+      const typeLabels: Record<string, string> = {
+        sale: 'Venta',
+        appointment: 'Cita',
+        client: 'Cliente',
+        product: 'Producto',
+        commission: 'Comisión',
+        'cash-register': 'Caja'
+      };
+
+      const headers = ['Tipo', 'Referencia', 'Título / Concepto', 'Fecha', 'Unidad', 'Cliente', 'Empleado', 'Estado', 'Monto (S/)'];
+      const rows = rawRows.map((r) => [
+        typeLabels[r.type] || r.type,
+        r.referenceId || r.id,
+        r.title || '—',
+        r.date ? format(new Date(r.date), 'dd/MM/yyyy HH:mm', { locale: es }) : '—',
+        r.unit === 'BARBERIA' ? 'Barbería' : 'SPA',
+        r.customer || '—',
+        r.employee || '—',
+        r.status || '—',
+        r.amount ? Number(r.amount).toFixed(2) : '—'
+      ]);
+
+      const totalAmount = rawRows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+      const filename = `reportes-particulares-${activeUnit || 'general'}-${new Date().toISOString().slice(0, 10)}`;
+
+      if (formatType === 'excel') {
+        await downloadExcelReport(
+          `${filename}.xlsx`,
+          'Reportes Particulares',
+          headers,
+          rows,
+          {
+            unit: activeUnit || 'General',
+            reportTitle: 'REPORTE DETALLADO UNIFICADO',
+            periodInfo: { from: currentDateFrom, to: currentDateTo },
+            totalAmount: totalAmount > 0 ? totalAmount : undefined,
+            filterInfo: [
+              activeUnit ? `Unidad: ${activeUnit}` : null,
+              selectedType ? `Tipo: ${typeLabels[selectedType] || selectedType}` : null,
+              selectedStatus ? `Estado: ${selectedStatus}` : null
+            ].filter(Boolean).join(' | ') || undefined
+          }
+        );
+      } else {
+        downloadPdfReport(
+          `${filename}.pdf`,
+          'REPORTE DETALLADO UNIFICADO',
+          activeUnit ? (activeUnit === 'BARBERIA' ? 'Barbería' : 'SPA') : 'Todas las unidades',
+          headers,
+          rows,
+          {
+            unit: activeUnit || 'General',
+            periodInfo: { from: currentDateFrom, to: currentDateTo },
+            totals: totalAmount > 0 ? {
+              label: 'MONTO TOTAL REGISTRADO:',
+              amount: totalAmount,
+              currency: 'S/'
+            } : undefined,
+            filterInfo: [
+              activeUnit ? `Unidad: ${activeUnit}` : null,
+              selectedType ? `Tipo: ${typeLabels[selectedType] || selectedType}` : null,
+              selectedStatus ? `Estado: ${selectedStatus}` : null
+            ].filter(Boolean).join(' | ') || undefined
+          }
+        );
+      }
+
+      success(`Reporte ${formatType.toUpperCase()} descargado exitosamente`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Error al exportar reporte');
     }
@@ -438,13 +485,13 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
         {/* Enhanced Header - Exacto estilo Agenda */}
         <div className="mb-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-[var(--unit-surface-elevated)]/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
               <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
               <span className="text-sm font-medium text-[var(--unit-text)]">
                 Sistema de Reportes Detallados
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Reportes Particulares</h1>
+            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-unit">Reportes Particulares</h1>
             <p className="text-[var(--unit-text-muted)]">
               Búsqueda avanzada unificada de todos los reportes del sistema
             </p>
@@ -462,62 +509,53 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
             dateTo={currentDateTo} 
           />
 
-          {/* Enhanced Action Buttons - Estilo Agenda */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* Normalized Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
             <button
               onClick={() => handleExport('excel')}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg border-2 border-emerald-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Exportar a Excel"
             >
-              <Download className="h-5 w-5" />
-              Exportar Excel
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span>Exportar Excel</span>
             </button>
             <button
               onClick={() => handleExport('pdf')}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg border-2 border-red-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+              title="Exportar a PDF"
             >
-              <Download className="h-5 w-5" />
-              Exportar PDF
+              <FileText className="h-4 w-4 text-rose-600" />
+              <span>Exportar PDF</span>
             </button>
           </div>
         </div>
 
-        {/* Enhanced Filters Section - Premium Glassmorphism como Agenda */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
-          {/* Filter Header - Exacto estilo Agenda */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Reportes Detallados</h3>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Refina tu búsqueda avanzada</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
-              >
-                {showFilters ? (
-                  <>
-                    <ChevronUp className="h-4 w-4" />
-                    Ocultar filtros
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4" />
-                    Mostrar filtros
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Filter Content - Conditional Rendering */}
-          {showFilters && (
+        {/* Unified TableToolbar Filters */}
+        <TableToolbar
+          search={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Buscar por título, cliente, empleado..."
+          chips={[
+            { id: '', label: 'Todos los tipos', count: data.length },
+            { id: 'sale', label: 'Ventas', count: data.filter((d: UnifiedReportData) => d.type === 'sale').length },
+            { id: 'appointment', label: 'Citas', count: data.filter((d: UnifiedReportData) => d.type === 'appointment').length },
+            { id: 'client', label: 'Clientes', count: data.filter((d: UnifiedReportData) => d.type === 'client').length },
+          ]}
+          activeChip={selectedType}
+          onChipChange={(id) => setSelectedType(String(id))}
+          showAdvancedFiltersButton={true}
+          isAdvancedOpen={showFilters}
+          onToggleAdvanced={() => setShowFilters(!showFilters)}
+          activeFiltersCount={(selectedType ? 1 : 0) + (selectedStatus ? 1 : 0) + (searchTerm ? 1 : 0)}
+          onResetFilters={() => {
+            setSelectedType('');
+            setSelectedStatus('');
+            setSearchTerm('');
+            setCurrentDateFrom(startOfDay(subDays(new Date(), 30)));
+            setCurrentDateTo(endOfDay(new Date()));
+          }}
+          advancedFiltersContent={
             <div className="space-y-6">
-              {/* Date Range Filter */}
               <DateRangeFilter
                 dateFrom={currentDateFrom}
                 dateTo={currentDateTo}
@@ -525,125 +563,49 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
                 onDateToChange={(date: Date | null) => date && setCurrentDateTo(date)}
                 showUnitFilter={false}
                 showStatusFilter={false}
-                className="rounded-xl"
+                className="rounded-unit"
               />
-
-              {/* Additional Filter Controls - Estilo Agenda */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Type Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Tipo de Registro</label>
-                  <select
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Select
+                    label="Tipo de Registro"
+                    options={[
+                      { value: '', label: 'Todos los tipos' },
+                      { value: 'sale', label: 'Ventas' },
+                      { value: 'appointment', label: 'Citas' },
+                      { value: 'client', label: 'Clientes' },
+                      { value: 'product', label: 'Productos' },
+                      { value: 'commission', label: 'Comisiones' },
+                      { value: 'cash-register', label: 'Cajas' },
+                    ]}
                     value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  >
-                    <option value="">Todos los tipos</option>
-                    <option value="sale">Ventas</option>
-                    <option value="appointment">Citas</option>
-                    <option value="client">Clientes</option>
-                    <option value="product">Productos</option>
-                    <option value="commission">Comisiones</option>
-                    <option value="cash-register">Cajas</option>
-                  </select>
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedType(e.target.value)}
+                  />
                 </div>
-
-                {/* Status Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Estado</label>
-                  <select
+                <div>
+                  <Select
+                    label="Estado"
+                    options={[
+                      { value: '', label: 'Todos los estados' },
+                      { value: 'OPEN', label: 'Abierto' },
+                      { value: 'CLOSED', label: 'Cerrado' },
+                      { value: 'PENDING', label: 'Pendiente' },
+                      { value: 'PAID', label: 'Pagado' },
+                      { value: 'CANCELLED', label: 'Cancelado' },
+                      { value: 'COMPLETED', label: 'Completado' },
+                      { value: 'SCHEDULED', label: 'Programado' },
+                    ]}
                     value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="OPEN">Abierto</option>
-                    <option value="CLOSED">Cerrado</option>
-                    <option value="PENDING">Pendiente</option>
-                    <option value="PAID">Pagado</option>
-                    <option value="CANCELLED">Cancelado</option>
-                    <option value="COMPLETED">Completado</option>
-                    <option value="SCHEDULED">Programado</option>
-                  </select>
-                </div>
-
-                {/* Search Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Búsqueda</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-[var(--unit-text-muted)]" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar por título, cliente, empleado..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
-                    />
-                    {searchTerm && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchTerm('')}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--unit-accent)] text-white hover:bg-[var(--unit-accent)]/80 transition-colors">
-                          <X className="h-3 w-3" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatus(e.target.value)}
+                  />
                 </div>
               </div>
-
-              {/* Enhanced Active Filters Summary */}
-              {(selectedType || selectedStatus || searchTerm || activeUnit) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedType && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
-                            Tipo: {selectedType === 'sale' ? 'Ventas' : selectedType === 'appointment' ? 'Citas' : selectedType === 'client' ? 'Clientes' : selectedType === 'product' ? 'Productos' : selectedType === 'commission' ? 'Comisiones' : 'Cajas'}
-                          </span>
-                        )}
-                        {selectedStatus && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 border border-purple-200">
-                            Estado: {selectedStatus === 'OPEN' ? 'Abierto' : selectedStatus === 'CLOSED' ? 'Cerrado' : selectedStatus === 'PENDING' ? 'Pendiente' : selectedStatus === 'PAID' ? 'Pagado' : selectedStatus === 'CANCELLED' ? 'Cancelado' : selectedStatus === 'COMPLETED' ? 'Completado' : 'Programado'}
-                          </span>
-                        )}
-                        {searchTerm && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                            Búsqueda: {searchTerm}
-                          </span>
-                        )}
-                        {activeUnit && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                            Unidad: {activeUnit === 'SPA' ? 'SPA' : 'Barbería'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedType('');
-                        setSelectedStatus('');
-                        setSearchTerm('');
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpiar filtros
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
-          )}
-        </div>
-                {/* Enhanced Results Table - Premium Glassmorphism como Agenda */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+          }
+        />
+
+        {/* Enhanced Results Table - Premium Glassmorphism como Agenda */}
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg p-6">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5">
             <div className="h-full w-full bg-repeat" style={{
@@ -653,11 +615,11 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
           
           <div className="relative">
             {/* Premium Table Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+            <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                    <FileText className="h-5 w-5 text-white" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                    <FileText className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-[var(--unit-text)]">Resultados Detallados</h3>
@@ -665,7 +627,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/20 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-sm">
+                  <span className="inline-flex items-center rounded-full bg-[var(--unit-accent)]/15 px-3 py-1.5 text-sm font-bold text-[var(--unit-accent)] border border-[var(--unit-accent)]/30 shadow-unit-sm">
                     {data.length} registros
                   </span>
                 </div>
@@ -692,7 +654,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
             </div>
             
             {/* Enhanced DataTable Container */}
-            <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
+            <div className="relative overflow-hidden rounded-unit border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
               <DataTable
                 columns={columns}
                 data={data}
@@ -710,7 +672,7 @@ Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}
         </div>
 
         {/* Period Info - Premium Footer */}
-        <div className="relative overflow-hidden rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4 text-center">
+        <div className="relative overflow-hidden rounded-unit border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4 text-center">
           <div className="flex items-center justify-center gap-2 text-sm text-[var(--unit-text-muted)]">
             <Calendar className="h-4 w-4" />
             <span className="font-medium">Período:</span>

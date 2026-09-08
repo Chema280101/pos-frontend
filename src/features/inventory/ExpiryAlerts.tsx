@@ -84,7 +84,7 @@ export function ExpiryAlerts(): JSX.Element {
                 Sistema de Alertas
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Alertas de Vencimiento</h1>
+            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-unit">Alertas de Vencimiento</h1>
             <p className="text-[var(--unit-text-muted)]">
               Control de productos próximos a vencer
             </p>
@@ -119,7 +119,7 @@ export function ExpiryAlerts(): JSX.Element {
                 Sistema de Alertas
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">Alertas de Vencimiento</h1>
+            <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-unit">Alertas de Vencimiento</h1>
             <p className="text-[var(--unit-text-muted)]">
               Control de productos próximos a vencer
             </p>
@@ -129,14 +129,14 @@ export function ExpiryAlerts(): JSX.Element {
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button
               onClick={() => refetch()}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg border-2 border-blue-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-unit bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-unit hover:shadow-unit transition-all active:scale-[0.98]"
             >
               <RefreshCw className="h-5 w-5" />
               Actualizar Alertas
             </button>
             <button
               onClick={() => window.location.href = '/inventory/products'}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--unit-accent)] to-[var(--unit-primary)] text-white font-bold shadow-lg border-2 border-[var(--unit-accent)]/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white font-bold shadow-unit hover:shadow-unit transition-all active:scale-[0.98]"
             >
               <Package className="h-5 w-5" />
               Ver Productos
@@ -144,14 +144,14 @@ export function ExpiryAlerts(): JSX.Element {
           </div>
         </div>
 
-        {/* Enhanced Alerts Filters - Exacto estilo InventoryPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 mb-8">
+        {/* Enhanced Alerts Filters */}
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6 mb-8">
           {/* Filter Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+          <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Filter className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit">
+                  <Filter className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--unit-text)]">Filtros de Alertas</h3>
@@ -160,7 +160,7 @@ export function ExpiryAlerts(): JSX.Element {
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--unit-border)]/30 bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-border)]/20 text-[var(--unit-text)] font-semibold text-sm transition-all"
               >
                 {showFilters ? (
                   <>
@@ -186,7 +186,7 @@ export function ExpiryAlerts(): JSX.Element {
                   <label className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Tipo de Alerta</label>
                   <select
                     value={alertType}
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                    className="w-full rounded-unit border border-[var(--unit-border)]/60 px-4 py-2.5 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all cursor-pointer"
                     onChange={(e) => setAlertType(e.target.value)}
                   >
                     <option value="all">Todas las alertas</option>
@@ -208,7 +208,7 @@ export function ExpiryAlerts(): JSX.Element {
                       placeholder="Buscar por nombre de producto..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 pl-12 pr-12 py-3 text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
+                      className="w-full rounded-unit border border-[var(--unit-border)]/60 pl-11 pr-11 py-2.5 text-sm text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all placeholder:text-[var(--unit-text-muted)]/50"
                     />
                     {search && (
                       <button
@@ -227,7 +227,7 @@ export function ExpiryAlerts(): JSX.Element {
 
               {/* Active Filters Summary */}
               {(alertType !== 'all' || search) && (
-                <div className="rounded-xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] p-4">
+                <div className="rounded-unit border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[var(--unit-text)] uppercase tracking-wider">Filtros activos:</span>
@@ -251,7 +251,7 @@ export function ExpiryAlerts(): JSX.Element {
                         setAlertType('all');
                         setSearch('');
                       }}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-xl border-2 border-[var(--unit-accent)]/50 transition-all"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--unit-accent)] hover:bg-[var(--unit-accent)] hover:text-white rounded-unit border border-[var(--unit-accent)]/50 transition-all"
                     >
                       <X className="h-4 w-4" />
                       Limpiar filtros
@@ -263,21 +263,21 @@ export function ExpiryAlerts(): JSX.Element {
           )}
         </div>
 
-        {/* Alerts Table - Exacto estilo InventoryPage */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6">
+        {/* Alerts Table */}
+        <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit p-6">
           {/* Table Header */}
-          <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
+          <div className="bg-[var(--unit-surface-elevated)] px-6 py-4 border-b border-[var(--unit-border)]/30 -mx-6 -mt-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <AlertTriangle className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-rose-600 text-white shadow-unit">
+                  <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--unit-text)]">Alertas Activas</h3>
                   <p className="text-sm text-[var(--unit-text-muted)]">Productos que requieren atención</p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-full bg-red-500/20 px-3 py-1.5 text-sm font-bold text-red-700 border border-red-300/30 shadow-sm">
+              <span className="inline-flex items-center rounded-full bg-rose-500/15 px-3 py-1.5 text-sm font-bold text-rose-700 dark:text-rose-300 border border-rose-300/30 shadow-unit-sm">
                 {alerts.length} alertas
               </span>
             </div>
@@ -303,13 +303,13 @@ export function ExpiryAlerts(): JSX.Element {
                   <div
                     key={p.id}
                     className={cn(
-                      'relative overflow-hidden rounded-xl border-2 p-6 hover:shadow-lg transition-all duration-300 group',
+                      'relative overflow-hidden rounded-unit border-2 p-6 hover:shadow-unit transition-all duration-300 group',
                       isCritical
                         ? 'border-red-500/50 bg-gradient-to-br from-red-50/95 to-red-100/85'
                         : 'border-amber-500/50 bg-gradient-to-br from-amber-50/95 to-amber-100/85'
                     )}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+                    <div className="absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity rounded-unit"
                       style={{
                         backgroundImage: isCritical 
                           ? `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23EF4444' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
@@ -320,7 +320,7 @@ export function ExpiryAlerts(): JSX.Element {
                     <div className="relative flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className={cn(
-                          'flex h-12 w-12 items-center justify-center rounded-xl shadow-lg',
+                          'flex h-12 w-12 items-center justify-center rounded-unit shadow-unit',
                           isCritical ? 'bg-red-500' : 'bg-amber-500'
                         )}>
                           <AlertTriangle className="h-6 w-6 text-white" />

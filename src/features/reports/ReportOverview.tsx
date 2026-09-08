@@ -74,26 +74,26 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
         {/* Left Column */}
         <div className="space-y-6">
           {/* Sales Preview - Premium */}
-          <div className="relative overflow-hidden rounded-xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 hover:shadow-lg transition-all duration-300 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-100/50 to-emerald-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+          <div className="relative overflow-hidden rounded-unit border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 hover:shadow-unit transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-100/50 to-emerald-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit"></div>
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit-lg bg-emerald-500/20 border border-emerald-300">
                     <TrendingUp className="h-4 w-4 text-emerald-600" />
                   </div>
                   <h3 className="text-lg font-bold text-emerald-900">Ventas</h3>
                 </div>
                 <Link
                   href="/reports/sales"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-emerald-700 bg-white rounded-full border border-emerald-300 hover:bg-emerald-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-emerald-700 bg-[var(--unit-surface-elevated)] rounded-full border border-emerald-300 hover:bg-emerald-50 transition-colors"
                 >
                   Ver todo
                   <TrendingUp className="h-3 w-3" />
                 </Link>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-unit">
                   <TrendingUp className="h-6 w-6 text-white" />
                 </div>
                 <div>
@@ -105,26 +105,26 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
           </div>
 
           {/* Appointments Preview - Premium */}
-          <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-50 to-blue-100 p-6 hover:shadow-lg transition-all duration-300 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-blue-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+          <div className="relative overflow-hidden rounded-unit border-2 border-blue-500/30 bg-gradient-to-br from-blue-50 to-blue-100 p-6 hover:shadow-unit transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-blue-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit"></div>
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20 border border-blue-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit-lg bg-blue-500/20 border border-blue-300">
                     <Calendar className="h-4 w-4 text-blue-600" />
                   </div>
                   <h3 className="text-lg font-bold text-blue-900">Citas</h3>
                 </div>
                 <Link
                   href="/reports/appointments"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-blue-700 bg-white rounded-full border border-blue-300 hover:bg-blue-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-blue-700 bg-[var(--unit-surface-elevated)] rounded-full border border-blue-300 hover:bg-blue-50 transition-colors"
                 >
                   Ver todo
                   <Calendar className="h-3 w-3" />
                 </Link>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-blue-500 to-blue-600 shadow-unit">
                   <Calendar className="h-6 w-6 text-white" />
                 </div>
                 <div>
@@ -136,26 +136,26 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
           </div>
 
           {/* Clients Preview - Premium */}
-          <div className="relative overflow-hidden rounded-xl border-2 border-purple-500/30 bg-gradient-to-br from-purple-50 to-purple-100 p-6 hover:shadow-lg transition-all duration-300 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+          <div className="relative overflow-hidden rounded-unit border-2 border-purple-500/30 bg-gradient-to-br from-purple-50 to-purple-100 p-6 hover:shadow-unit transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-100/50 to-purple-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit"></div>
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/20 border border-purple-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit-lg bg-purple-500/20 border border-purple-300">
                     <Users className="h-4 w-4 text-purple-600" />
                   </div>
                   <h3 className="text-lg font-bold text-purple-900">Clientes</h3>
                 </div>
                 <Link
                   href="/reports/clients"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-purple-700 bg-white rounded-full border border-purple-300 hover:bg-purple-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-purple-700 bg-[var(--unit-surface-elevated)] rounded-full border border-purple-300 hover:bg-purple-50 transition-colors"
                 >
                   Ver todo
                   <Users className="h-3 w-3" />
                 </Link>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-purple-500 to-purple-600 shadow-unit">
                   <Users className="h-6 w-6 text-white" />
                 </div>
                 <div>
@@ -170,26 +170,26 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
         {/* Right Column */}
         <div className="space-y-6">
           {/* Top Service - Premium */}
-          <div className="relative overflow-hidden rounded-xl border-2 border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 hover:shadow-lg transition-all duration-300 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-100/50 to-indigo-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+          <div className="relative overflow-hidden rounded-unit border-2 border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 hover:shadow-unit transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-100/50 to-indigo-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit"></div>
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 border border-indigo-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit-lg bg-indigo-500/20 border border-indigo-300">
                     <Package className="h-4 w-4 text-indigo-600" />
                   </div>
                   <h3 className="text-lg font-bold text-indigo-900">Servicio Top</h3>
                 </div>
                 <Link
                   href="/reports/services"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-indigo-700 bg-white rounded-full border border-indigo-300 hover:bg-indigo-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-indigo-700 bg-[var(--unit-surface-elevated)] rounded-full border border-indigo-300 hover:bg-indigo-50 transition-colors"
                 >
                   Ver servicios
                   <Package className="h-3 w-3" />
                 </Link>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-unit">
                   <Package className="h-6 w-6 text-white" />
                 </div>
                 <div>
@@ -201,26 +201,26 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
           </div>
 
           {/* Top Employee - Premium */}
-          <div className="relative overflow-hidden rounded-xl border-2 border-amber-500/30 bg-gradient-to-br from-amber-50 to-amber-100 p-6 hover:shadow-lg transition-all duration-300 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+          <div className="relative overflow-hidden rounded-unit border-2 border-amber-500/30 bg-gradient-to-br from-amber-50 to-amber-100 p-6 hover:shadow-unit transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-amber-200/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-unit"></div>
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 border border-amber-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit-lg bg-amber-500/20 border border-amber-300">
                     <Calculator className="h-4 w-4 text-amber-600" />
                   </div>
                   <h3 className="text-lg font-bold text-amber-900">Empleado Top</h3>
                 </div>
                 <Link
                   href="/reports/commissions"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-amber-700 bg-white rounded-full border border-amber-300 hover:bg-amber-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-amber-700 bg-[var(--unit-surface-elevated)] rounded-full border border-amber-300 hover:bg-amber-50 transition-colors"
                 >
                   Ver comisiones
                   <Calculator className="h-3 w-3" />
                 </Link>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-gradient-to-br from-amber-500 to-amber-600 shadow-unit">
                   <Calculator className="h-6 w-6 text-white" />
                 </div>
                 <div>
@@ -233,13 +233,13 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
 
           {/* Inventory Alert - Premium */}
           <div className={cn(
-            'relative overflow-hidden rounded-xl border-2 p-6 hover:shadow-lg transition-all duration-300 group',
+            'relative overflow-hidden rounded-unit border-2 p-6 hover:shadow-unit transition-all duration-300 group',
             overviewStats.lowStockProducts > 0 
               ? 'border-red-500/30 bg-gradient-to-br from-red-50 to-red-100' 
               : 'border-green-500/30 bg-gradient-to-br from-green-50 to-green-100'
           )}>
             <div className={cn(
-              'absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity rounded-xl',
+              'absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity rounded-unit',
               overviewStats.lowStockProducts > 0 
                 ? 'from-red-100/50 to-red-200/50' 
                 : 'from-green-100/50 to-green-200/50'
@@ -248,7 +248,7 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-lg border',
+                    'flex h-8 w-8 items-center justify-center rounded-unit-lg border',
                     overviewStats.lowStockProducts > 0 
                       ? 'bg-red-500/20 border-red-300' 
                       : 'bg-green-500/20 border-green-300'
@@ -268,8 +268,8 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
                   className={cn(
                     'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold rounded-full border hover:transition-colors',
                     overviewStats.lowStockProducts > 0 
-                      ? 'text-red-700 bg-white border-red-300 hover:bg-red-50' 
-                      : 'text-green-700 bg-white border-green-300 hover:bg-green-50'
+                      ? 'text-red-700 bg-[var(--unit-surface-elevated)] border-red-300 hover:bg-red-50' 
+                      : 'text-green-700 bg-[var(--unit-surface-elevated)] border-green-300 hover:bg-green-50'
                   )}
                 >
                   Ver inventario
@@ -281,7 +281,7 @@ export function ReportOverview({ unit, dateFrom, dateTo }: ReportOverviewProps):
                 overviewStats.lowStockProducts > 0 && 'text-red-600'
               )}>
                 <div className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-xl shadow-lg',
+                  'flex h-12 w-12 items-center justify-center rounded-unit shadow-unit',
                   overviewStats.lowStockProducts > 0 
                     ? 'bg-gradient-to-br from-red-500 to-red-600' 
                     : 'bg-gradient-to-br from-green-500 to-green-600'

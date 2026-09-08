@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui';
+import { Button, Input, Textarea } from '@/components/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { t } from '@/lib/uiTranslations';
 import { z } from 'zod';
@@ -165,7 +165,7 @@ export function SupplierForm() {
             <p className="text-[var(--unit-text-muted)] mb-6">El proveedor que intentas editar no existe o ha sido eliminado.</p>
             <button
               onClick={() => router.push('/inventory/suppliers')}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--unit-accent)] px-4 py-2 text-white font-medium hover:bg-[var(--unit-primary)] transition-colors"
+              className="inline-flex items-center gap-2 rounded-unit bg-[var(--unit-accent)] px-4 py-2 text-white font-medium hover:bg-[var(--unit-primary)] transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               Volver a proveedores
@@ -197,56 +197,55 @@ export function SupplierForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-2xl mx-auto p-6">
-        {/* Enhanced Header - Exacto estilo ClientForm */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-            <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-            <span className="text-sm font-medium text-[var(--unit-text)]">
-              {isEdit ? 'Modo edición' : 'Nuevo registro'}
-            </span>
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit-sm shrink-0">
+              {isEdit ? <Edit className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                  {isEdit ? 'Edición' : 'Nuevo'}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--unit-text)]">
+                {isEdit ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+              </h1>
+              <p className="text-xs sm:text-sm font-medium text-[var(--unit-text-muted)] mt-0.5">
+                Gestión de Inventario
+              </p>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
-            {isEdit ? 'Editar proveedor' : 'Nuevo proveedor'}
-          </h1>
-          <p className="text-[var(--unit-text-muted)]">
-            {isEdit ? 'Modifica la información del proveedor' : 'Registra un nuevo proveedor en el sistema'}
-          </p>
+
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="self-start sm:self-auto px-5 py-2 rounded-full border border-[var(--unit-border)]/60 text-sm font-bold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] shadow-sm transition-all"
+          >
+            Cancelar
+          </button>
         </div>
 
-        {/* Enhanced Form Container - Exacto estilo ClientForm */}
+        {/* Enhanced Form Container */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl">
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
             {/* Form Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  {isEdit ? (
-                    <Edit className="h-5 w-5 text-white" />
-                  ) : (
-                    <Plus className="h-5 w-5 text-white" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Información del proveedor</h2>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Completa todos los campos requeridos</p>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 text-[var(--unit-accent)] border-b border-[var(--unit-border)]/30 pb-3">
+              <Building2 className="h-4 w-4" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Información del proveedor
+              </h2>
             </div>
 
             {/* Enhanced Error Alert */}
             {errors.root && (
-              <div className="mx-6 mt-4 rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
+              <div className="mx-6 mt-4 rounded-unit border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-red-500 shadow-unit">
                     <AlertCircle className="h-4 w-4 text-white" />
                   </div>
                   <p className="font-medium text-red-800">{errors.root.message}</p>
@@ -254,140 +253,76 @@ export function SupplierForm() {
               </div>
             )}
 
-            {/* Enhanced Form Content */}
-            <div className="p-6 space-y-6">
-              {/* Basic Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información básica</h4>
-                </div>
-                
-                {/* Enhanced Name Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre del proveedor *</label>
-                  <input 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                    placeholder="Ej: Distribuidora de Productos S.A."
-                    {...register('name')} 
-                  />
-                  {errors.name && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.name.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Enhanced Contact Name Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre de contacto</label>
-                  <input 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                    placeholder="Ej: Juan Pérez"
-                    {...register('contactName')} 
-                  />
-                  {errors.contactName && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.contactName.message}
-                    </p>
-                  )}
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Input
+                  label="Nombre del proveedor"
+                  placeholder="Ej: Distribuidora de Productos S.A."
+                  error={errors.name?.message}
+                  required
+                  {...register('name')}
+                />
               </div>
 
-              {/* Contact Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Phone className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Información de contacto</h4>
-                </div>
-
-                {/* Enhanced Phone Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Teléfono</label>
-                  <input
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    placeholder="Ej: +51 987 654 321"
-                    {...register('phone')}
-                  />
-                  {errors.phone && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.phone.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Enhanced Email Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Email *</label>
-                  <input
-                    type="email"
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
-                    placeholder="Ej: contacto@proveedor.com"
-                    {...register('email')}
-                  />
-                  {errors.email && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
+              <div className="sm:col-span-2">
+                <Input
+                  label="Nombre de contacto"
+                  placeholder="Ej: Juan Pérez"
+                  error={errors.contactName?.message}
+                  {...register('contactName')}
+                />
               </div>
 
-              {/* Location Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="h-4 w-4 text-[var(--unit-accent)]" />
-                  <h4 className="text-sm font-bold text-[var(--unit-text)] uppercase tracking-wider">Ubicación</h4>
-                </div>
+              <div>
+                <Input
+                  label="Teléfono"
+                  placeholder="Ej: +51 987 654 321"
+                  error={errors.phone?.message}
+                  {...register('phone')}
+                />
+              </div>
 
-                {/* Enhanced Address Field */}
-                <div>
-                  <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Dirección</label>
-                  <textarea 
-                    className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
-                    rows={3}
-                    placeholder="Ej: Av. Principal 123, Lima, Perú"
-                    {...register('address')} 
-                  />
-                  {errors.address && (
-                    <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {errors.address.message}
-                    </p>
-                  )}
-                </div>
+              <div>
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="Ej: contacto@proveedor.com"
+                  error={errors.email?.message}
+                  {...register('email')}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <Textarea
+                  label="Dirección"
+                  rows={2}
+                  placeholder="Ej: Av. Principal 123, Lima, Perú"
+                  error={errors.address?.message}
+                  {...register('address')}
+                />
               </div>
             </div>
+          </div>
 
-            {/* Enhanced Action Buttons - Exacto estilo ClientForm */}
-            <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
-              <div className="flex gap-4">
-                <Button 
-                  type="submit" 
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  <Save className="h-4 w-4" />
-                  {isEdit ? 'Actualizar proveedor' : 'Guardar proveedor'}
-                </Button>
-                <button 
-                  type="button" 
-                  onClick={() => router.back()} 
-                  className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  <span className="flex items-center gap-2">
-                    <X className="h-4 w-4" />
-                    Cancelar
-                  </span>
-                </button>
-              </div>
-            </div>
+          {/* Action Bar */}
+          <div className="flex gap-4 pt-4 mt-6 border-t border-[var(--unit-border)]/40">
+            <button 
+              type="button" 
+              onClick={() => router.back()} 
+              className="px-6 py-2.5 rounded-full font-bold text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/60 transition-all shadow-sm"
+            >
+              Cancelar
+            </button>
+            <Button 
+              type="submit" 
+              variant="primary"
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 rounded-full font-bold shadow-unit-sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isEdit ? 'Actualizar Proveedor' : 'Guardar Proveedor'}
+            </Button>
           </div>
         </form>
       </div>

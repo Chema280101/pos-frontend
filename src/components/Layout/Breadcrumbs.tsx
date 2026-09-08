@@ -22,9 +22,9 @@ export function Breadcrumbs({ items }: BreadcrumbsProps): JSX.Element {
             <ChevronRight className="h-4 w-4 text-[var(--unit-text-muted)]/50" aria-hidden />
           )}
           {item.href ? (
-            <Link 
-              href={item.href} 
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--unit-border)]/30 bg-[var(--unit-surface)]/50 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all duration-200 group"
+            <Link
+              href={item.href}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-unit border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all duration-200 group"
             >
               {item.icon && (
                 <item.icon className="h-4 w-4 text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)] transition-colors" />
@@ -34,7 +34,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps): JSX.Element {
               </span>
             </Link>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border-2 border-[var(--unit-accent)]/30 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-unit border-2 border-[var(--unit-accent)]/30 bg-[var(--unit-accent)]/10">
               {item.icon && (
                 <item.icon className="h-4 w-4 text-[var(--unit-accent)]" />
               )}

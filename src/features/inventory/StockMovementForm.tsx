@@ -46,69 +46,63 @@ export function StockMovementForm(): JSX.Element {
   const canSubmit = productId && Number(quantity) > 0 && reason.trim() && selectedProduct && selectedProduct.stock >= Number(quantity);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-2xl mx-auto p-6">
-        {/* Enhanced Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-            <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></div>
-            <span className="text-sm font-medium text-[var(--unit-text)]">
-              Movimiento de inventario
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Top Header */}
+        <div className="border-b border-[var(--unit-border)]/40 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)] text-xs font-bold">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+              Inventario & Insumos
             </span>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
-            Uso Interno
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unit-text)] tracking-tight">
+            Registrar Uso Interno
           </h1>
-          <p className="text-[var(--unit-text-muted)]">
-            Registra el consumo interno de productos y servicios
+          <p className="text-xs sm:text-sm text-[var(--unit-text-muted)]">
+            Salida de productos e insumos para consumo operativo y servicios
           </p>
         </div>
 
-        {/* Enhanced Form Container */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl">
+        {/* Form Container */}
+        <div className="rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] shadow-unit overflow-hidden">
           {/* Form Header */}
-          <div className="relative bg-gradient-to-r from-orange-500/10 to-orange-600/10 px-6 py-4 border-b border-orange-500/30">
+          <div className="bg-[var(--unit-surface)] px-6 py-4 border-b border-[var(--unit-border)]/40">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                <Home className="h-5 w-5 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-unit bg-amber-500/10 text-amber-600 font-bold">
+                <Home className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[var(--unit-text)]">Información de uso interno</h2>
-                <p className="text-sm text-[var(--unit-text-muted)]">Registra el consumo del producto</p>
+                <h2 className="text-base font-bold text-[var(--unit-text)]">Datos del Consumo</h2>
+                <p className="text-xs text-[var(--unit-text-muted)]">Selecciona el producto y especifica el motivo</p>
               </div>
             </div>
           </div>
 
-          {/* Enhanced Error Alert */}
+          {/* Error Alert */}
           {mutation.error && (
-            <div className="mx-6 mt-4 rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
+            <div className="mx-6 mt-4 rounded-unit border border-rose-500/30 bg-rose-500/10 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
-                  <AlertCircle className="h-4 w-4 text-white" />
-                </div>
-                <p className="font-medium text-red-800">
-                  Error al registrar uso
+                <AlertCircle className="h-5 w-5 text-rose-600" />
+                <p className="text-xs font-semibold text-rose-600">
+                  Error al registrar el uso interno. Por favor verifica el stock disponible.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Enhanced Form Content */}
-          <div className="p-6 space-y-6">
-            {/* Enhanced Product Field */}
-            <div>
-              <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Producto *</label>
+          {/* Form Content */}
+          <div className="p-6 space-y-5">
+            {/* Product Field */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">
+                Producto *
+              </label>
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
+                className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3.5 py-2.5 text-xs sm:text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 transition-all"
               >
                 <option value="">Seleccionar producto...</option>
                 {(products ?? []).map((p) => (
@@ -118,93 +112,69 @@ export function StockMovementForm(): JSX.Element {
                 ))}
               </select>
               {selectedProduct && (
-                <div className="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <p className="text-sm text-orange-700 font-medium">
-                    📦 Stock disponible: {selectedProduct.stock} {selectedProduct.measureUnit || 'unidades'}
-                  </p>
-                </div>
+                <p className="text-[11px] text-[var(--unit-text-muted)] pl-1">
+                  Stock actual disponible: <span className="font-bold text-[var(--unit-accent)]">{selectedProduct.stock} {selectedProduct.measureUnit ?? 'unidades'}</span>
+                </p>
               )}
             </div>
 
-            {/* Enhanced Quantity Field */}
-            <div>
-              <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Cantidad *</label>
+            {/* Quantity Field */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">
+                Cantidad a Consumir *
+              </label>
               <input
                 type="number"
                 min="1"
+                max={selectedProduct ? selectedProduct.stock : undefined}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Ej: 5"
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
+                placeholder="Ej. 1"
+                className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3.5 py-2.5 text-xs sm:text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 transition-all"
               />
-              {selectedProduct && quantity && Number(quantity) > 0 && (
-                <>
-                  {Number(quantity) > selectedProduct.stock && (
-                    <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                      <p className="text-sm text-red-700 font-medium flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
-                        ❌ Stock insuficiente. Máximo disponible: {selectedProduct.stock} {selectedProduct.measureUnit || 'unidades'}
-                      </p>
-                    </div>
-                  )}
-                  {Number(quantity) <= selectedProduct.stock && (
-                    <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-700 font-medium">
-                        📉 Nuevo stock: {selectedProduct.stock - Number(quantity)} {selectedProduct.measureUnit || 'unidades'}
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
 
-            {/* Enhanced Reason Field */}
-            <div>
-              <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Motivo del uso *</label>
+            {/* Reason Field */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[var(--unit-text-muted)] uppercase tracking-wider">
+                Motivo / Justificación *
+              </label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Describe el motivo del consumo interno..."
-                className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all resize-none"
-                rows={4}
+                rows={3}
+                placeholder="Ej. Consumo en cabina estética, limpieza de sillones, prueba técnica..."
+                className="w-full rounded-unit border border-[var(--unit-border)]/60 px-3.5 py-2.5 text-xs sm:text-sm text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 transition-all resize-none"
               />
-              <p className="mt-2 text-xs text-[var(--unit-text-muted)] flex items-center gap-1">
-                <FileText className="h-3 w-3" />
-                Ej: Uso en masaje - cita completada, Consumo en barbería, Mantenimiento de equipo, etc.
-              </p>
             </div>
-          </div>
 
-          {/* Enhanced Action Buttons */}
-          <div className="px-6 py-4 bg-gradient-to-r from-orange-50 to-orange-100 border-t border-orange-500/30">
-            <div className="flex gap-4">
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-3 border-t border-[var(--unit-border)]/30">
               <button 
                 type="button" 
                 onClick={() => mutation.mutate()} 
                 disabled={!canSubmit || mutation.isPending} 
-                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold shadow-lg border-2 border-orange-500/50 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs sm:text-sm font-bold shadow-unit transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex-1"
               >
                 {mutation.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
+                  <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Registrando uso...
-                  </span>
+                    <span>Registrando uso...</span>
+                  </>
                 ) : (
-                  <span className="flex items-center justify-center gap-2">
+                  <>
                     <Save className="h-4 w-4" />
-                    Registrar uso interno
-                  </span>
+                    <span>Registrar Uso Interno</span>
+                  </>
                 )}
               </button>
               <button 
                 type="button" 
                 onClick={() => window.history.back()} 
-                className="px-6 py-3 rounded-xl border-2 border-orange-500/50 text-orange-600 font-bold bg-white hover:bg-orange-500 hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs sm:text-sm font-semibold text-[var(--unit-text)] bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] transition-all shadow-unit-sm"
               >
-                <span className="flex items-center gap-2">
-                  <X className="h-4 w-4" />
-                  Cancelar
-                </span>
+                <X className="h-4 w-4" />
+                <span>Cancelar</span>
               </button>
             </div>
           </div>

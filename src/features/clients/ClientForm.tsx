@@ -1,14 +1,15 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, useFormState } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { Select, UnsavedChangesModal } from '@/components/ui';
+import { Input, Select, Textarea, UnsavedChangesModal, Button } from '@/components/ui';
 import type { Client } from '../../types/client';
 import { useUnitStore } from '../../store/unitStore';
-import { Button } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import { 
   AlertCircle, 
@@ -19,15 +20,18 @@ import {
   Save, 
   X, 
   Info,
-  Loader2,
-  CheckCircle,
   Edit,
-  Plus
+  Plus,
+  User,
+  Phone,
+  Compass,
+  FileText
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
-  name: z.string().min(1, { message: "Este campo es requerido" }).max(200),
-  phone: z.string().min(1, { message: "Este campo es requerido" }).regex(/^[+]?[\d\s-]{9,}$/, { message: "Teléfono inválido" }),
+  name: z.string().min(1, { message: "El nombre es requerido" }).max(200),
+  phone: z.string().min(1, { message: "El teléfono es requerido" }).regex(/^[+]?[\d\s-]{9,}$/, { message: "Teléfono inválido (mínimo 9 dígitos)" }),
   gender: z.enum(['M', 'F', 'Otro']).optional().nullable(),
   howFoundUs: z.string().max(200).optional().nullable(),
   preferenceNotes: z.string().max(2000).optional().nullable(),
@@ -37,7 +41,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-interface ClientFormProps {
+export interface ClientFormProps {
   onClose?: () => void;
 }
 
@@ -51,7 +55,6 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const unit = (activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA');
 
-  // Query for services
   const { data: servicesResponse } = useQuery({
     queryKey: ['services', unit],
     queryFn: async () => {
@@ -59,11 +62,8 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
       return data;
     },
   });
-
-  // Extract services array from paginated response
   const services = Array.isArray(servicesResponse?.data) ? servicesResponse.data : Array.isArray(servicesResponse) ? servicesResponse : [];
 
-  // Query for products
   const { data: productsResponse } = useQuery({
     queryKey: ['inventory-products', unit],
     queryFn: async () => {
@@ -71,11 +71,8 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
       return data;
     },
   });
-
-  // Extract products array from paginated response
   const products = Array.isArray(productsResponse?.data) ? productsResponse.data : Array.isArray(productsResponse) ? productsResponse : [];
 
-  // Query for packages
   const { data: packagesResponse } = useQuery({
     queryKey: ['packages'],
     queryFn: async () => {
@@ -83,8 +80,6 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
       return data;
     },
   });
-
-  // Extract packages array from paginated response
   const packages = Array.isArray(packagesResponse?.data) ? packagesResponse.data : Array.isArray(packagesResponse) ? packagesResponse : [];
 
   const { data: client } = useQuery({
@@ -100,9 +95,9 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   const { data: phoneCheck } = useQuery({
     queryKey: ['check-phone', phoneToCheck, id],
     queryFn: async (): Promise<{ duplicate: boolean }> => {
-      const params = new URLSearchParams({ phone: phoneToCheck! });
-      if (isEdit && id) params.set('excludeId', id);
-      const { data } = await api.get<{ duplicate: boolean }>(`/api/clients/check-phone?${params}`);
+      const p = new URLSearchParams({ phone: phoneToCheck! });
+      if (isEdit && id) p.set('excludeId', id);
+      const { data } = await api.get<{ duplicate: boolean }>(`/api/clients/check-phone?${p}`);
       return data;
     },
     enabled: !!phoneToCheck && phoneToCheck.trim().length >= 9,
@@ -131,29 +126,16 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingClose, setPendingClose] = useState<(() => void) | null>(null);
 
-  // ✅ Mejorar detección de cambios para manejar valores nulos/vacíos
   const hasChanges = 
     JSON.stringify(watchedValues) !== JSON.stringify(defaultValues) ||
     selectedItems.length > 0 ||
     Object.keys(checkedState).length > 0 ||
-    // Verificar si algún campo tiene un valor real
     (watchedValues.name && watchedValues.name.trim() !== '') ||
-    (watchedValues.phone && watchedValues.phone.trim() !== '') ||
-    (watchedValues.gender !== null) ||
-    (watchedValues.howFoundUs && watchedValues.howFoundUs.trim() !== '') ||
-    (watchedValues.preferenceNotes && watchedValues.preferenceNotes.trim() !== '') ||
-    (watchedValues.freeNotes && watchedValues.freeNotes.trim() !== '') ||
-    (watchedValues.usualProducts && watchedValues.usualProducts.trim() !== '');
+    (watchedValues.phone && watchedValues.phone.trim() !== '');
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
-    // Extract name from value (format: type:id:name)
     const name = value.split(':')[2];
-    
-    setCheckedState(prev => ({
-      ...prev,
-      [value]: checked
-    }));
-    
+    setCheckedState(prev => ({ ...prev, [value]: checked }));
     if (checked) {
       setSelectedItems(prev => [...prev, name]);
     } else {
@@ -165,22 +147,14 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
     if (hasChanges) {
       setPendingClose(() => {
         reset();
-        if (onClose) {
-          onClose();
-        } else {
-          // ✅ Si onClose no está definida, navegar hacia atrás
-          router.back();
-        }
+        if (onClose) onClose();
+        else router.back();
       });
       setShowUnsavedModal(true);
     } else {
       reset();
-      if (onClose) {
-        onClose();
-      } else {
-        // ✅ Si onClose no está definida, navegar hacia atrás
-        router.back();
-      }
+      if (onClose) onClose();
+      else router.back();
     }
   };
 
@@ -195,21 +169,13 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
   const handleCancelDiscard = () => {
     setShowUnsavedModal(false);
     setPendingClose(null);
-    reset(); // Resetear formulario a valores por defecto
-    if (onClose) {
-      onClose(); // ✅ Cerrar el formulario
-    }
   };
 
   useEffect(() => {
-    // Reset initialization flag when switching between edit/new
-    if (!isEdit) {
-      setIsInitialized(false);
-    }
+    if (!isEdit) setIsInitialized(false);
   }, [isEdit]);
 
   useEffect(() => {
-    // Update form value when selectedItems changes
     setValue('usualProducts', selectedItems.join(', '));
   }, [selectedItems, setValue]);
 
@@ -225,52 +191,30 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
         usualProducts: client.usualProducts ?? '',
       });
       
-      // Parse existing usualProducts and set checkbox values
       if (client.usualProducts) {
         const rawItems = client.usualProducts.split(',').map(item => item.trim());
         const itemNames: string[] = [];
-        
-        // Handle both old format (type:id:name) and new format (name)
         rawItems.forEach(item => {
           if (item.includes(':')) {
-            // Old format: type:id:name
-            const name = item.split(':')[2];
-            itemNames.push(name);
+            itemNames.push(item.split(':')[2]);
           } else {
-            // New format: just name
             itemNames.push(item);
           }
         });
-        
         setSelectedItems(itemNames);
         
-        // Find corresponding full values for checkboxes
         const newCheckedState: Record<string, boolean> = {};
-        
-        // Check services
         services.forEach((service: any) => {
-          if (itemNames.includes(service.name)) {
-            newCheckedState[`service:${service.id}:${service.name}`] = true;
-          }
+          if (itemNames.includes(service.name)) newCheckedState[`service:${service.id}:${service.name}`] = true;
         });
-        
-        // Check products
         products.forEach((product: any) => {
-          if (itemNames.includes(product.name)) {
-            newCheckedState[`product:${product.id}:${product.name}`] = true;
-          }
+          if (itemNames.includes(product.name)) newCheckedState[`product:${product.id}:${product.name}`] = true;
         });
-        
-        // Check packages
         packages.forEach((pkg: any) => {
-          if (itemNames.includes(pkg.name)) {
-            newCheckedState[`package:${pkg.id}:${pkg.name}`] = true;
-          }
+          if (itemNames.includes(pkg.name)) newCheckedState[`package:${pkg.id}:${pkg.name}`] = true;
         });
-        
         setCheckedState(newCheckedState);
       }
-      
       setIsInitialized(true);
     }
   }, [isEdit, client, reset, services, products, packages, isInitialized]);
@@ -282,7 +226,7 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      success('Cliente creado exitosamente');
+      success('Cliente registrado exitosamente');
       reset();
       router.replace(`/clients/${data.id}`);
     },
@@ -322,303 +266,248 @@ export function ClientForm({ onClose }: ClientFormProps): JSX.Element {
       usualProducts: selectedItems.length > 0 ? selectedItems.join(', ') : null,
     };
     
-    if (isEdit) {
-      updateMutation.mutate(payload);
-    } else {
-      createMutation.mutate(payload);
-    }
+    if (isEdit) updateMutation.mutate(payload);
+    else createMutation.mutate(payload);
   };
 
-  if (isEdit && !client && !createMutation.isPending) {
-    return <p className="p-6 text-[var(--unit-text)]">Cargando...</p>;
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--unit-surface)] via-[var(--unit-surface-elevated)] to-[var(--unit-surface)] relative">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="h-full w-full bg-repeat" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-      </div>
-      
-      <div className="relative max-w-2xl mx-auto p-6">
-        {/* Enhanced Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 mb-4">
-            <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse"></div>
-            <span className="text-sm font-medium text-[var(--unit-text)]">
-              {isEdit ? 'Modo edición' : 'Nuevo registro'}
-            </span>
+    <div className="min-h-screen bg-[var(--unit-surface)]">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--unit-border)]/40 pb-5">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-unit-sm shrink-0">
+              {isEdit ? <Edit className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--unit-accent)]/10 text-[var(--unit-accent)]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+                  {isEdit ? 'Edición' : 'Nuevo'}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--unit-text)]">
+                {isEdit ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
+              </h1>
+              <p className="text-xs sm:text-sm font-medium text-[var(--unit-text-muted)] mt-0.5">
+                Directorio de Clientes
+              </p>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--unit-text)] mb-2 drop-shadow-lg">
-            {isEdit ? 'Editar cliente' : 'Nuevo cliente'}
-          </h1>
-          <p className="text-[var(--unit-text-muted)]">
-            {isEdit ? 'Modifica la información del cliente' : 'Registra un nuevo cliente en el sistema'}
-          </p>
+
+          <button
+            type="button"
+            onClick={handleDrawerClose}
+            className="self-start sm:self-auto px-5 py-2 rounded-full border border-[var(--unit-border)]/60 text-sm font-bold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] shadow-sm transition-all"
+          >
+            Cancelar
+          </button>
         </div>
 
-        {/* Enhanced Form Container */}
+        {/* Error Alert */}
+        {errors.root && (
+          <div className="rounded-unit border border-red-500/30 bg-red-500/10 p-4 flex items-center gap-3 text-red-600 dark:text-red-400 text-sm">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <p className="font-medium">{errors.root.message}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-2xl">
-            {/* Form Header */}
-            <div className="relative bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 px-6 py-4 border-b border-[var(--unit-border)]/30">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  {isEdit ? (
-                    <Edit className="h-5 w-5 text-white" />
-                  ) : (
-                    <Plus className="h-5 w-5 text-white" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--unit-text)]">Información del cliente</h2>
-                  <p className="text-sm text-[var(--unit-text-muted)]">Completa todos los campos requeridos</p>
-                </div>
-              </div>
+          {/* Section: Contact Details */}
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
+            <div className="flex items-center gap-2 text-[var(--unit-accent)] border-b border-[var(--unit-border)]/30 pb-3">
+              <User className="h-4 w-4" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Datos de Contacto
+              </h2>
             </div>
 
-            {/* Enhanced Error Alert */}
-            {errors.root && (
-              <div className="mx-6 mt-4 rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-red-50 to-red-100 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 shadow-lg">
-                    <AlertCircle className="h-4 w-4 text-white" />
-                  </div>
-                  <p className="font-medium text-red-800">{errors.root.message}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Enhanced Form Content */}
-            <div className="p-6 space-y-6">
-              {/* Enhanced Name Field */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Nombre completo *</label>
-                <input 
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Input
+                  label="Nombre Completo"
                   placeholder="Ej: María González Rodríguez"
-                  {...register('name')} 
+                  error={errors.name?.message}
+                  required
+                  {...register('name')}
                 />
-                {errors.name && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.name.message}
-                  </p>
-                )}
               </div>
 
-              {/* Enhanced Phone Field */}
               <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Teléfono *</label>
-                <input
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all"
+                <Input
+                  label="Teléfono / WhatsApp"
                   placeholder="Ej: +58 412 123 4567"
+                  error={errors.phone?.message}
+                  required
+                  leftIcon={<Phone className="h-4 w-4" />}
                   {...register('phone', {
                     onBlur: (e) => setPhoneToCheck((e.target.value || '').trim() || null),
                   })}
                 />
-                {errors.phone && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.phone.message}
-                  </p>
-                )}
                 {phoneCheck?.duplicate && (
-                  <p className="mt-2 text-sm text-amber-600 font-medium flex items-center gap-1 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-                    <AlertCircle className="h-4 w-4" />
-                    Ya existe un cliente con este teléfono. Puedes continuar pero revisa duplicados.
-                  </p>
+                  <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1 bg-amber-500/10 p-2.5 rounded-unit border border-amber-500/30">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>Ya existe un cliente con este teléfono registrado.</span>
+                  </div>
                 )}
               </div>
 
-              {/* Enhanced Gender Field */}
               <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Género</label>
                 <Select
+                  label="Género"
                   options={[
-                    { value: '', label: '— Seleccionar —', disabled: true },
-                    { value: 'M', label: 'Masculino' },
+                    { value: '', label: '— Seleccionar género —' },
                     { value: 'F', label: 'Femenino' },
-                    { value: 'Otro', label: 'Otro' }
+                    { value: 'M', label: 'Masculino' },
+                    { value: 'Otro', label: 'Otro / Prefiero no decir' }
                   ]}
                   value={watch('gender') || ''}
                   onChange={(e: any) => setValue('gender', e.target.value === '' ? null : e.target.value)}
                 />
               </div>
 
-              {/* Enhanced How Found Us Field */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Cómo nos conoció</label>
-                <input 
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all" 
-                  placeholder="Ej: Instagram, recomendación de amiga, Google, etc."
-                  {...register('howFoundUs')} 
+              <div className="sm:col-span-2">
+                <Input
+                  label="¿Cómo nos conoció?"
+                  placeholder="Ej: Instagram, recomendación, Google Maps, volante, etc."
+                  leftIcon={<Compass className="h-4 w-4" />}
+                  {...register('howFoundUs')}
                 />
-              </div>
-
-              {/* Enhanced Preference Notes */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Notas de preferencias</label>
-                <textarea 
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
-                  rows={3} 
-                  placeholder="Ej: Prefiere corte corto, alérgica a tintes, le gusta el café, etc."
-                  {...register('preferenceNotes')} 
-                />
-              </div>
-
-              {/* Enhanced Free Notes */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Notas libres</label>
-                <textarea 
-                  className="w-full rounded-xl border-2 border-[var(--unit-border)]/50 px-4 py-3 text-[var(--unit-text)] bg-[var(--unit-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 focus:border-[var(--unit-accent)] transition-all resize-none" 
-                  rows={3} 
-                  placeholder="Ej: Siempre viene los sábados, cliente frecuente, prefiere horarios matutinos, etc."
-                  {...register('freeNotes')} 
-                />
-              </div>
-
-              {/* Enhanced Products Section */}
-              <div>
-                <label className="block text-sm font-bold text-[var(--unit-text)] mb-2">Productos y servicios habituales</label>
-                <div className="space-y-4 max-h-80 overflow-y-auto border-2 border-[var(--unit-border)]/50 rounded-xl p-4 bg-[var(--unit-surface)]">
-                  {/* Services */}
-                  {services.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-[var(--unit-text)] mb-3 uppercase tracking-wider flex items-center gap-2">
-                        <Scissors className="h-4 w-4" />
-                        Servicios
-                      </p>
-                      <div className="space-y-2">
-                        {services.map((service: any) => (
-                          <label key={service.id} className="flex items-center gap-3 p-3 rounded-lg border border-[var(--unit-border)]/30 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              value={`service:${service.id}:${service.name}`}
-                              checked={checkedState[`service:${service.id}:${service.name}`] || false}
-                              className="rounded-lg border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 w-5 h-5"
-                              style={{
-                                accentColor: 'var(--unit-accent)'
-                              }}
-                              onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
-                            />
-                            <span className="text-sm text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] font-medium">{service.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Products */}
-                  {products.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-[var(--unit-text)] mb-3 uppercase tracking-wider flex items-center gap-2">
-                        <ShoppingBag className="h-4 w-4" />
-                        Productos
-                      </p>
-                      <div className="space-y-2">
-                        {products
-                          .filter((product: any) => product.type === 'FOR_SALE' || product.type === 'BOTH')
-                          .map((product: any) => (
-                          <label key={product.id} className="flex items-center gap-3 p-3 rounded-lg border border-[var(--unit-border)]/30 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              value={`product:${product.id}:${product.name}`}
-                              checked={checkedState[`product:${product.id}:${product.name}`] || false}
-                              className="rounded-lg border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 w-5 h-5"
-                              style={{
-                                accentColor: 'var(--unit-accent)'
-                              }}
-                              onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
-                            />
-                            <span className="text-sm text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] font-medium">{product.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Packages */}
-                  {packages.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-[var(--unit-text)] mb-3 uppercase tracking-wider flex items-center gap-2">
-                        <Gift className="h-4 w-4" />
-                        Paquetes
-                      </p>
-                      <div className="space-y-2">
-                        {packages.map((pkg: any) => (
-                          <label key={pkg.id} className="flex items-center gap-3 p-3 rounded-lg border border-[var(--unit-border)]/30 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-surface-elevated)] transition-all cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              value={`package:${pkg.id}:${pkg.name}`}
-                              checked={checkedState[`package:${pkg.id}:${pkg.name}`] || false}
-                              className="rounded-lg border-2 border-[var(--unit-border)]/50 text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50 w-5 h-5"
-                              style={{
-                                accentColor: 'var(--unit-accent)'
-                              }}
-                              onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
-                            />
-                            <span className="text-sm text-[var(--unit-text)] group-hover:text-[var(--unit-accent)] font-medium">{pkg.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* If no items available */}
-                  {services.length === 0 && products.length === 0 && packages.length === 0 && (
-                    <div className="text-center py-8">
-                      <Package className="h-12 w-12 text-[var(--unit-text-muted)] mx-auto mb-3" />
-                      <p className="text-sm text-[var(--unit-text-muted)] font-medium">
-                        No hay servicios, productos o paquetes disponibles
-                      </p>
-                    </div>
-                  )}
-                </div>
-                {errors.usualProducts && (
-                  <p className="mt-2 text-sm text-red-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.usualProducts.message}
-                  </p>
-                )}
-                <p className="text-xs text-[var(--unit-text-muted)] mt-2 flex items-center gap-1">
-                  <Info className="h-4 w-4" />
-                  Selecciona los productos y servicios que este cliente suele solicitar
-                </p>
-              </div>
-            </div>
-
-            {/* Enhanced Action Buttons */}
-            <div className="px-6 py-4 bg-gradient-to-r from-[var(--unit-surface)] to-[var(--unit-surface-elevated)] border-t border-[var(--unit-border)]/30">
-              <div className="flex gap-4">
-                <Button 
-                  type="submit" 
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  <Save className="h-4 w-4" />
-                  Guardar cliente
-                </Button>
-                <button 
-                  type="button" 
-                  onClick={handleDrawerClose} 
-                  className="px-6 py-3 rounded-xl border-2 border-[var(--unit-accent)]/50 text-[var(--unit-accent)] font-bold bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all hover:shadow-lg active:scale-[0.98]"
-                >
-                  <span className="flex items-center gap-2">
-                    <X className="h-4 w-4" />
-                    Cancelar
-                  </span>
-                </button>
               </div>
             </div>
           </div>
+
+          {/* Section: Notes & Preferences */}
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
+            <div className="flex items-center gap-2 text-[var(--unit-accent)] border-b border-[var(--unit-border)]/30 pb-3">
+              <FileText className="h-4 w-4" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                Preferencias y Notas del Cliente
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Textarea
+                label="Notas de Preferencia"
+                placeholder="Ej: Prefiere corte degrafilado, sensible a tintes, prefiere té, etc."
+                rows={3}
+                {...register('preferenceNotes')}
+              />
+
+              <Textarea
+                label="Notas Libres / Observaciones"
+                placeholder="Ej: Frecuente los viernes por la tarde, cumpleañero en marzo, etc."
+                rows={3}
+                {...register('freeNotes')}
+              />
+            </div>
+          </div>
+
+          {/* Section: Habitual Items */}
+          <div className="rounded-unit-lg border border-[var(--unit-border)]/40 bg-[var(--unit-surface-elevated)]/40 backdrop-blur-md p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--unit-border)]/30 pb-3">
+              <div className="flex items-center gap-2 text-[var(--unit-accent)]">
+                <Scissors className="h-4 w-4" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">
+                  Servicios y Productos Habituales
+                </h2>
+              </div>
+              <span className="text-xs text-[var(--unit-text-muted)]">
+                {selectedItems.length} seleccionados
+              </span>
+            </div>
+
+            <div className="space-y-4 max-h-72 overflow-y-auto custom-scrollbar p-1">
+              {services.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                    <Scissors className="h-3.5 w-3.5" />
+                    Servicios frecuentes
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {services.map((service: any) => (
+                      <label 
+                        key={service.id} 
+                        className={cn(
+                          'flex items-center gap-3 p-3 rounded-unit border transition-all cursor-pointer text-sm font-medium',
+                          checkedState[`service:${service.id}:${service.name}`]
+                            ? 'border-[var(--unit-accent)] bg-[var(--unit-accent)]/10 text-[var(--unit-text)] shadow-unit-sm'
+                            : 'border-[var(--unit-border)]/40 bg-[var(--unit-surface)] hover:border-[var(--unit-accent)]/40 text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          value={`service:${service.id}:${service.name}`}
+                          checked={checkedState[`service:${service.id}:${service.name}`] || false}
+                          className="w-4 h-4 rounded text-[var(--unit-accent)]"
+                          style={{ accentColor: 'var(--unit-accent)' }}
+                          onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
+                        />
+                        <span className="truncate">{service.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {products.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <p className="text-xs font-bold text-[var(--unit-text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    Productos de compra habitual
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {products
+                      .filter((product: any) => product.type === 'FOR_SALE' || product.type === 'BOTH')
+                      .map((product: any) => (
+                        <label 
+                          key={product.id} 
+                          className={cn(
+                            'flex items-center gap-3 p-3 rounded-unit border transition-all cursor-pointer text-sm font-medium',
+                            checkedState[`product:${product.id}:${product.name}`]
+                              ? 'border-[var(--unit-accent)] bg-[var(--unit-accent)]/10 text-[var(--unit-text)] shadow-unit-sm'
+                              : 'border-[var(--unit-border)]/40 bg-[var(--unit-surface)] hover:border-[var(--unit-accent)]/40 text-[var(--unit-text-muted)] hover:text-[var(--unit-text)]'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            value={`product:${product.id}:${product.name}`}
+                            checked={checkedState[`product:${product.id}:${product.name}`] || false}
+                            className="w-4 h-4 rounded text-[var(--unit-accent)]"
+                            style={{ accentColor: 'var(--unit-accent)' }}
+                            onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
+                          />
+                          <span className="truncate">{product.name}</span>
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Bar */}
+          <div className="flex gap-4 pt-4 mt-6 border-t border-[var(--unit-border)]/40">
+            <button 
+              type="button" 
+              onClick={handleDrawerClose} 
+              className="px-6 py-2.5 rounded-full font-bold text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] bg-[var(--unit-surface)] hover:bg-[var(--unit-surface-elevated)] border border-[var(--unit-border)]/60 transition-all shadow-sm"
+            >
+              Cancelar
+            </button>
+            <Button 
+              type="submit" 
+              variant="primary"
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 rounded-full font-bold shadow-unit-sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isEdit ? 'Actualizar Cliente' : 'Guardar Cliente'}
+            </Button>
+          </div>
         </form>
-        
-        {/* Unsaved Changes Modal */}
+
         <UnsavedChangesModal
           open={showUnsavedModal}
           onClose={handleCancelDiscard}

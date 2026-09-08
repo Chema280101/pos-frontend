@@ -168,22 +168,26 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
   }), [activeUnit]);
 
   const navContent = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col select-none">
       {/* Mobile Header */}
-      <div className="flex items-center justify-between border-b-2 border-[var(--unit-border)]/30 pb-4 md:hidden">
-        <span className="font-heading text-sm font-bold text-[var(--unit-text)]">Menú</span>
+      <div className="flex items-center justify-between border-b border-[var(--unit-border)]/40 pb-4 lg:hidden">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-[var(--unit-accent)] animate-pulse" />
+          <span className="font-heading text-base font-bold text-[var(--unit-text)] tracking-wide">Menú</span>
+        </div>
         {onMobileClose && (
           <button
             type="button"
             onClick={onMobileClose}
-            className="rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 transition-all"
+            className="rounded-unit-sm border border-[var(--unit-border)]/60 bg-[var(--unit-surface-elevated)] p-1.5 text-[var(--unit-text-muted)] hover:text-[var(--unit-text)] hover:bg-[var(--unit-accent)]/10 transition-colors"
             aria-label="Cerrar menú"
           >
             <X className="h-5 w-5" />
           </button>
         )}
       </div>
-      <nav className="mt-4 flex-1 space-y-1 md:mt-0" aria-label="Principal">
+
+      <nav className="mt-4 flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pr-1 lg:mt-2" aria-label="Principal">
         {visible.map((item) => {
           if (item.children) {
             // Render submenu
@@ -191,36 +195,34 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
             const hasActiveChild = isSubmenuActive(item.children);
             
             return (
-              <div key={item.label}>
+              <div key={item.label} className="space-y-1">
                 <button
                   type="button"
                   onClick={() => toggleSubmenu(item.label)}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all duration-200 group',
+                    'flex w-full items-center justify-between rounded-unit px-3.5 py-2.5 text-sm transition-all duration-200 group',
                     hasActiveChild
-                      ? 'border-[var(--unit-accent)]/50 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 shadow-lg text-[var(--unit-text)]'
-                      : 'border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10'
+                      ? 'bg-[var(--unit-accent)]/15 text-[var(--unit-accent)] font-bold shadow-sm'
+                      : 'text-[var(--unit-text-muted)] font-medium hover:bg-[var(--unit-surface-elevated)] hover:text-[var(--unit-text)]'
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <span className={cn(
-                      'transition-colors',
+                      'transition-colors duration-200',
                       hasActiveChild ? 'text-[var(--unit-accent)]' : 'text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)]'
                     )}>
                       {item.icon}
                     </span>
-                    <span>{item.label}</span>
+                    <span className="tracking-tight">{item.label}</span>
                   </div>
-                  <span className={cn(
-                    'transition-transform duration-200',
-                    isSubmenuOpen ? 'rotate-180' : ''
-                  )}>
-                    <ChevronDown className="h-4 w-4 text-[var(--unit-text-muted)]" />
-                  </span>
+                  <ChevronDown className={cn(
+                    'h-4 w-4 text-[var(--unit-text-muted)] transition-transform duration-200',
+                    isSubmenuOpen ? 'rotate-180 text-[var(--unit-accent)]' : ''
+                  )} />
                 </button>
                 
                 {isSubmenuOpen && (
-                  <div className="ml-3 mt-2 space-y-2">
+                  <div className="ml-4 pl-3 border-l-2 border-[var(--unit-border)]/40 space-y-1 pt-1 pb-1 animate-fade-in">
                     {item.children
                       .filter(child => child.roles.includes(role))
                       .map((child) => {
@@ -233,13 +235,16 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
                             onMouseEnter={() => child.href && prefetchRoute(child.href)}
                             onFocus={() => child.href && prefetchRoute(child.href)}
                             className={cn(
-                              'flex items-center gap-3 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 group',
+                              'flex items-center gap-2.5 rounded-unit-sm px-3 py-2 text-xs transition-all duration-150 group',
                               isActive
-                                ? 'border-[var(--unit-accent)]/50 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 shadow-lg text-[var(--unit-text)]'
-                                : 'border-[var(--unit-border)]/30 bg-[var(--unit-surface)]/30 text-[var(--unit-text-muted)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-text)]'
+                                ? 'bg-[var(--unit-accent)] text-white font-bold shadow-unit-sm'
+                                : 'text-[var(--unit-text-muted)] font-medium hover:bg-[var(--unit-surface-elevated)] hover:text-[var(--unit-text)]'
                             )}
                           >
-                            <span className="transition-colors group-hover:text-[var(--unit-accent)]">
+                            <span className={cn(
+                              'transition-colors',
+                              isActive ? 'text-white' : 'group-hover:text-[var(--unit-accent)]'
+                            )}>
                               {child.icon}
                             </span>
                             <span>{child.label}</span>
@@ -253,50 +258,52 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
           } else {
             // Render regular item
             const isActive = item.href ? isItemActive(item.href) : false;
-          return (
-            <Link
-              key={item.href}
+            return (
+              <Link
+                key={item.href}
                 href={item.href || '#'}
-              onClick={onMobileClose}
+                onClick={onMobileClose}
                 onMouseEnter={() => item.href && prefetchRoute(item.href)}
                 onFocus={() => item.href && prefetchRoute(item.href)}
-              className={cn(
-                'flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all duration-200 group',
-                isActive
-                  ? 'border-[var(--unit-accent)]/50 bg-gradient-to-r from-[var(--unit-accent)]/10 to-[var(--unit-primary)]/10 shadow-lg text-[var(--unit-text)]'
-                  : 'border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 text-[var(--unit-text)] hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10'
-              )}
-            >
-              <span className={cn(
-                'transition-colors',
-                isActive ? 'text-[var(--unit-accent)]' : 'text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)]'
-              )}>
-                {item.icon}
-              </span>
-              <span>{item.label}</span>
-            </Link>
-          );
+                className={cn(
+                  'flex items-center gap-3 rounded-unit px-3.5 py-2.5 text-sm transition-all duration-200 group',
+                  isActive
+                    ? 'bg-[var(--unit-accent)] text-white font-bold shadow-unit-sm'
+                    : 'text-[var(--unit-text-muted)] font-medium hover:bg-[var(--unit-surface-elevated)] hover:text-[var(--unit-text)]'
+                )}
+              >
+                <span className={cn(
+                  'transition-colors duration-200',
+                  isActive ? 'text-white' : 'text-[var(--unit-text-muted)] group-hover:text-[var(--unit-accent)]'
+                )}>
+                  {item.icon}
+                </span>
+                <span className="tracking-tight">{item.label}</span>
+              </Link>
+            );
           }
         })}
       </nav>
 
       {/* Unit Logo */}
-      <div className="mt-auto border-t-2 border-[var(--unit-border)]/30 pt-6">
+      <div className="mt-auto border-t border-[var(--unit-border)]/40 pt-4 pb-1">
         <div className="flex flex-col items-center">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm shadow-lg p-3 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+          <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/50 bg-[var(--unit-surface-elevated)] p-2.5 group hover:border-[var(--unit-accent)]/40 hover:shadow-unit-sm transition-all duration-300">
             <Image
               src={logoConfig.src}
               alt={logoConfig.alt}
-              width={80}
-              height={80}
-              className="relative h-12 w-auto object-contain opacity-80 transition-opacity group-hover:opacity-100"
+              width={72}
+              height={72}
+              className="relative h-10 w-auto object-contain opacity-90 transition-opacity group-hover:opacity-100"
               priority={false}
             />
           </div>
-          <span className="mt-3 text-xs font-bold uppercase tracking-widest text-[var(--unit-text-muted)]">
-            {logoConfig.alt}
-          </span>
+          <div className="mt-2.5 flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full bg-[var(--unit-accent)] shadow-[0_0_8px_var(--unit-accent)]" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--unit-text)]">
+              {logoConfig.alt}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -308,7 +315,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
       {onMobileClose && (
         <div
           className={cn(
-            'fixed inset-0 z-40 bg-black/50 transition-opacity md:hidden',
+            'fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden',
             mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           )}
           onClick={onMobileClose}
@@ -317,9 +324,9 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps): JS
       )}
       <aside
         className={cn(
-          'w-56 border-2 border-[var(--unit-border)]/30 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6',
-          'fixed inset-y-0 left-0 z-50 transform transition-transform md:fixed md:top-0 md:left-0 md:inset-y-0 md:z-40',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          'w-56 border-r border-[var(--unit-border)]/40 bg-[var(--unit-surface)] shadow-unit p-4 flex flex-col',
+          'fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:fixed lg:top-0 lg:left-0 lg:inset-y-0 lg:z-40',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {navContent}

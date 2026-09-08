@@ -26,6 +26,8 @@ export interface BaseAppointment {
   id: string;
   unit: BusinessUnit;
   customerId: string;
+  employeeId?: string;
+  packageId?: string | null;
   startTime: string; // ISO string
   endTime?: string; // ISO string
   durationMin?: number;
@@ -209,5 +211,12 @@ export interface CalendarAppointmentWithProps {
     unit: BusinessUnit;
     status: AppointmentStatus;
     notes?: string;
+    sale?: {
+      id: string;
+      saleNumber: string;
+      status: string;
+    } | null;
   };
 }
+
+export type AppointmentForReminder = Appointment;

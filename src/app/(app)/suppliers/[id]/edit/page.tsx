@@ -8,7 +8,9 @@ export default function SupplierEditRedirectPage(): JSX.Element {
   const params = useParams();
 
   useEffect(() => {
-    router.replace(`/inventory/suppliers/${params.id}/edit`);
+    if (params?.id) {
+      router.replace(`/inventory/suppliers/${params.id}/edit`);
+    }
   }, [router, params]);
 
   return (

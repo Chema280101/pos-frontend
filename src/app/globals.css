@@ -1,37 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* ========== Design tokens — Fallback (login, sin unidad) ========== */
+/* ========== Design tokens — Master Design System (UI/UX Pro Max) ========== */
 :root {
-  --unit-primary: #4A0E0E; /* Borgoña oscuro sofisticado */
-  --unit-primary-dark: #2D0505;
-  --unit-secondary: #F8F5FF; /* Blanco con un toque de lavanda muy sutil */
-  --unit-accent: #0028b3; /* Violeta eléctrico para elementos de acción global */
+  --unit-primary: #EC4899;
+  --unit-primary-dark: #BE185D;
+  --unit-secondary: #F9A8D4;
+  --unit-accent: #8B5CF6;
   --unit-accent-hover: #7C3AED;
-  /* Texto: Máxima legibilidad compartida */
-  --unit-text: #1a1a1a; /* Negro suave legible */
-  --unit-text-muted: #6b7280; /* Gris profesional */
+  /* Texto: Máxima legibilidad */
+  --unit-text: #831843;
+  --unit-text-muted: #9D174D;
   /* Superficies: Limpias y modernas */
-  --unit-surface: #FFFFFF;
-  --unit-surface-elevated: #F9FAFB;
-  /* Bordes y Radio: Un estándar intermedio (ni tan redondo, ni tan recto) */
-  --unit-border: rgba(74, 14, 14, 0.1);
-  --unit-border-radius: 10px;
-  --unit-radius-sm: 6px;
+  --unit-surface: #FDF2F8;
+  --unit-surface-elevated: #FFFFFF;
+  /* Bordes y Radio */
+  --unit-border: #FBCFE8;
+  --unit-border-radius: 12px;
+  --unit-radius-sm: 8px;
   /* Sombras: Profundidad equilibrada */
-  --unit-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  --unit-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --unit-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  --unit-shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
   /* Estados del sistema */
   --unit-error: #DC2626;
   --unit-warning: #D97706;
   --unit-success: #059669;
   --unit-info: #2563EB;
-  /* Tipografía: El mix perfecto */
-  --unit-font-heading: 'Playfair Display', serif; /* Elegancia */
-  --unit-font-body: 'Outfit', sans-serif; /* Modernidad Urbana */
-  /* Gradiente hero: Fusión de ambos mundos */
-  --unit-gradient-hero: linear-gradient(135deg, #4A0E0E 0%, #2D0A31 100%);
+  /* Tipografía: Master Design System */
+  --unit-font-heading: var(--font-playfair), 'Lora', serif;
+  --unit-font-body: var(--font-inter), 'Raleway', sans-serif;
+  /* Gradiente hero */
+  --unit-gradient-hero: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
   --unit-icon-style: outline;
 }
 
@@ -78,155 +77,209 @@
   --unit-border: rgba(255, 255, 255, 0.2);
 }
 
-/* ========== SPA - Rosa y Dorado ========== */
+/* ========== SPA - Rosa Elegante (estilo Barbería) ========== */
 [data-unit='SPA'] {
-  /* Colores principales con mejor profundidad */
-  --unit-primary: #E8D5D1; /* Rosa suave mantenido */
-  --unit-primary-dark: #222220; /* Negro suave mantenido */
+  /* Colores principales: Base neutra */
+  --unit-primary: #222220; /* Negro suave */
+  --unit-primary-dark: #000000; /* Negro puro */
   --unit-secondary: #FCFCFC; /* Blanco mantenido */
-  /* Acentos: Rosa principal y dorado para detalles */
-  --unit-accent: #E8D5D1; /* Rosa para CTAs */
-  --unit-accent-hover: #937A52; /* Dorado para hover */
-  /* Texto con coherencia de superficie */
+  /* Acentos: Rosa elegante con contraste */
+  --unit-accent: #D4788C; /* Rosa elegante */
+  --unit-accent-hover: #C4667A; /* Rosa oscuro para hover */
+  /* Texto */
   --unit-text: #222220; /* Negro sobre superficies claras */
-  --unit-text-muted: #937A52; /* Dorado suave para texto secundario */
-  /* Superficies con contraste apropiado */
+  --unit-text-muted: #6B7280; /* Gris para texto secundario */
+  /* Superficies */
   --unit-surface: #FCFCFC; /* Fondo principal blanco */
-  --unit-surface-elevated: #F8F8F8; /* Cards ligeramente rosados */
-  /* Bordes con rosa sutil */
-  --unit-border: rgba(232, 213, 209, 0.2);
-  --unit-border-radius: 8px; /* Moderadamente redondeados */
-  --unit-radius-sm: 4px;
-  /* Sombras profundas pero elegantes */
-  --unit-shadow: 0 4px 20px rgba(232, 213, 209, 0.08);
-  --unit-shadow-lg: 0 15px 50px rgba(232, 213, 209, 0.12);
-  /* Tipografía */
-  --unit-font-heading: 'Bebas Neue', 'Oswald', sans-serif;
-  --unit-font-body: 'Inter', system-ui, sans-serif;
-  /* Gradiente hero con colores mantenidos */
-  --unit-gradient-hero: linear-gradient(135deg, #E8D5D1 0%, #FCFCFC 100%);
+  --unit-surface-elevated: #FDF2F4; /* Cards ligeramente rosados */
+  /* Bordes y Sombras normalizadas */
+  --unit-border: #FBCFE8;
+  --unit-border-radius: 12px;
+  --unit-radius-sm: 8px;
+  --unit-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  --unit-shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  /* Tipografía Normalizada */
+  --unit-font-heading: var(--font-playfair), serif;
+  --unit-font-body: var(--font-inter), sans-serif;
+  /* Gradiente hero */
+  --unit-gradient-hero: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
   --unit-icon-style: outline;
 }
 
 /* ========== SPA Dark Mode ========== */
 .dark[data-unit='SPA'] {
-  /* Colores principales con nueva paleta */
-  --unit-primary: #E8D5D1; /* Rosa suave principal */
-  --unit-primary-dark: #937A52; /* Café medio oscuro */
-  --unit-secondary: #222220; /* Negro suave */
-  --unit-accent: #FCFCFC; /* Blanco brillante para CTAs */
-  --unit-accent-hover: #E8D5D1; /* Rosa suave para hover */
-  
-  /* Texto para SPA dark con máximo contraste */
-  --unit-text: #FCFCFC; /* Blanco brillante para máxima legibilidad */
-  --unit-text-muted: #E8D5D1; /* Rosa suave para texto secundario */
-  
-  /* Superficies para SPA dark con nueva paleta */
-  --unit-surface: #222220; /* Negro suave como fondo principal */
-  --unit-surface-elevated: #2A2A28; /* Negro suave ligeramente más claro */
-  
-  /* Bordes para SPA dark con rosa sutil */
-  --unit-border: rgba(232, 213, 209, 0.3);
-  
-  /* Sombras para SPA dark con tonos cálidos */
-  --unit-shadow: 0 4px 20px rgba(147, 122, 82, 0.25);
-  --unit-shadow-lg: 0 12px 40px rgba(147, 122, 82, 0.35);
-  
-  /* Gradiente hero para SPA dark con nueva paleta */
-  --unit-gradient-hero: linear-gradient(135deg, #222220 0%, #2A2A28 50%, #333330 100%);
+  /* Colores principales: Base oscura neutra */
+  --unit-primary: #1A1A1A; /* Negro suave */
+  --unit-primary-dark: #000000; /* Negro puro */
+  --unit-secondary: #FCFCFC; /* Blanco mantenido */
+  /* Acentos: Rosa elegante (mismo que modo claro) */
+  --unit-accent: #D4788C; /* Rosa elegante */
+  --unit-accent-hover: #E8A5B0; /* Rosa claro para hover */
+  /* Texto */
+  --unit-text: #FCFCFC; /* Blanco brillante */
+  --unit-text-muted: #A1A1AA; /* Gris claro para texto secundario */
+  /* Superficies: Gris oscuro neutro */
+  --unit-surface: #18181B; /* Fondo gris muy oscuro */
+  --unit-surface-elevated: #27272A; /* Cards gris oscuro */
+  /* Bordes con rosa sutil */
+  --unit-border: rgba(212, 120, 140, 0.3);
+  /* Sombras sutiles */
+  --unit-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --unit-shadow-lg: 0 15px 50px rgba(0, 0, 0, 0.4);
+  /* Sin gradiente */
+  --unit-gradient-hero: #18181B;
 }
 
-/* ========== Barbería — Urbana y masculina ========== */
+/* ========== Barbería — Rojo Elegante (estilo SPA) ========== */
 [data-unit='BARBERIA'] {
-  /* Colores principales con mejor profundidad */
-  --unit-primary: #7A0A0A; /* Rojo barbería mantenido */
-  --unit-primary-dark: #000000; /* Negro mantenido */
+  /* Colores principales: Base neutra */
+  --unit-primary: #222220; /* Negro suave */
+  --unit-primary-dark: #000000; /* Negro puro */
   --unit-secondary: #FCFCFC; /* Blanco mantenido */
-  /* Acentos: Rojo principal y negro */
-  --unit-accent: #7A0A0A; /* Rojo para CTAs */
-  --unit-accent-hover: #000000; /* Negro para hover */
-  /* Texto con coherencia de superficie */
-  --unit-text: #000000; /* Negro sobre superficies claras */
-  --unit-text-muted: #7A0A0A; /* Rojo suave para texto secundario */
-  /* Superficies con contraste apropiado */
+  /* Acentos: Rojo elegante con contraste */
+  --unit-accent: #991B1B; /* Rojo elegante */
+  --unit-accent-hover: #7F1D1D; /* Rojo oscuro para hover */
+  /* Texto */
+  --unit-text: #222220; /* Negro sobre superficies claras */
+  --unit-text-muted: #6B7280; /* Gris para texto secundario */
+  /* Superficies */
   --unit-surface: #FCFCFC; /* Fondo principal blanco */
-  --unit-surface-elevated: #F8F8F8; /* Cards ligeramente grises */
-  /* Bordes con rojo sutil */
-  --unit-border: rgba(122, 10, 10, 0.2); /* Rojo con opacidad */
-  --unit-border-radius: 8px; /* Moderadamente redondeados */
-  --unit-radius-sm: 4px;
-  /* Sombras profundas pero elegantes */
-  --unit-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  --unit-shadow-lg: 0 15px 50px rgba(0, 0, 0, 0.12);
-  /* Tipografía */
-  --unit-font-heading: 'Bebas Neue', 'Oswald', sans-serif;
-  --unit-font-body: 'Outfit', 'Inter', system-ui, sans-serif;
-  /* Gradiente hero con colores mantenidos */
-  --unit-gradient-hero: linear-gradient(135deg, #7A0A0A 0%, #000000 100%);
+  --unit-surface-elevated: #F5F5F5; /* Cards gris muy suave */
+  /* Bordes y Sombras normalizadas */
+  --unit-border: rgba(153, 27, 27, 0.25);
+  --unit-border-radius: 12px;
+  --unit-radius-sm: 8px;
+  --unit-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  --unit-shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  /* Tipografía Normalizada */
+  --unit-font-heading: var(--font-outfit), sans-serif;
+  --unit-font-body: var(--font-work-sans), sans-serif;
+  /* Gradiente hero */
+  --unit-gradient-hero: #FCFCFC;
   --unit-icon-style: outline;
 }
 
 /* ========== Barbería Dark Mode ========== */
 .dark[data-unit='BARBERIA'] {
-  /* Colores principales para Barbería en modo oscuro */
-  --unit-primary: #FFFFFF; /* Blanco brillante */
-  --unit-primary-dark: #F8F8F8;
-  --unit-secondary: #450A0A; /* Rojo oscuro profundo */
-  --unit-accent: #F87171; /* Rojo coral brillante */
-  --unit-accent-hover: #FCA5A5;
-  
-  /* Texto para Barbería dark con máximo contraste */
-  --unit-text: #FFFFFF; /* Blanco puro para máxima legibilidad */
-  --unit-text-muted: #E2E8F0; /* Gris claro para texto secundario */
-  
-  /* Superficies para Barbería dark con gradientes */
-  --unit-surface: #450A0A; /* Rojo oscuro profundo */
-  --unit-surface-elevated: #7F1D1D; /* Rojo oscuro medio */
-  
-  /* Bordes para Barbería dark más visibles */
-  --unit-border: rgba(248, 113, 113, 0.35);
-  
-  /* Sombras para Barbería dark con más profundidad */
-  --unit-shadow: 0 4px 20px rgba(248, 113, 113, 0.3);
-  --unit-shadow-lg: 0 15px 50px rgba(248, 113, 113, 0.4);
-  
-  /* Gradiente hero para Barbería dark más elegante */
-  --unit-gradient-hero: linear-gradient(135deg, #450A0A 0%, #7F1D1D 50%, #991B1B 100%);
+  /* Colores principales: Base oscura neutra */
+  --unit-primary: #1A1A1A; /* Negro suave */
+  --unit-primary-dark: #000000; /* Negro puro */
+  --unit-secondary: #FCFCFC; /* Blanco mantenido */
+  /* Acentos: Rojo elegante (mismo que modo claro) */
+  --unit-accent: #991B1B; /* Rojo elegante */
+  --unit-accent-hover: #B91C1C; /* Rojo brillante para hover */
+  /* Texto */
+  --unit-text: #FCFCFC; /* Blanco brillante */
+  --unit-text-muted: #A1A1AA; /* Gris claro para texto secundario */
+  /* Superficies: Gris oscuro neutro (igual que SPA) */
+  --unit-surface: #18181B; /* Fondo gris muy oscuro */
+  --unit-surface-elevated: #27272A; /* Cards gris oscuro */
+  /* Bordes con rojo sutil */
+  --unit-border: rgba(153, 27, 27, 0.3);
+  /* Sombras sutiles */
+  --unit-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --unit-shadow-lg: 0 15px 50px rgba(0, 0, 0, 0.4);
+  /* Sin gradiente */
+  --unit-gradient-hero: #18181B;
 }
 
-/* ========== Tailwind Dark Mode Utilities ========== */
+/* ========== Tailwind Dark Mode & Luxury Utilities ========== */
 @layer utilities {
   /* Transiciones suaves para modo oscuro */
   .transition-theme {
-    transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
+    transition: background-color 250ms cubic-bezier(0.4, 0, 0.2, 1),
+                color 250ms cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 250ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  /* Overlay para modo oscuro */
+  /* Glassmorphism & Modern Panels */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--unit-border);
+  }
+  .dark .glass-panel {
+    background: rgba(24, 24, 27, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--unit-border);
+  }
+
+  .glass-card {
+    background: var(--unit-surface);
+    border: 1px solid var(--unit-border);
+    box-shadow: var(--unit-shadow);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass-card:hover {
+    box-shadow: var(--unit-shadow-lg);
+    border-color: var(--unit-accent);
+  }
+
+  /* Micro-interactions & Tactile feedback */
+  .hover-lift {
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--unit-shadow-lg);
+  }
+
+  .btn-tactile {
+    transition: transform 100ms ease, filter 150ms ease, box-shadow 150ms ease;
+  }
+  .btn-tactile:active {
+    transform: scale(0.97);
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px -3px var(--unit-accent);
+  }
+
+  .tabular-numbers {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Overlay para modo oscuro y modales */
   .dark-overlay {
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
   
-  /* Scrollbar para modo oscuro */
+  /* Scrollbar elegante y adaptable */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.6);
+  }
+
   .dark .scrollbar-dark {
-    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
   }
-  
   .dark .scrollbar-dark::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
-  
   .dark .scrollbar-dark::-webkit-scrollbar-track {
     background: transparent;
   }
-  
   .dark .scrollbar-dark::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 9999px;
   }
-  
   .dark .scrollbar-dark::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.45);
   }
 }
 

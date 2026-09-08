@@ -55,17 +55,15 @@ export function CartManager({
   return (
     <div className="space-y-4">
       {/* Customer Selection */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-        
-        <div className="relative">
+      <div className="rounded-unit-lg border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)] p-4">
+        <div>
           <div className="flex items-center gap-3 mb-3">
             <UserCircle className="h-5 w-5 text-[var(--unit-accent)]" />
             <span className="text-sm font-semibold text-[var(--unit-text)]">Cliente</span>
           </div>
           
           {selectedCustomer ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--unit-surface)] border border-[var(--unit-border)]/30">
+            <div className="flex items-center justify-between p-3 rounded-unit bg-[var(--unit-surface)] border border-[var(--unit-border)]/30">
               <div>
                 <p className="text-sm font-medium text-[var(--unit-text)]">{selectedCustomer.name}</p>
                 <p className="text-xs text-[var(--unit-text-muted)]">{selectedCustomer.phone}</p>
@@ -94,12 +92,10 @@ export function CartManager({
       </div>
 
       {/* Cart Items */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--unit-accent)]/3 to-[var(--unit-primary)]/3 rounded-2xl"></div>
-        
-        <div className="relative">
+      <div className="rounded-unit-lg border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)] p-4">
+        <div>
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">
+            <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
               <Package className="h-4 w-4 text-[var(--unit-accent)]" />
             </div>
             <h3 className="text-lg font-bold text-[var(--unit-text)]">Carrito</h3>
@@ -119,9 +115,9 @@ export function CartManager({
               {cart.map((item, index) => (
                 <div
                   key={`${item.referenceId}-${item.employeeId || 'no-emp'}-${index}`}
-                  className="flex items-center gap-3 rounded-xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/90 p-3"
+                  className="flex items-center gap-3 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] p-3"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--unit-accent)]/10">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-unit bg-[var(--unit-accent)]/10">
                     {getItemIcon(item.itemType)}
                   </div>
                   
@@ -140,7 +136,7 @@ export function CartManager({
                     <button
                       type="button"
                       onClick={() => onUpdateQuantity(item.referenceId, item.itemType, item.employeeId, Math.max(1, item.quantity - 1))}
-                      className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--unit-border)]/50 bg-white/80 hover:bg-[var(--unit-accent)] hover:text-white transition-all"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
@@ -152,7 +148,7 @@ export function CartManager({
                     <button
                       type="button"
                       onClick={() => onUpdateQuantity(item.referenceId, item.itemType, item.employeeId, item.quantity + 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--unit-border)]/50 bg-white/80 hover:bg-[var(--unit-accent)] hover:text-white transition-all"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] hover:bg-[var(--unit-accent)] hover:text-white transition-all"
                     >
                       <Plus className="h-3 w-3" />
                     </button>
@@ -174,12 +170,10 @@ export function CartManager({
 
       {/* Discount Section */}
       {cart.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-4">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/3 to-orange-500/3 rounded-2xl"></div>
-          
-          <div className="relative">
+        <div className="rounded-unit-lg border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)] p-4">
+          <div>
             <div className="flex items-center gap-3 mb-3">
-              <Percent className="h-5 w-5 text-amber-600" />
+              <Percent className="h-5 w-5 text-[var(--unit-warning)]" />
               <span className="text-sm font-semibold text-[var(--unit-text)]">Descuento</span>
             </div>
             
@@ -196,7 +190,7 @@ export function CartManager({
                     const amount = parseFloat(e.target.value) || 0;
                     onDiscountChange(amount, discountReason);
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--unit-border)]/50 bg-white/80 text-[var(--unit-text)] focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                  className="w-full px-3 py-2 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]/50 focus:ring-2 focus:ring-[var(--unit-accent)]/20 transition-all"
                   placeholder="0.00"
                 />
               </div>
@@ -207,7 +201,7 @@ export function CartManager({
                   type="text"
                   value={discountReason || ''}
                   onChange={(e) => onDiscountChange(discountAmount, e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--unit-border)]/50 bg-white/80 text-[var(--unit-text)] focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                  className="w-full px-3 py-2 rounded-unit border border-[var(--unit-border)]/50 bg-[var(--unit-surface)] text-[var(--unit-text)] focus:outline-none focus:border-[var(--unit-accent)]/50 focus:ring-2 focus:ring-[var(--unit-accent)]/20 transition-all"
                   placeholder="Motivo del descuento"
                 />
               </div>
@@ -218,10 +212,8 @@ export function CartManager({
 
       {/* Totals */}
       {cart.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/98 to-white/95 backdrop-blur-sm shadow-xl p-4">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/3 to-green-500/3 rounded-2xl"></div>
-          
-          <div className="relative space-y-2">
+        <div className="rounded-unit-lg border border-[var(--unit-border)]/30 bg-[var(--unit-surface-elevated)] p-4">
+          <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--unit-text-muted)]">Subtotal:</span>
               <span className="text-sm font-medium text-[var(--unit-text)]">
@@ -232,7 +224,7 @@ export function CartManager({
             {discountAmount > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-sm text-[var(--unit-text-muted)]">Descuento:</span>
-                <span className="text-sm font-medium text-amber-600">
+                <span className="text-sm font-medium text-[var(--unit-warning)]">
                   -S/ {discountAmount.toFixed(2)}
                 </span>
               </div>
@@ -241,7 +233,7 @@ export function CartManager({
             <div className="border-t border-[var(--unit-border)]/50 pt-2">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-[var(--unit-text)]">Total:</span>
-                <span className="text-lg font-bold text-emerald-600">
+                <span className="text-lg font-bold text-[var(--unit-accent)]">
                   S/ {cartTotals.total.toFixed(2)}
                 </span>
               </div>

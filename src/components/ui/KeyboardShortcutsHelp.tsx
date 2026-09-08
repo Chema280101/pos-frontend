@@ -23,7 +23,7 @@ export function KeyboardShortcutsHelp(): JSX.Element {
       {/* Trigger button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 px-4 py-2 bg-[var(--unit-accent)] text-white rounded-xl shadow-lg hover:bg-[var(--unit-accent-hover)] transition-all duration-200 hover:scale-105"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 px-4 py-2 bg-[var(--unit-accent)] text-white rounded-unit shadow-unit hover:bg-[var(--unit-accent-hover)] transition-all duration-200 hover:scale-105"
         aria-label="Mostrar atajos de teclado"
       >
         <Keyboard className="h-5 w-5" />
@@ -33,12 +33,12 @@ export function KeyboardShortcutsHelp(): JSX.Element {
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border-2 border-[var(--unit-border)]/50">
+          <div className="relative w-full max-w-md bg-[var(--unit-surface-elevated)] rounded-unit-lg shadow-unit-lg border-2 border-[var(--unit-border)]/50">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-[var(--unit-border)]/30">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                  <Keyboard className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-md">
+                  <Keyboard className="h-5 w-5" />
                 </div>
                 <h3 className="text-lg font-bold text-[var(--unit-text)]">
                   Atajos de Teclado
@@ -46,7 +46,7 @@ export function KeyboardShortcutsHelp(): JSX.Element {
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)]"
+                className="p-2 rounded-unit border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)]"
                 aria-label="Cerrar"
               >
                 <X className="h-4 w-4" />
@@ -58,7 +58,7 @@ export function KeyboardShortcutsHelp(): JSX.Element {
               {shortcuts.map((shortcut) => (
                 <div
                   key={shortcut.key}
-                  className="flex items-center justify-between p-3 rounded-xl bg-[var(--unit-surface)]/50 border border-[var(--unit-border)]/30"
+                  className="flex items-center justify-between p-3 rounded-unit bg-[var(--unit-surface)]/50 border border-[var(--unit-border)]/30"
                 >
                   <kbd
                     className={cn(

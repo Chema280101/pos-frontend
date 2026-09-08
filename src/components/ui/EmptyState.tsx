@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Inbox, Search, Package, Users, Calendar, DollarSign, FileText, AlertCircle, Plus, RefreshCw } from 'lucide-react';
+import { Inbox, Search, Package, Users, Calendar, DollarSign, FileText, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface EmptyStateProps {
@@ -25,62 +25,70 @@ export function EmptyState({
   const getVariantIcon = (): ReactNode => {
     switch (variant) {
       case 'search':
-        return <Search className="mx-auto h-12 w-12" aria-hidden />;
+        return <Search className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       case 'data':
-        return <Package className="mx-auto h-12 w-12" aria-hidden />;
+        return <Package className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       case 'users':
-        return <Users className="mx-auto h-12 w-12" aria-hidden />;
+        return <Users className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       case 'calendar':
-        return <Calendar className="mx-auto h-12 w-12" aria-hidden />;
+        return <Calendar className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       case 'money':
-        return <DollarSign className="mx-auto h-12 w-12" aria-hidden />;
+        return <DollarSign className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       case 'reports':
-        return <FileText className="mx-auto h-12 w-12" aria-hidden />;
+        return <FileText className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       case 'error':
-        return <AlertCircle className="mx-auto h-12 w-12" aria-hidden />;
+        return <AlertCircle className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
       default:
-        return <Inbox className="mx-auto h-12 w-12" aria-hidden />;
+        return <Inbox className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden />;
     }
   };
 
-  // Colores por variante
-  const getVariantColors = (): string => {
+  // Estilos de badge por variante
+  const getVariantBadgeStyles = (): string => {
     switch (variant) {
       case 'search':
-        return 'text-blue-500/50 border-blue-200/50 bg-blue-50/30';
+        return 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400';
       case 'data':
-        return 'text-purple-500/50 border-purple-200/50 bg-purple-50/30';
+        return 'bg-[var(--unit-accent)]/10 border-[var(--unit-accent)]/20 text-[var(--unit-accent)]';
       case 'users':
-        return 'text-pink-500/50 border-pink-200/50 bg-pink-50/30';
+        return 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400';
       case 'calendar':
-        return 'text-green-500/50 border-green-200/50 bg-green-50/30';
+        return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400';
       case 'money':
-        return 'text-emerald-500/50 border-emerald-200/50 bg-emerald-50/30';
+        return 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400';
       case 'reports':
-        return 'text-orange-500/50 border-orange-200/50 bg-orange-50/30';
+        return 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400';
       case 'error':
-        return 'text-red-500/50 border-red-200/50 bg-red-50/30';
+        return 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400';
       default:
-        return 'text-[var(--unit-text)]/50 border-[var(--unit-primary)]/40 bg-[var(--unit-secondary)]/30';
+        return 'bg-[var(--unit-accent)]/10 border-[var(--unit-accent)]/20 text-[var(--unit-accent)]';
     }
   };
 
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-[var(--unit-border-radius)] border border-dashed px-8 py-12 text-center',
-        getVariantColors(),
+        'flex flex-col items-center justify-center rounded-unit-lg border border-dashed border-[var(--unit-border)] bg-[var(--unit-surface-elevated)]/40 p-8 sm:p-12 text-center transition-colors',
         className
       )}
     >
-      <div className="mb-4">
+      <div
+        className={cn(
+          'mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-unit border shadow-unit transition-transform duration-200 hover:scale-105',
+          getVariantBadgeStyles()
+        )}
+      >
         {icon ?? getVariantIcon()}
       </div>
-      <h3 className="font-heading text-lg font-semibold text-[var(--unit-text)]">{title}</h3>
+      <h3 className="text-base sm:text-lg font-semibold text-[var(--unit-text)] tracking-tight">
+        {title}
+      </h3>
       {description && (
-        <p className="mt-2 max-w-sm text-sm text-[var(--unit-text)]/80">{description}</p>
+        <p className="mt-1.5 max-w-md text-sm text-[var(--unit-text-muted)] leading-relaxed">
+          {description}
+        </p>
       )}
-      {action && <div className="mt-6">{action}</div>}
+      {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
   );
 }
@@ -113,3 +121,4 @@ export function EmptyStateReports(props: Omit<EmptyStateProps, 'variant'>) {
 export function EmptyStateError(props: Omit<EmptyStateProps, 'variant'>) {
   return <EmptyState {...props} variant="error" />;
 }
+

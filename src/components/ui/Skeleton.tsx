@@ -106,7 +106,7 @@ export const TableSkeleton = ({ rows = 5, columns = 4 }: { rows?: number; column
 );
 
 export const CardSkeleton = ({ showAvatar = true }: { showAvatar?: boolean }) => (
-  <div className="p-6 border border-[var(--unit-border)]/30 rounded-xl bg-[var(--unit-surface)]">
+  <div className="p-6 border border-[var(--unit-border)]/30 rounded-unit bg-[var(--unit-surface)]">
     {showAvatar && (
       <div className="flex items-center space-x-4 mb-4">
         <Skeleton variant="circular" width={40} height={40} />

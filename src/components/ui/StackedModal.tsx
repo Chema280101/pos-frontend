@@ -12,17 +12,19 @@ export interface StackedModalProps {
   title?: string;
   description?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   showCloseButton?: boolean;
   modalId?: string;
   modalName?: string;
+  headerIcon?: ReactNode;
 }
 
 const sizeClasses = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
-  full: 'max-w-[90vw] max-h-[90vh]',
+  xl: 'max-w-xl',
+  full: 'max-w-[95vw] md:max-w-4xl lg:max-w-5xl min-w-[280px]',
 };
 
 export function StackedModal({
@@ -35,22 +37,15 @@ export function StackedModal({
   showCloseButton = true,
   modalId,
   modalName = 'Modal',
+  headerIcon,
 }: StackedModalProps): JSX.Element {
   const { openModal, closeModal, getZIndex } = useModalStack();
 
-  // Generate unique ID if not provided
   const id = modalId || `modal-${modalName.replace(/\s+/g, '-').toLowerCase()}`;
-
-  // Handle modal open/close with stack management
-  const handleOpen = () => {
-    if (open) {
-      const zIndex = openModal(id, modalName, onClose);
-      return zIndex;
-    }
-  };
 
   const handleClose = () => {
     closeModal(id);
+    onClose();
   };
 
   return (
@@ -65,76 +60,77 @@ export function StackedModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-md" aria-hidden="true" />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" aria-hidden="true" />
         </Transition.Child>
-        <div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+
+        <div className="fixed inset-0 z-10 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 overflow-y-auto">
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
+            enterFrom="opacity-0 translate-y-12 sm:translate-y-0 sm:scale-95"
+            enterTo="opacity-100 translate-y-0 sm:scale-100"
             leave="ease-in duration-200"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
+            leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+            leaveTo="opacity-0 translate-y-12 sm:translate-y-0 sm:scale-95"
           >
-            <div 
+            <Dialog.Panel
               className={cn(
-                'w-full rounded-t-[calc(var(--unit-border-radius)*1.5)] sm:rounded-2xl border-2 border-[var(--unit-border)]/50 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto relative overflow-hidden',
+                'w-full rounded-t-3xl sm:rounded-unit-lg border border-[var(--unit-border)]/60',
+                'bg-[var(--unit-surface-elevated)] shadow-unit-lg relative flex flex-col',
+                'max-h-[90vh] sm:max-h-[85vh] overflow-hidden',
+                'transition-all duration-300',
                 sizeClasses[size]
               )}
             >
-              {/* Glassmorphism overlay pattern - Consistente con Modal.tsx */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="absolute inset-0 bg-gradient-to-br from-[var(--unit-accent)]/5 to-[var(--unit-primary)]/5"></div>
-                <div className="absolute inset-0">
-                  <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.1"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" />
-                  </svg>
-                </div>
+              {/* Subtle top ambient line */}
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--unit-accent)]/40 to-transparent pointer-events-none" />
+
+              {/* Mobile handle */}
+              <div className="pt-3 pb-1 flex justify-center sm:hidden">
+                <div className="h-1.5 w-12 rounded-full bg-slate-300 dark:bg-zinc-700" />
               </div>
 
-              {/* Modal Header - Estándar consistente */}
+              {/* Header Section */}
               {(title || showCloseButton) && (
-                <div className="relative mb-6 flex items-start justify-between gap-4">
-                  {/* Background gradient for header - Consistente con Modal.tsx */}
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--unit-accent)]/20 to-transparent"></div>
-                  
-                  {title && (
-                    <div className="relative z-10 flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--unit-accent)] to-[var(--unit-primary)] shadow-lg">
-                        <div className="h-6 w-6 bg-white rounded-sm"></div>
+                <div className="relative px-6 py-4 sm:px-8 sm:py-5 flex items-start justify-between gap-4 border-b border-[var(--unit-border)]/30">
+                  <div className="flex items-center gap-3.5 pr-2">
+                    {headerIcon && (
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-unit bg-[var(--unit-accent)] text-white shadow-md">
+                        {headerIcon}
                       </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-[var(--unit-text)]">{title}</h3>
-                        {description && (
-                          <p className="text-sm text-[var(--unit-text-muted)]">{description}</p>
-                        )}
-                      </div>
+                    )}
+                    <div>
+                      {title && (
+                        <Dialog.Title className="font-heading text-xl sm:text-2xl font-bold tracking-tight text-[var(--unit-text)]">
+                          {title}
+                        </Dialog.Title>
+                      )}
+                      {description && (
+                        <Dialog.Description className="mt-1 text-xs sm:text-sm text-[var(--unit-text-muted)] line-clamp-2">
+                          {description}
+                        </Dialog.Description>
+                      )}
                     </div>
-                  )}
-                  
+                  </div>
+
                   {showCloseButton && (
                     <button
+                      type="button"
                       onClick={handleClose}
-                      className="relative z-10 shrink-0 rounded-xl border-2 border-[var(--unit-border)]/50 bg-[var(--unit-surface)]/50 p-2 text-[var(--unit-text-muted)] transition-all duration-200 hover:border-[var(--unit-accent)]/50 hover:bg-[var(--unit-accent)]/10 hover:text-[var(--unit-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/50"
-                      aria-label="Cerrar"
+                      className="shrink-0 rounded-unit border border-slate-200/80 dark:border-zinc-700/80 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 p-2 text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--unit-accent)]/40 active:scale-95"
+                      aria-label="Cerrar modal"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-5 w-5" />
                     </button>
                   )}
                 </div>
               )}
 
               {/* Modal Content */}
-              <div className="relative z-10">
+              <div className="p-6 sm:p-8 overflow-y-auto flex-1 custom-scrollbar">
                 {children}
               </div>
-            </div>
+            </Dialog.Panel>
           </Transition.Child>
         </div>
       </Dialog>
