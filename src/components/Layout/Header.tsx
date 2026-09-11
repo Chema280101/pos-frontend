@@ -10,6 +10,7 @@ import { usePrefetchQueries } from '@/hooks/usePrefetchQueries';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useAppointmentReminders } from '@/hooks/useAppointmentReminders';
+import { useApprovalNotifications } from '@/hooks/useApprovalNotifications';
 import { ConfirmModal, Drawer, ThemeToggle } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from '@/components/Notifications/NotificationBell';
@@ -43,6 +44,17 @@ const RemindersComponent = memo(({ role }: { role?: string }) => {
 });
 
 RemindersComponent.displayName = 'RemindersComponent';
+
+const ApprovalNotificationsComponent = memo(({ role }: { role?: string }) => {
+  const isActive = role === 'ADMIN';
+  
+  // ✅ Llamar hook siempre con parámetro enabled
+  useApprovalNotifications();
+  
+  return null;
+});
+
+ApprovalNotificationsComponent.displayName = 'ApprovalNotificationsComponent';
 
 export function Header({ onMenuClick }: HeaderProps): JSX.Element {
   const router = useRouter();
@@ -169,6 +181,7 @@ export function Header({ onMenuClick }: HeaderProps): JSX.Element {
     <>
       <AlertsComponent role={user?.role} />
       <RemindersComponent role={user?.role} />
+      <ApprovalNotificationsComponent role={user?.role} />
       
     <header
       className="sticky top-0 z-40 border-b border-[var(--unit-border)]/40 bg-[var(--unit-surface)] px-6 py-3.5"
