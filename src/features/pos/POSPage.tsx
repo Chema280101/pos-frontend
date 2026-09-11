@@ -432,9 +432,12 @@ export function POSPage(): JSX.Element {
   };
 
   const addServiceToCart = (service: { id: string; name: string; price?: unknown; unit: string; priceType?: string; minPrice?: number; maxPrice?: number; requiresApproval?: boolean }) => {
+    console.log('🔍 addServiceToCart called:', service);
+    
     // Check if service has variable pricing
     const serviceOption = service as ServiceOption;
     if (serviceOption.priceType && serviceOption.priceType !== 'FIXED') {
+      console.log('🔍 Service has variable pricing, showing VariablePriceModal:', serviceOption);
       // Show variable price modal
       setSelectedServiceForPrice(serviceOption);
       setShowVariablePriceModal(true);
@@ -443,6 +446,7 @@ export function POSPage(): JSX.Element {
       return;
     }
 
+    console.log('🔍 Service has fixed pricing, showing EmployeeModal');
     // Show employee selection modal for fixed price services
     setSelectedServiceForEmployee(service as ServiceOption);
     setShowEmployeeModal(true);
