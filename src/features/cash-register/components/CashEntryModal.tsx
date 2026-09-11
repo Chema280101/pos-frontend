@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, X, ArrowUpRight, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
 export interface CashEntryModalProps {
@@ -16,6 +17,8 @@ export interface CashEntryModalProps {
 
 export function CashEntryModal({ isOpen, onClose, unit, userId, onSuccess }: CashEntryModalProps): JSX.Element | null {
   const { success, error } = useToast();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN';
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [type, setType] = useState('CASH_ENTRY');
@@ -63,7 +66,7 @@ export function CashEntryModal({ isOpen, onClose, unit, userId, onSuccess }: Cas
     setLoading(true);
 
     try {
-      await api.post('/api/income', {
+      const res = await api.post('/api/income', {
         amount: parsedAmount,
         reason: reason.trim(),
         type: type,
@@ -71,7 +74,11 @@ export function CashEntryModal({ isOpen, onClose, unit, userId, onSuccess }: Cas
         enteredBy: userId,
       });
 
-      success('Ingreso registrado correctamente');
+      if (res.data?.requiresApproval || !isAdmin) {
+        success('Solicitud de ingreso enviada a supervisión. Pendiente de aprobación del Administrador.');
+      } else {
+        success('Ingreso registrado correctamente');
+      }
       onSuccess?.();
       onClose();
     } catch (err: any) {
@@ -80,7 +87,7 @@ export function CashEntryModal({ isOpen, onClose, unit, userId, onSuccess }: Cas
     } finally {
       setLoading(false);
     }
-  }, [amount, reason, type, unit, userId, error, success, onClose, onSuccess]);
+  }, [amount, reason, type, unit, userId, isAdmin, error, success, onClose, onSuccess]);
 
   if (!isOpen) return null;
 
@@ -126,6 +133,13 @@ export function CashEntryModal({ isOpen, onClose, unit, userId, onSuccess }: Cas
 
         {/* Form Content */}
         <div className="space-y-4">
+          {!isAdmin && (
+            <div className="p-3 rounded-unit bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2">
+              <span className="text-sm">⚠️</span>
+              <span>Como cajero, este ingreso se enviará como <strong>solicitud pendiente</strong> y requerirá aprobación del Administrador antes de sumarse a la caja.</span>
+            </div>
+          )}
+
           {/* Monto */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">

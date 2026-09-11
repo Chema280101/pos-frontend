@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { TrendingDown, X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
 export interface ExpenseModalProps {
@@ -15,6 +16,8 @@ export interface ExpenseModalProps {
 
 export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: ExpenseModalProps): JSX.Element | null {
   const { success, error } = useToast();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN';
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [category, setCategory] = useState('Otros');
@@ -59,7 +62,7 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
     setLoading(true);
 
     try {
-      await api.post(
+      const res = await api.post(
         `/api/cash-register/${registerId}/expense`,
         {
           amount: parsedAmount,
@@ -69,7 +72,11 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
         }
       );
 
-      success('Egreso registrado correctamente');
+      if (res.data?.requiresApproval || !isAdmin) {
+        success('Solicitud de egreso enviada a supervisión. Pendiente de aprobación del Administrador.');
+      } else {
+        success('Egreso registrado correctamente');
+      }
       onSuccess?.();
       onClose();
     } catch (err: any) {
@@ -78,7 +85,7 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
     } finally {
       setLoading(false);
     }
-  }, [amount, reason, category, paymentMethod, registerId, error, success, onClose, onSuccess]);
+  }, [amount, reason, category, paymentMethod, registerId, isAdmin, error, success, onClose, onSuccess]);
 
   if (!isOpen) return null;
 
@@ -124,6 +131,13 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
 
         {/* Form Content */}
         <div className="space-y-4">
+          {!isAdmin && (
+            <div className="p-3 rounded-unit bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2">
+              <span className="text-sm">⚠️</span>
+              <span>Como cajero, este gasto se enviará como <strong>solicitud pendiente</strong> y requerirá aprobación del Administrador antes de descontarse de la caja.</span>
+            </div>
+          )}
+
           {/* Monto */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold uppercase tracking-wider text-[var(--unit-text)]">

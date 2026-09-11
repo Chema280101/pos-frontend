@@ -24,6 +24,7 @@ import {
   ChevronRight,
   TrendingUp,
   Settings,
+  Bell,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
@@ -99,6 +100,7 @@ const navItems: NavItem[] = [
     roles: ['ADMIN'],
     children: [
       { href: '/admin/users', label: 'Usuarios', icon: <ShieldCheck className="h-4 w-4" />, roles: ['ADMIN'] },
+      { href: '/approvals', label: 'Aprobaciones', icon: <Bell className="h-4 w-4" />, roles: ['ADMIN'] },
       { href: '/admin/audit', label: 'Auditoría', icon: <History className="h-4 w-4" />, roles: ['ADMIN'] },
       { href: '/admin/backups', label: 'Backups', icon: <Database className="h-4 w-4" />, roles: ['ADMIN'] },
     ]

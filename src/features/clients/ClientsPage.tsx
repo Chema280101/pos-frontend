@@ -52,6 +52,7 @@ export default function ClientsPage(): JSX.Element {
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
+  const isAdmin = user?.role === 'ADMIN';
   const { success, error: toastError } = useToast();
 
   // Navigation tab: 'all' | 'vip' | 'credit' | 'metrics'
@@ -309,7 +310,7 @@ export default function ClientsPage(): JSX.Element {
       },
       disabled: () => !canEdit,
     },
-    {
+    ...(isAdmin ? [{
       label: 'Bloquear / Desbloquear',
       variant: 'delete' as const,
       icon: <Lock className="h-4 w-4" />,
@@ -317,8 +318,8 @@ export default function ClientsPage(): JSX.Element {
         setSelectedClientForModal(row);
         setBlockModal(true);
       },
-      disabled: () => !canEdit,
-    },
+      disabled: () => !isAdmin,
+    }] : []),
   ];
 
   return (
@@ -534,14 +535,14 @@ export default function ClientsPage(): JSX.Element {
             setDrawerOpen(false);
             router.push(`/clients/${c.id}/edit`);
           }}
-          onAddCredit={(c) => {
+          onAddCredit={isAdmin ? (c) => {
             setSelectedClientForModal(c);
             setCreditModal(true);
-          }}
-          onToggleBlock={(c) => {
+          } : undefined}
+          onToggleBlock={isAdmin ? (c) => {
             setSelectedClientForModal(c);
             setBlockModal(true);
-          }}
+          } : undefined}
         />
 
         {/* Credit & Block Modals */}

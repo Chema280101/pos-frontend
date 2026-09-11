@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CreditCard, ArrowRightLeft, Smartphone, Receipt, TrendingDown, Vault, ShoppingCart, Lock, Unlock, FileDown, PlusCircle, TrendingUp, DollarSign, Clock, AlertCircle, CheckCircle, Calculator, FileText, Eye, Search, Filter, X, Calendar, ChevronDown, ChevronUp, ChevronRight, RefreshCw } from 'lucide-react';
+import { Banknote, CreditCard, ArrowRightLeft, Smartphone, Receipt, TrendingDown, Vault, ShoppingCart, Lock, Unlock, FileDown, PlusCircle, TrendingUp, DollarSign, Clock, AlertCircle, CheckCircle, Calculator, FileText, Eye, Search, Filter, X, Calendar, ChevronDown, ChevronUp, ChevronRight, RefreshCw, Printer } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
@@ -30,6 +30,7 @@ import { CashClosingArqueo } from './CashClosingArqueo';
 export function CashRegisterPage(): JSX.Element {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN';
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const unit = activeUnit === 'BARBERIA' ? 'BARBERIA' : 'SPA';
   const [openingAmount, setOpeningAmount] = useState('');
@@ -108,6 +109,7 @@ export function CashRegisterPage(): JSX.Element {
 
   const { data: registersData = { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } } } = useQuery<CashRegisterListResponse>({
     queryKey: ['cash-registers', unit],
+    enabled: isAdmin,
     queryFn: async (): Promise<CashRegisterListResponse> => {
       const { data } = await api.get<CashRegisterListResponse>(`/api/cash-register?unit=${unit}&limit=20`);
       return data;
@@ -430,6 +432,40 @@ export function CashRegisterPage(): JSX.Element {
     });
   }
 
+  function handlePrintCurrentRegister() {
+    if (!openRegister || !summary) return;
+    import('@/lib/cashCloseReceipt').then((module: any) => {
+      const { printCashCloseReceipt } = module;
+      const cashData = {
+        unit: unit as 'BARBERIA' | 'SPA',
+        registerId: openRegister.id,
+        openedAt: openRegister.openedAt,
+        closedAt: new Date().toISOString(),
+        openedBy: user?.name || 'Cajero',
+        closedBy: user?.name || 'Cajero (Arqueo en curso)',
+        openingAmount: Number(openRegister.openingAmount) || 0,
+        cashFromSales: Number(summary.cashFromSales) || 0,
+        cardSales: Number(summary.card) || 0,
+        transferSales: Number(summary.transfer) || 0,
+        walletSales: Number(summary.wallet) || 0,
+        totalSales: (Number(summary.cashFromSales) || 0) + (Number(summary.card) || 0) + (Number(summary.transfer) || 0) + (Number(summary.wallet) || 0),
+        manualIncome: Number(summary.cashEntries) || 0,
+        expenses: Number(summary.expenses) || 0,
+        expectedCash: Number(summary.expectedCash) || 0,
+        closingDeclared: Number(summary.expectedCash) || 0,
+        difference: 0,
+        denominations: [],
+        closingNotes: 'Comprobante de arqueo de caja en curso',
+        businessName: 'Barbería y Spa POS',
+        businessAddress: 'Dirección del negocio',
+        businessPhone: 'Teléfono de contacto',
+      };
+      printCashCloseReceipt(cashData);
+    }).catch(error => {
+      console.error('Error al cargar el módulo de impresión:', error);
+    });
+  }
+
   const kpiCards = summary
     ? [
         { label: 'Efectivo', value: summary.cashFromSales || 0, icon: Banknote, color: 'text-emerald-600' },
@@ -498,6 +534,16 @@ export function CashRegisterPage(): JSX.Element {
 
                 <button
                   type="button"
+                  onClick={handlePrintCurrentRegister}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-unit border border-[var(--unit-border)]/60 text-xs font-semibold text-[var(--unit-text)] bg-[var(--unit-surface-elevated)] hover:bg-[var(--unit-surface)] transition-all shadow-unit-sm"
+                  title="Imprimir comprobante de arqueo actual"
+                >
+                  <Printer className="h-4 w-4 text-[var(--unit-accent)]" />
+                  <span className="hidden sm:inline">Imprimir Arqueo</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={openCloseModal}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
                 >
@@ -509,8 +555,8 @@ export function CashRegisterPage(): JSX.Element {
           </div>
         </div>
 
-        {/* Cash Register Metrics */}
-        <CashRegisterMetrics cashRegisters={registersData?.data || []} />
+        {/* Cash Register Metrics (Solo Admin) */}
+        {isAdmin && <CashRegisterMetrics cashRegisters={registersData?.data || []} />}
 
         {isLoading ? (
           <div className="relative overflow-hidden rounded-unit-lg border border-[var(--unit-border)]/60 bg-[var(--unit-surface)] shadow-unit-lg p-12">
@@ -1093,8 +1139,8 @@ export function CashRegisterPage(): JSX.Element {
           </div>
         )}
 
-        {/* Enhanced History Section with Custom Filters */}
-        {registersData?.data && Array.isArray(registersData.data) && registersData.data.length > 0 && (
+        {/* Enhanced History Section with Custom Filters (Solo Admin) */}
+        {isAdmin && registersData?.data && Array.isArray(registersData.data) && registersData.data.length > 0 && (
           <div className="mt-12">
             {/* History Header */}
             <div className="flex items-center justify-between mb-6">

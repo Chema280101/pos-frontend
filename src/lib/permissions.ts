@@ -20,6 +20,7 @@ export const routePermissions: Record<string, UserRole[]> = {
     '/admin/users': ['ADMIN'],
     '/admin/audit': ['ADMIN'],
     '/admin/backups': ['ADMIN'],
+    '/approvals': ['ADMIN'],
     // Allow all roles for appointments and commissions
     '/appointments': ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'],
     '/commissions': ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'],

@@ -5,12 +5,14 @@ import { ArrowLeft, Bell, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { PriceApprovalsPanel } from '@/components/PriceApprovals/PriceApprovalsPanel';
+import { CashApprovalsPanel } from '@/components/PriceApprovals/CashApprovalsPanel';
 import { useSocket } from '@/hooks/useSocket';
 import { useApprovalNotifications } from '@/hooks/useApprovalNotifications';
 import { Button } from '@/components/ui';
 
 export default function PriceApprovalsPage() {
   const { user } = useAuthStore();
+  const [activeCategory, setActiveCategory] = useState<'prices' | 'expenses' | 'income'>('prices');
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
 
   // 🔌 Activar Socket.io para actualizaciones en tiempo real
@@ -60,7 +62,7 @@ export default function PriceApprovalsPage() {
               </Link>
               <div className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-amber-600" />
-                <h1 className="text-xl font-bold text-gray-900">Aprobaciones de Precios</h1>
+                <h1 className="text-xl font-bold text-gray-900">Centro de Aprobaciones</h1>
               </div>
             </div>
           </div>
@@ -68,7 +70,41 @@ export default function PriceApprovalsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Category Selector */}
+        <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-xl">
+          <button
+            onClick={() => setActiveCategory('prices')}
+            className={`flex-1 py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+              activeCategory === 'prices'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Precios de Servicios
+          </button>
+          <button
+            onClick={() => setActiveCategory('expenses')}
+            className={`flex-1 py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+              activeCategory === 'expenses'
+                ? 'bg-white text-rose-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Gastos de Caja
+          </button>
+          <button
+            onClick={() => setActiveCategory('income')}
+            className={`flex-1 py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+              activeCategory === 'income'
+                ? 'bg-white text-emerald-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Ingresos Adicionales
+          </button>
+        </div>
+
         <div className="bg-white rounded-lg shadow">
           {/* Tabs */}
           <div className="border-b border-gray-200">
@@ -118,7 +154,15 @@ export default function PriceApprovalsPage() {
 
           {/* Tab Content */}
           <div className="p-6">
-            <PriceApprovalsPanel status={getStatusFromTab(activeTab)} />
+            {activeCategory === 'prices' && (
+              <PriceApprovalsPanel status={getStatusFromTab(activeTab)} />
+            )}
+            {activeCategory === 'expenses' && (
+              <CashApprovalsPanel status={getStatusFromTab(activeTab)} typeFilter="EXPENSE" />
+            )}
+            {activeCategory === 'income' && (
+              <CashApprovalsPanel status={getStatusFromTab(activeTab)} typeFilter="INCOME" />
+            )}
           </div>
         </div>
       </div>
