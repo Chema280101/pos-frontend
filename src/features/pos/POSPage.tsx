@@ -432,12 +432,9 @@ export function POSPage(): JSX.Element {
   };
 
   const addServiceToCart = (service: { id: string; name: string; price?: unknown; unit: string; priceType?: string; minPrice?: number; maxPrice?: number; requiresApproval?: boolean }) => {
-    console.log('🔍 addServiceToCart called:', service);
-    
     // Check if service has variable pricing
     const serviceOption = service as ServiceOption;
     if (serviceOption.priceType && serviceOption.priceType !== 'FIXED') {
-      console.log('🔍 Service has variable pricing, showing VariablePriceModal:', serviceOption);
       // Show variable price modal
       setSelectedServiceForPrice(serviceOption);
       setShowVariablePriceModal(true);
@@ -446,7 +443,6 @@ export function POSPage(): JSX.Element {
       return;
     }
 
-    console.log('🔍 Service has fixed pricing, showing EmployeeModal');
     // Show employee selection modal for fixed price services
     setSelectedServiceForEmployee(service as ServiceOption);
     setShowEmployeeModal(true);
@@ -552,20 +548,13 @@ export function POSPage(): JSX.Element {
 
   const handleApprovalRequest = async (approvalData: { serviceId: string; requestedPrice: number; reason: string }) => {
     try {
-      console.log('🔍 handleApprovalRequest called:', approvalData);
-      
       // Generar un ID temporal para el saleItemId
       const tempSaleItemId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log('🔍 tempSaleItemId:', tempSaleItemId);
 
-      const payload = {
+      const response = await api.post('/api/prices/approvals', {
         ...approvalData,
         saleItemId: tempSaleItemId
-      };
-      console.log('🔍 Sending request to /api/prices/approvals:', payload);
-
-      const response = await api.post('/api/prices/approvals', payload);
-      console.log('🔍 Response from /api/prices/approvals:', response.data);
+      });
 
       success('Solicitud de aprobación enviada correctamente');
       // Add service with pending approval to cart
@@ -591,9 +580,6 @@ export function POSPage(): JSX.Element {
       setShowItemSearch(false);
       setItemSearch('');
     } catch (error: any) {
-      console.error('❌ Error in handleApprovalRequest:', error);
-      console.error('❌ Error response:', error.response?.data);
-      
       // Error requesting approval
 
       // Manejo específico de errores
