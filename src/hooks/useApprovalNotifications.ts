@@ -40,6 +40,13 @@ export function useApprovalNotifications() {
     const approvalsArray = Array.isArray(approvals) ? approvals : approvals.data || [];
     console.log('🔔 approvalsArray:', approvalsArray);
 
+    // Ver los status de todas las aprobaciones
+    const statusCounts = approvalsArray.reduce((acc: any, a: any) => {
+      acc[a.status] = (acc[a.status] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('🔔 Status counts:', statusCounts);
+
     // Obtener aprobaciones pendientes
     const pendingApprovals = approvalsArray.filter((a: any) => a.status === 'PENDING');
     console.log('🔔 pendingApprovals:', pendingApprovals);
