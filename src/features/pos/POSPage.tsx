@@ -547,13 +547,20 @@ export function POSPage(): JSX.Element {
 
   const handleApprovalRequest = async (approvalData: { serviceId: string; requestedPrice: number; reason: string }) => {
     try {
+      console.log('🔍 handleApprovalRequest called:', approvalData);
+      
       // Generar un ID temporal para el saleItemId
       const tempSaleItemId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('🔍 tempSaleItemId:', tempSaleItemId);
 
-      const response = await api.post('/api/prices/approvals', {
+      const payload = {
         ...approvalData,
         saleItemId: tempSaleItemId
-      });
+      };
+      console.log('🔍 Sending request to /api/prices/approvals:', payload);
+
+      const response = await api.post('/api/prices/approvals', payload);
+      console.log('🔍 Response from /api/prices/approvals:', response.data);
 
       success('Solicitud de aprobación enviada correctamente');
       // Add service with pending approval to cart
@@ -579,6 +586,9 @@ export function POSPage(): JSX.Element {
       setShowItemSearch(false);
       setItemSearch('');
     } catch (error: any) {
+      console.error('❌ Error in handleApprovalRequest:', error);
+      console.error('❌ Error response:', error.response?.data);
+      
       // Error requesting approval
 
       // Manejo específico de errores
