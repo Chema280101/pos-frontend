@@ -18,7 +18,7 @@ import { TableBadge } from '@/components/ui/TableBadge';
 export function MyCommissions(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'ADMIN';
-  const canViewAllCommissions = user?.role === 'ADMIN'; // Only ADMIN can view all commissions
+  const canViewAllCommissions = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST';
   
   // Filter states
   const [dateFrom, setDateFrom] = useState<Date>(startOfDay(subDays(new Date(), 30)));
@@ -185,8 +185,8 @@ export function MyCommissions(): JSX.Element {
                 href="/commissions/admin" 
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-unit bg-[var(--unit-accent)] hover:bg-[var(--unit-accent)]/90 text-white text-xs font-bold transition-all shadow-unit active:scale-[0.98]"
               >
-                <Eye className="h-4 w-4" />
-                Panel Administrador
+                <DollarSign className="h-4 w-4" />
+                {isAdmin ? 'Panel Administrador' : 'Liquidar Comisiones'}
               </Link>
             )}
           </div>

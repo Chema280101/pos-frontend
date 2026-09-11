@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Settings,
   Bell,
+  DollarSign,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUnitStore } from '@/store/unitStore';
@@ -84,7 +85,15 @@ const navItems: NavItem[] = [
       { href: '/packages', label: 'Paquetes', icon: <Package className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
     ]
   },
-  { href: '/commissions', label: 'Comisiones', icon: <Percent className="h-5 w-5" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
+  { 
+    label: 'Comisiones', 
+    icon: <Percent className="h-5 w-5" />, 
+    roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'],
+    children: [
+      { href: '/commissions/admin', label: 'Liquidar Comisiones', icon: <DollarSign className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST'] },
+      { href: '/commissions', label: 'Mis Comisiones', icon: <Percent className="h-4 w-4" />, roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER'] },
+    ]
+  },
   { 
     label: 'Reportes', 
     icon: <FileText className="h-5 w-5" />, 

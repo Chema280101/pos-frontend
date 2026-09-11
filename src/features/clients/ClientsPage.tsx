@@ -84,12 +84,12 @@ export default function ClientsPage(): JSX.Element {
     isFetching, 
     refetch 
   } = useQuery({
-    queryKey: ['clients-list', activeUnit, debouncedSearch, statusFilter],
+    queryKey: ['clients-list', activeUnit, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (activeUnit) params.set('unit', activeUnit);
       if (debouncedSearch) params.set('search', debouncedSearch);
-      if (statusFilter !== 'all') params.set('status', statusFilter);
+      params.set('limit', '1000');
 
       const { data } = await api.get(`/api/clients?${params}`);
       return data;
@@ -103,9 +103,14 @@ export default function ClientsPage(): JSX.Element {
     ? clientsResponse 
     : [];
 
-  // Filter clients based on active tab
+  // Filter clients based on active tab and status chip
   const clients = useMemo(() => {
     return rawClients.filter((c) => {
+      // Filtrado por chip de estado (Todos | Solo Activos | Solo Bloqueados)
+      if (statusFilter === 'active' && c.isBlocked) return false;
+      if (statusFilter === 'blocked' && !c.isBlocked) return false;
+
+      // Filtrado por pestaña activa
       if (activeTab === 'vip') {
         return (c._count?.appointments ?? 0) >= 5;
       }
@@ -114,7 +119,7 @@ export default function ClientsPage(): JSX.Element {
       }
       return true;
     });
-  }, [rawClients, activeTab]);
+  }, [rawClients, activeTab, statusFilter]);
 
   // Metrics summary
   const metrics = useMemo(() => {
@@ -515,6 +520,7 @@ export default function ClientsPage(): JSX.Element {
                 actions={actions}
                 keyExtractor={(row) => row.id}
                 loading={isLoading}
+                pageSize={50}
                 searchPlaceholder=""
                 filters={[]}
                 emptyMessage="No se encontraron clientes registrados para esta unidad o búsqueda."
