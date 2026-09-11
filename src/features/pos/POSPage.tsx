@@ -528,7 +528,8 @@ export function POSPage(): JSX.Element {
       unitPrice: price,
       quantity: 1,
       customPrice: price,
-      requiresApproval: selectedServiceForPrice.requiresApproval,
+      // ✅ Admin no requiere aprobación, otros roles sí
+      requiresApproval: user?.role === 'ADMIN' ? false : selectedServiceForPrice.requiresApproval,
       employeeId: employeeId || undefined, // ✅ Convertir null a undefined
     });
 
