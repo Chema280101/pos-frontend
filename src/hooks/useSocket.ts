@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/useToast';
 
 interface ApprovalData {
   id: string;
@@ -37,6 +38,7 @@ export function useSocket() {
   const { user, accessToken } = useAuthStore();
   const queryClient = useQueryClient();
   const socketRef = useRef<any>(null);
+  const { success, error: showError } = useToast();
 
   useEffect(() => {
     if (!user || !accessToken) {
@@ -120,8 +122,8 @@ export function useSocket() {
               detail: { approval: data.approval } 
             }));
             
-            // Mostrar toast de éxito (opcional - necesitarías useToast)
-            // success('¡Tu solicitud de precio fue aprobada!');
+            // Mostrar toast de éxito
+            success(`¡Tu solicitud de precio S/ ${data.approval.requestedPrice} para "${data.approval.service.name}" fue aprobada!`);
           } else if (data.approval.status === 'REJECTED') {
             // Tu solicitud fue rechazada
             console.log('❌ Solicitud rechazada:', data.approval);
@@ -135,8 +137,8 @@ export function useSocket() {
               detail: { approval: data.approval } 
             }));
             
-            // Mostrar toast de rechazo (opcional - necesitarías useToast)
-            // error('Tu solicitud de precio fue rechazada');
+            // Mostrar toast de rechazo
+            showError(`Tu solicitud de precio para "${data.approval.service.name}" fue rechazada`);
           }
         });
 
