@@ -177,6 +177,7 @@ function checkRouteAccess(pathname: string, method: string | null, user: any) {
     '/api/cash-register': { roles: ['ADMIN', 'RECEPTIONIST'], dataType: 'financial' },
     '/api/expenses': { roles: ['ADMIN', 'RECEPTIONIST'], dataType: 'financial' },
     '/api/income': { roles: ['ADMIN', 'RECEPTIONIST'], dataType: 'financial' },
+    '/api/approvals/operations': { roles: ['ADMIN', 'RECEPTIONIST', 'SPA_SPECIALIST', 'BARBER', 'MANAGER'], dataType: 'financial' },
     
     // Inventory
     '/api/inventory': { roles: ['ADMIN', 'RECEPTIONIST', 'MANAGER'], dataType: 'inventory' },

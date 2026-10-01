@@ -211,6 +211,7 @@ export function canAccessEndpoint(
     '/api/cash-register': ['ADMIN', 'RECEPTIONIST'],
     '/api/expenses': ['ADMIN', 'RECEPTIONIST'],
     '/api/income': ['ADMIN', 'RECEPTIONIST'],
+    '/api/approvals/operations': ['ADMIN', 'RECEPTIONIST', 'BARBER', 'SPA_SPECIALIST', 'MANAGER'],
     
     // Inventory endpoints
     '/api/inventory': ['ADMIN', 'RECEPTIONIST', 'MANAGER'],

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ArqueoProps {
@@ -20,6 +21,8 @@ interface ArqueoProps {
   cardExpenses: number;
   transferExpenses: number;
   walletExpenses: number;
+  pendingExpensesCount?: number;
+  pendingExpensesAmount?: number;
 }
 
 const DENOM_ORDER = [200, 100, 50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1];
@@ -40,6 +43,8 @@ export function CashClosingArqueo({
   cardExpenses,
   transferExpenses,
   walletExpenses,
+  pendingExpensesCount,
+  pendingExpensesAmount,
 }: ArqueoProps): JSX.Element {
   const totalDeclared = useMemo(
     () => DENOM_ORDER.reduce((acc, d) => acc + d * (denominations[d] ?? 0), 0),
@@ -85,6 +90,21 @@ export function CashClosingArqueo({
           {walletExpenses > 0 && <Row label="Billetera" value={-walletExpenses} className="text-red-500" />}
           {expenses > 0 && <Row label="Total egresos" value={-expenses} bold className="text-red-600" />}
         </div>
+
+        {/* Alerta de gastos pendientes de aprobación */}
+        {pendingExpensesCount !== undefined && pendingExpensesCount > 0 && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 flex items-start gap-2.5">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-900 dark:text-amber-200">
+              <p className="font-bold">
+                ⚠️ Hay {pendingExpensesCount} gasto{pendingExpensesCount > 1 ? 's' : ''} pendiente{pendingExpensesCount > 1 ? 's' : ''} de aprobación (S/ {Number(pendingExpensesAmount || 0).toFixed(2)})
+              </p>
+              <p className="mt-0.5 text-amber-800/80 dark:text-amber-300/80">
+                El Administrador debe confirmarlo{pendingExpensesCount > 1 ? 's' : ''} en el <strong>Centro de Aprobaciones</strong> para que se descuente{pendingExpensesCount > 1 ? 'n' : ''} de este arqueo y cuadre el efectivo.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Conteo de denominaciones */}

@@ -743,6 +743,8 @@ export function CashRegisterPage(): JSX.Element {
                         cardExpenses={summary.cardExpenses || 0}
                         transferExpenses={summary.transferExpenses || 0}
                         walletExpenses={summary.walletExpenses || 0}
+                        pendingExpensesCount={(summary as any).pendingExpensesCount || 0}
+                        pendingExpensesAmount={(summary as any).pendingExpensesAmount || 0}
                       />
                     </div>
                   )}

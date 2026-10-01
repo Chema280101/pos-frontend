@@ -72,11 +72,7 @@ export function ExpenseModal({ isOpen, onClose, registerId, onSuccess }: Expense
         }
       );
 
-      if (res.data?.requiresApproval || !isAdmin) {
-        success('Solicitud de egreso enviada a supervisión. Pendiente de aprobación del Administrador.');
-      } else {
-        success('Egreso registrado correctamente');
-      }
+      success('Egreso registrado correctamente');
       onSuccess?.();
       onClose();
     } catch (err: any) {

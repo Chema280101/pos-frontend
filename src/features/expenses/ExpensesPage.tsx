@@ -41,6 +41,7 @@ import { TableToolbar } from '@/components/ui/TableToolbar';
 import { TableBadge } from '@/components/ui/TableBadge';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { RequestApprovalModal } from '@/components/PriceApprovals/RequestApprovalModal';
 import { ExpenseDetailDrawer, type ExpenseRecord } from './ExpenseDetailDrawer';
 import { ExpensesMetrics } from './ExpensesMetrics';
 import { useToast } from '@/hooks/useToast';
@@ -51,7 +52,8 @@ export function ExpensesPage(): JSX.Element {
   const queryClient = useQueryClient();
   const activeUnit = useUnitStore((s) => s.activeUnit);
   const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST' || user?.role === 'MANAGER';
+  const isAdmin = user?.role === 'ADMIN';
+  const canEdit = isAdmin || user?.role === 'RECEPTIONIST' || user?.role === 'MANAGER';
   const { success, error: toastError } = useToast();
 
   // Navigation tabs: 'all' | 'metrics'
@@ -117,19 +119,28 @@ export function ExpensesPage(): JSX.Element {
 
   // Delete Mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { data } = await api.delete(`/api/expenses/${id}`);
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
+      const { data } = await api.delete(`/api/expenses/${id}`, {
+        data: { reason }
+      });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
-      success('Egreso eliminado exitosamente');
+      queryClient.invalidateQueries({ queryKey: ['cash-approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['operation-approvals'] });
+      
+      if (data?.requiresApproval) {
+        success('Solicitud enviada a supervisión. Pendiente de confirmación del Administrador.');
+      } else {
+        success('Egreso eliminado exitosamente');
+      }
       setShowDeleteDialog(false);
       setExpenseToDelete(null);
     },
     onError: (err: any) => {
-      toastError(err?.response?.data?.error || 'Error al eliminar el gasto');
+      toastError(err?.response?.data?.error || 'Error al procesar la solicitud de eliminación');
     },
   });
 
@@ -524,24 +535,44 @@ export function ExpensesPage(): JSX.Element {
           }}
         />
 
-        {/* Confirm Delete Dialog */}
-        <ConfirmDialog
-          isOpen={showDeleteDialog}
-          onClose={() => {
-            setShowDeleteDialog(false);
-            setExpenseToDelete(null);
-          }}
-          onConfirm={() => {
-            if (expenseToDelete) {
-              deleteMutation.mutate(expenseToDelete.id);
-            }
-          }}
-          title="Eliminar Gasto"
-          message={`¿Estás seguro de que deseas eliminar el registro de gasto "${expenseToDelete?.reason}" por un monto de S/ ${Number(expenseToDelete?.amount || 0).toFixed(2)}?`}
-          confirmText="Eliminar Gasto"
-          type="danger"
-          isLoading={deleteMutation.isPending}
-        />
+        {/* Delete Dialog: Confirm for Admin, Approval Request for Non-Admin */}
+        {isAdmin ? (
+          <ConfirmDialog
+            isOpen={showDeleteDialog}
+            onClose={() => {
+              setShowDeleteDialog(false);
+              setExpenseToDelete(null);
+            }}
+            onConfirm={() => {
+              if (expenseToDelete) {
+                deleteMutation.mutate({ id: expenseToDelete.id });
+              }
+            }}
+            title="Eliminar Gasto"
+            message={`¿Estás seguro de que deseas eliminar el registro de gasto "${expenseToDelete?.reason}" por un monto de S/ ${Number(expenseToDelete?.amount || 0).toFixed(2)}?`}
+            confirmText="Eliminar Gasto"
+            type="danger"
+            isLoading={deleteMutation.isPending}
+          />
+        ) : (
+          <RequestApprovalModal
+            isOpen={showDeleteDialog}
+            onClose={() => {
+              setShowDeleteDialog(false);
+              setExpenseToDelete(null);
+            }}
+            title="Solicitar Eliminación de Gasto"
+            actionType="DELETE"
+            entityName={expenseToDelete?.reason || 'Gasto'}
+            amount={Number(expenseToDelete?.amount || 0)}
+            onSubmit={async (reason) => {
+              if (expenseToDelete) {
+                await deleteMutation.mutateAsync({ id: expenseToDelete.id, reason });
+              }
+            }}
+            isLoading={deleteMutation.isPending}
+          />
+        )}
       </div>
     </div>
   );
